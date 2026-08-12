@@ -1,0 +1,48 @@
+# dependencies
+node_modules/
+/.pnp
+.pnp.*
+
+# builds
+/.next/
+**/.next/
+/dist/
+**/dist/
+/out/
+/build/
+
+# env
+.env
+.env.local
+.env*.local
+
+# prisma
+**/prisma/dev.db*
+
+# testing
+/coverage
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.log
+
+# misc
+.DS_Store
+*.pem
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# vercel
+.vercel
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+
+# Claude Code local settings (machine-local, not project source)
+.claude/settings.local.json

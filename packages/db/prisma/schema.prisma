@@ -1,0 +1,351 @@
+// Brew Ledger data model — WBS 3.3.
+//
+// Three structural decisions carry the project's red lines into the schema
+// itself (see BrewLedger_WBS_Dictionary.md §3.3):
+//
+//  RL-1  Settlement destination is a MERCHANT-owned gateway account reference
+//        on Merchant/Payment. There is no Brew Ledger ledger, float, or
+//        pooled-balance table anywhere in this file.
+//  RL-2  BomLine is a separate, optional table with no NOT NULL dependency
+//        from MenuItem — a menu item is fully valid and orderable with zero
+//        recipe rows.
+//  RL-3  Every cost / expense / stock / margin column lives on a table
+//        classified MERCHANT_ONLY in /docs/data_dictionary.md. The public API
+//        layer (apps/api/src/public, WBS 3.5) has no read path to these
+//        tables — enforced at the API layer, not here.
+//
+// All money is stored as an integer number of satang (1 THB = 100 satang).
+// No Float/Decimal appears anywhere in the money path.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Tier {
+  FREE
+  STARTER
+  GROWTH
+  SCALE
+}
+
+enum KycStatus {
+  NOT_STARTED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum StaffRole {
+  OWNER
+  STAFF
+}
+
+enum Channel {
+  ONLINE
+  CASH
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  ACCEPTED
+  PREPARING
+  READY
+  COLLECTED
+  CANCELLED
+  REFUNDED
+}
+
+enum FeeBearer {
+  PLATFORM
+  MERCHANT
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum BaseUnit {
+  G
+  ML
+  PIECE
+}
+
+enum LedgerReason {
+  PURCHASE
+  SALE
+  CANCEL_REVERSAL
+  ADJUSTMENT
+}
+
+enum ExpenseSource {
+  OCR
+  MANUAL
+}
+
+enum OcrStatus {
+  NONE
+  PENDING
+  PARSED
+  CONFIRMED
+  FAILED
+}
+
+// ---------------------------------------------------------------------------
+// Core tables (mixed PUBLIC_SAFE / MERCHANT_ONLY — see data dictionary)
+// ---------------------------------------------------------------------------
+
+model Merchant {
+  id                String      @id @default(cuid())
+  phone             String      @unique // OTP identity
+  displayName       String
+  tier              Tier        @default(FREE)
+  absorbGatewayFee  Boolean     @default(true) // runtime switch, never hardcoded
+  gatewayProvider   String? // '2c2p' | 'omise' | 'beam' | 'chillpay'
+  gatewayMerchantId String? // MERCHANT-owned account ref (RL-1)
+  gatewayKycStatus  KycStatus   @default(NOT_STARTED)
+  createdAt         DateTime    @default(now())
+  stores            Store[]
+  staff             StaffUser[]
+}
+
+// Referenced by Merchant.staff in the WBS Prisma excerpt but not itself
+// defined there. Minimal shape consistent with the OTP-identity pattern used
+// on Merchant; multi-staff management beyond the single-owner MVP persona is
+// Phase 2 scope.
+model StaffUser {
+  id         String    @id @default(cuid())
+  merchantId String
+  phone      String    @unique
+  role       StaffRole @default(STAFF)
+  createdAt  DateTime  @default(now())
+  merchant   Merchant  @relation(fields: [merchantId], references: [id])
+
+  @@index([merchantId])
+}
+
+model Store {
+  id                String        @id @default(cuid())
+  merchantId        String
+  slug              String        @unique // public URL key, /s/{slug}
+  name              String
+  pickupAddress     String
+  timezone          String        @default("Asia/Bangkok")
+  openTime          String // "07:00"
+  closeTime         String // "17:00"
+  isAcceptingOrders Boolean       @default(false)
+  merchant          Merchant      @relation(fields: [merchantId], references: [id])
+  menuItems         MenuItem[]
+  timeSlots         TimeSlot[]
+  orders            Order[]
+  ingredients       Ingredient[]
+  stockLedger       StockLedger[]
+  expenses          Expense[]
+
+  @@index([merchantId])
+}
+
+model MenuItem {
+  id           String        @id @default(cuid())
+  storeId      String
+  name         String
+  priceSatang  Int // integer money only
+  category     String?
+  imageUrl     String?
+  isActive     Boolean       @default(true)
+  store        Store         @relation(fields: [storeId], references: [id])
+  optionGroups OptionGroup[]
+  bomLines     BomLine[] // OPTIONAL — zero rows is valid (RL-2)
+  orderItems   OrderItem[]
+
+  @@index([storeId, isActive])
+}
+
+model OptionGroup {
+  id         String   @id @default(cuid())
+  menuItemId String
+  name       String // "Temperature", "Sweetness"
+  isRequired Boolean  @default(false)
+  minSelect  Int      @default(0)
+  maxSelect  Int      @default(1)
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+  options    Option[]
+
+  @@index([menuItemId])
+}
+
+model Option {
+  id               String      @id @default(cuid())
+  optionGroupId    String
+  name             String // "Hot", "Iced", "50% sweet"
+  priceDeltaSatang Int         @default(0)
+  optionGroup      OptionGroup @relation(fields: [optionGroupId], references: [id])
+
+  @@index([optionGroupId])
+}
+
+model TimeSlot {
+  id          String   @id @default(cuid())
+  storeId     String
+  slotStart   DateTime
+  slotEnd     DateTime
+  capacity    Int
+  bookedCount Int      @default(0) // guarded by a transaction at booking time (WBS 5.3)
+  store       Store    @relation(fields: [storeId], references: [id])
+  orders      Order[]
+
+  @@unique([storeId, slotStart])
+  @@index([storeId, slotStart])
+}
+
+model Order {
+  id               String      @id @default(cuid())
+  storeId          String
+  publicCode       String      @unique // customer-facing, ambiguity-free alphabet
+  customerPhone    String // only PII collected
+  timeSlotId       String?
+  channel          Channel     @default(ONLINE) // ONLINE | CASH
+  status           OrderStatus @default(PENDING_PAYMENT)
+  subtotalSatang   Int
+  totalSatang      Int
+  gatewayFeeSatang Int         @default(0) // recorded even while absorbed
+  feeBorneBy       FeeBearer   @default(PLATFORM)
+  createdAt        DateTime    @default(now())
+  paidAt           DateTime?
+  store            Store       @relation(fields: [storeId], references: [id])
+  timeSlot         TimeSlot?   @relation(fields: [timeSlotId], references: [id])
+  items            OrderItem[]
+  payment          Payment?
+
+  @@index([storeId, status, createdAt])
+  @@index([customerPhone])
+}
+
+model OrderItem {
+  id              String   @id @default(cuid())
+  orderId         String
+  menuItemId      String
+  nameSnapshot    String // menu can change later
+  qty             Int
+  unitPriceSatang Int
+  optionsJson     Json
+  unitCostSatang  Int? // MERCHANT_ONLY, null when no BOM (RL-2)
+  order           Order    @relation(fields: [orderId], references: [id])
+  menuItem        MenuItem @relation(fields: [menuItemId], references: [id])
+
+  @@index([orderId])
+  @@index([menuItemId])
+}
+
+model Payment {
+  id                       String        @id @default(cuid())
+  orderId                  String        @unique
+  provider                 String
+  providerChargeId         String        @unique // gateway charge reference
+  amountSatang             Int
+  feeSatang                Int
+  status                   PaymentStatus
+  idempotencyKey           String        @unique // duplicate webhook guard (WBS 5.6)
+  rawPayload               Json
+  settledToMerchantAccount String // proof of RL-1 destination
+  createdAt                DateTime      @default(now())
+  order                    Order         @relation(fields: [orderId], references: [id])
+}
+
+// ---------------------------------------------------------------------------
+// Costing and inventory tables — MERCHANT_ONLY in their entirety
+// ---------------------------------------------------------------------------
+
+model Ingredient {
+  id             String        @id @default(cuid())
+  storeId        String
+  name           String
+  baseUnit       BaseUnit
+  unitCostSatang Int           @default(0) // cost per ONE base unit
+  reorderPoint   Float         @default(0) // in base units
+  store          Store         @relation(fields: [storeId], references: [id])
+  bomLines       BomLine[]
+  stockLedger    StockLedger[]
+  costHistory    CostHistory[]
+
+  @@index([storeId])
+}
+
+model BomLine {
+  id           String     @id @default(cuid())
+  menuItemId   String
+  ingredientId String
+  qtyBaseUnit  Float // always normalized to base unit
+  isSuggested  Boolean    @default(false) // seeded template, merchant may edit (F26)
+  menuItem     MenuItem   @relation(fields: [menuItemId], references: [id])
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@unique([menuItemId, ingredientId])
+}
+
+model StockLedger {
+  id            String       @id @default(cuid())
+  storeId       String
+  ingredientId  String
+  deltaBaseUnit Float // negative = consumption
+  reason        LedgerReason
+  refType       String? // 'order' | 'expense'
+  refId         String?
+  createdAt     DateTime     @default(now())
+  store         Store        @relation(fields: [storeId], references: [id])
+  ingredient    Ingredient   @relation(fields: [ingredientId], references: [id])
+
+  @@index([storeId, ingredientId, createdAt])
+}
+
+model CostHistory {
+  id              String     @id @default(cuid())
+  ingredientId    String
+  unitCostSatang  Int
+  sourceExpenseId String?
+  effectiveAt     DateTime   @default(now())
+  ingredient      Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@index([ingredientId, effectiveAt])
+}
+
+model Expense {
+  id          String        @id @default(cuid())
+  storeId     String
+  source      ExpenseSource
+  vendor      String?
+  totalSatang Int
+  occurredAt  DateTime
+  imageUrl    String? // private bucket
+  ocrStatus   OcrStatus     @default(NONE)
+  store       Store         @relation(fields: [storeId], references: [id])
+  lines       ExpenseLine[]
+
+  @@index([storeId, occurredAt])
+}
+
+model ExpenseLine {
+  id           String  @id @default(cuid())
+  expenseId    String
+  rawText      String // exactly what OCR read
+  ingredientId String? // null until merchant maps it
+  qty          Float?
+  unit         String? // as printed on the bill: "kg", "ลัง"
+  amountSatang Int?
+  confidence   Float? // OCR confidence, drives review UI
+  isConfirmed  Boolean @default(false) // merchant confirmation gate
+  expense      Expense @relation(fields: [expenseId], references: [id])
+
+  @@index([expenseId])
+}

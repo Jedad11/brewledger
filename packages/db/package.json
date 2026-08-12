@@ -1,0 +1,25 @@
+{
+  "name": "@brewledger/db",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "echo \"(no lint configured for @brewledger/db)\"",
+    "build": "tsc -p tsconfig.json",
+    "prisma:generate": "prisma generate"
+  },
+  "prisma": {
+    "seed": "ts-node --transpile-only seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "prisma": "^6.3.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5"
+  }
+}

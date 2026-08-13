@@ -11,6 +11,7 @@
 // are pre-declared so the rule activates automatically the moment that
 // workspace is scaffolded — until then this config has nothing to check.
 import importPlugin from "eslint-plugin-import";
+import tseslint from "typescript-eslint";
 
 export default [
   {
@@ -24,6 +25,12 @@ export default [
   },
   {
     files: ["apps/shop/**/*.{ts,tsx,js,jsx}"],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        ecmaFeatures: { jsx: true },
+      },
+    },
     plugins: { import: importPlugin },
     settings: {
       // eslint-plugin-import's default node resolver only tries .js/.json —

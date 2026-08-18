@@ -1,0 +1,179 @@
+<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BrewLedger — P0 Foundation</title>
+<link rel="stylesheet" href="_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css">
+<link rel="stylesheet" href="_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/typography.css">
+<link rel="stylesheet" href="_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/effects.css">
+<link rel="stylesheet" href="_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/styles.css">
+<link rel="stylesheet" href="brewledger-tokens.css">
+<style>
+.page{max-width:1080px;margin:0 auto;padding:var(--space-6) var(--gutter-md) var(--space-9)}
+.masthead{border-bottom:1px solid var(--hairline);padding-bottom:var(--space-4);margin-bottom:var(--space-6)}
+.masthead .kicker{font-size:var(--text-2);font-weight:700;letter-spacing:var(--tracking-loose);text-transform:uppercase;color:var(--green-sage)}
+.masthead h1{font-size:var(--text-7);margin:.8rem 0}
+.masthead p{max-width:62ch;color:var(--text-black-soft)}
+section{margin-top:var(--space-8)}
+section>h2{display:flex;align-items:baseline;gap:1.2rem;margin-bottom:var(--space-2)}
+section>h2 .n{font-size:var(--text-2);font-weight:700;color:var(--green-sage);letter-spacing:var(--tracking-loose)}
+.lede{max-width:64ch;color:var(--text-black-soft);margin-bottom:var(--space-4)}
+.grid{display:grid;gap:var(--space-3)}
+.g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.sw{border-radius:var(--radius-card);overflow:hidden;box-shadow:var(--shadow-card);background:var(--white)}
+.sw .chip{height:76px}
+.sw .meta{padding:1.2rem 1.4rem;display:flex;flex-direction:column;gap:.2rem}
+.sw .meta b{font-size:var(--text-2)}
+.sw .meta span{font-size:var(--text-1);color:var(--text-black-soft);font-variant-numeric:tabular-nums}
+.rule{display:grid;grid-template-columns:auto 1fr;gap:1.2rem var(--space-3);align-items:start;padding:var(--space-3) 0;border-top:1px solid var(--hairline)}
+.rule .mark{width:26px;height:26px;border-radius:50%;background:var(--green-mist);color:var(--green-ledger);display:grid;place-items:center;font-size:var(--text-2);font-weight:800}
+.rule b{display:block;margin-bottom:.3rem}
+.rule p{color:var(--text-black-soft);max-width:70ch}
+.spec{font-size:var(--text-1);color:var(--text-black-soft);font-variant-numeric:tabular-nums;letter-spacing:0}
+.statusrow{display:flex;flex-wrap:wrap;gap:1rem}
+.typerow{display:grid;grid-template-columns:120px 1fr;gap:var(--space-3);align-items:baseline;padding:1.4rem 0;border-top:1px solid var(--hairline)}
+.clip-test{background:var(--white);border-radius:var(--radius-card);padding:var(--space-3);box-shadow:var(--shadow-card);display:grid;gap:1.2rem}
+.clip-test div{border-bottom:1px dashed var(--input-border);padding-bottom:.6rem}
+.phone{width:375px;max-width:100%;border-radius:20px;overflow:hidden;background:var(--surface-page);box-shadow:var(--shadow-nav);display:flex;flex-direction:column;height:520px}
+.phone .body{flex:1;overflow:hidden;padding:var(--space-3);display:flex;flex-direction:column;gap:1.2rem}
+.phone .cw-cartbar,.phone .oc-nav{position:static}
+.shelf{display:flex;flex-wrap:wrap;gap:var(--space-4);align-items:flex-start}
+.tag{display:inline-block;font-size:var(--text-1);font-weight:700;letter-spacing:var(--tracking-loose);text-transform:uppercase;color:var(--green-sage);margin-bottom:.8rem}
+.desknav{border-radius:var(--radius-card);overflow:hidden;box-shadow:var(--shadow-card);background:var(--white);width:232px}
+.desknav .oc-side{display:flex;flex-direction:column;gap:.4rem;padding:var(--space-4) var(--space-3)}
+.desknav .oc-side button{display:flex;align-items:center;gap:1.2rem;min-height:var(--tap-min);padding:0 1.4rem;border:0;border-radius:var(--radius-pill);background:none;cursor:pointer;font-size:var(--text-3);font-weight:600;color:var(--text-black-soft);text-align:left}
+.desknav .oc-side button.is-active{background:var(--green-mist);color:var(--green-ledger)}
+.desknav .wordmark{font-weight:800;font-size:var(--text-4);color:var(--green-ledger);margin-bottom:var(--space-3);padding:0 1.4rem}
+.states{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--space-3)}
+.statebox{background:var(--white);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:var(--space-3);display:flex;flex-direction:column;gap:1.2rem;align-items:flex-start}
+.statebox .tag{margin:0}
+.tapdemo{display:flex;gap:var(--space-3);align-items:flex-end;flex-wrap:wrap}
+.tapbox{background:var(--green-mist);border:1px dashed var(--green-brew);border-radius:8px;display:grid;place-items:center;color:var(--green-ledger);font-weight:700;font-size:var(--text-2)}
+.moneytable{width:100%;border-collapse:collapse;background:var(--white);border-radius:var(--radius-card);overflow:hidden;box-shadow:var(--shadow-card)}
+.moneytable th,.moneytable td{text-align:left;padding:1.2rem 1.6rem;border-top:1px solid var(--hairline);font-size:var(--text-2)}
+.moneytable th{background:var(--ceramic);border-top:0;font-weight:700;color:var(--green-ledger)}
+.moneytable td:last-child,.moneytable th:last-child{text-align:right}
+.bp{display:grid;gap:.8rem}
+.bpbar{height:34px;border-radius:6px;background:var(--green-mist);display:flex;align-items:center;padding:0 1.2rem;font-size:var(--text-2);font-weight:600;color:var(--green-ledger)}
+.callout{background:var(--green-cask);color:var(--text-white);border-radius:var(--radius-card);padding:var(--space-4);display:grid;gap:1rem}
+.callout h3{color:#fff}.callout p{color:var(--text-white-soft);max-width:70ch}
+.callout .big{font-size:var(--text-6);font-weight:800;color:var(--gold-light)}
+</style></head><body>
+<div class="page">
+<header class="masthead"><div class="kicker">BrewLedger · P0</div><h1>Foundation, navigation shell, responsive rules</h1><p>Design tokens layered on the Brewledger design system, the two navigation shells, and the rules that every screen downstream inherits. No product screens yet.</p></header>
+
+<section><h2><span class="n">01</span>Semantic colour</h2><p class="lede">The design system's four-tier green stays as-is for brand and surface. These roles are added on top so a number's meaning is legible before it is read.</p>
+<div class="grid g4">
+<div class="sw"><div class="chip" style="background:var(--c-revenue)"></div><div class="meta"><b>Revenue</b><span>--c-revenue · #14875a</span></div></div>
+<div class="sw"><div class="chip" style="background:var(--c-cost)"></div><div class="meta"><b>Cost</b><span>--c-cost · bronze</span></div></div>
+<div class="sw"><div class="chip" style="background:var(--c-profit)"></div><div class="meta"><b>Profit</b><span>--c-profit · #0b6b47</span></div></div>
+<div class="sw"><div class="chip" style="background:var(--c-warning)"></div><div class="meta"><b>Warning</b><span>--c-warning · #e0a728</span></div></div>
+<div class="sw"><div class="chip" style="background:var(--c-unknown)"></div><div class="meta"><b>Unknown</b><span>--c-unknown · black 38%</span></div></div>
+</div>
+<p class="note-plain" style="margin-top:var(--space-3)">Cost is a muted bronze derived from the system's gold hue, not red — a cost is not a fault. Red stays reserved for cancellation and refund. Gold is not used in this product; there is no rewards tier here.</p></section>
+
+<section><h2><span class="n">02</span>Order status — 8 states</h2><p class="lede">One colour and one Thai label per status, used identically in the console inbox, the order detail screen, and the customer tracking screen.</p>
+<div class="statusrow">
+<span class="st st--unpaid">รอชำระเงิน</span><span class="st st--accepted">รับออเดอร์แล้ว</span><span class="st st--making">กำลังทำ</span><span class="st st--ready">พร้อมรับ</span><span class="st st--collected">รับแล้ว</span><span class="st st--cancelled">ยกเลิก</span><span class="st st--refunded">คืนเงินแล้ว</span><span class="st st--expired">หมดเวลา</span></div>
+<p class="note-plain" style="margin-top:var(--space-3)">พร้อมรับ is the only filled badge — it is the one status that needs to be spotted across a counter. The three terminal-neutral statuses share one grey so the eye skips them.</p></section>
+
+<section><h2><span class="n">03</span>Thai typography</h2><p class="lede">Thai has no inter-word spaces and stacks marks two levels above and below the baseline. Body line-height is 1.5, headings 1.35 — looser than the design system's English-first defaults. Noto Sans Thai carries the Thai glyphs; Manrope remains the Latin and numeral face.</p>
+<div class="typerow"><div class="spec">Display · 32/1.35 · 800</div><div style="font-size:var(--text-7);font-weight:800;line-height:1.35;color:var(--green-ledger)">กำไรสุทธิวันนี้</div></div>
+<div class="typerow"><div class="spec">Heading · 19/1.35 · 700</div><div style="font-size:var(--text-4);font-weight:700;line-height:1.35;color:var(--green-ledger)">ออเดอร์ที่ต้องทำในช่วง 08:00–08:30</div></div>
+<div class="typerow"><div class="spec">Body · 16/1.5 · 400</div><div style="font-size:var(--text-3);line-height:1.5">ยังไม่ได้บันทึกต้นทุน จึงยังคำนวณกำไรไม่ได้ ระบบจะแสดงเครื่องหมายขีดแทนตัวเลขที่ยังไม่ทราบ</div></div>
+<div class="typerow"><div class="spec">Caption · 14/1.5 · 400</div><div style="font-size:var(--text-2);line-height:1.5;color:var(--text-black-soft)">คำนวณจาก 8 จาก 12 รายการที่มีข้อมูลต้นทุน</div></div>
+<div style="margin-top:var(--space-4)"><div class="tag">Clipping test · 40-character menu name</div><div class="clip-test">
+<div style="font-size:var(--text-3);line-height:1.5">ลาเต้เย็นหวานน้อยพิเศษเพิ่มช็อต</div>
+<div style="font-size:var(--text-4);font-weight:700;line-height:1.35">ลาเต้เย็นหวานน้อยพิเศษเพิ่มช็อต</div>
+<div style="font-size:var(--text-2);line-height:1.5;color:var(--text-black-soft)">ลาเต้เย็นหวานน้อยพิเศษเพิ่มช็อต · ปั่น · หวานน้อย</div>
+</div><p class="note-plain" style="margin-top:1.2rem">No tone or vowel mark is clipped at any of the three sizes. Menu names truncate at two lines with an ellipsis, never at one.</p></div></section>
+
+<section><h2><span class="n">04</span>Money display</h2><p class="lede">Stored as integer satang, displayed in baht. The one rule that matters: an unknown value is never zero.</p>
+<table class="moneytable"><thead><tr><th>Case</th><th>Renders</th></tr></thead><tbody>
+<tr><td>Known amount</td><td><span class="money">฿45.50</span></td></tr>
+<tr><td>Revenue</td><td><span class="money money--revenue">฿3,240</span></td></tr>
+<tr><td>Cost</td><td><span class="money money--cost">฿18.20</span></td></tr>
+<tr><td>Profit</td><td><span class="money money--profit">฿1,905</span></td></tr>
+<tr><td>Unknown — no recipe entered</td><td><span class="money money--unknown">—</span></td></tr>
+<tr><td>Zero baseline in a comparison</td><td><span class="money money--unknown">—</span></td></tr>
+<tr><td>A genuine zero</td><td><span class="money">฿0</span></td></tr>
+</tbody></table>
+<p class="note-plain" style="margin-top:var(--space-3)"><code>MoneyValue</code> accepts <code>null</code> and renders the em dash. Rendering 0 for an unknown cost implies a 100% margin — the most dangerous wrong number this product could show.</p></section>
+
+<section><h2><span class="n">05</span>Tap targets</h2><p class="lede">The merchant taps this with wet hands, between two customers, looking for about three seconds.</p>
+<div class="tapdemo">
+<div class="tapbox" style="width:44px;height:44px">44</div>
+<div class="tapbox" style="width:56px;height:56px">56</div>
+<div style="flex:1;min-width:260px"><button class="btn btn--primary btn--wet">เริ่มทำ</button><p class="note-plain" style="margin-top:.8rem">56px, full width — order status buttons and quick cash sale tiles.</p></div>
+</div></section>
+
+<section><h2><span class="n">06</span>Breakpoints</h2>
+<div class="grid g2">
+<div><div class="tag">Customer web</div><div class="bp"><div class="bpbar" style="width:34%">375 · baseline</div><div class="bpbar" style="width:34%">768 · content stays 480px, centred</div><div class="bpbar" style="width:34%">1280 · unchanged</div></div><p class="note-plain" style="margin-top:1.2rem">Nobody orders coffee on a desktop. The layout never stretches.</p></div>
+<div><div class="tag">Owner console</div><div class="bp"><div class="bpbar" style="width:34%">375 · baseline, bottom nav</div><div class="bpbar" style="width:64%">768 · two-column cards, bottom nav</div><div class="bpbar" style="width:100%">1280 · sidebar, wide tables</div></div><p class="note-plain" style="margin-top:1.2rem">Mobile is primary, but reports get opened on a laptop after close.</p></div>
+</div></section>
+
+<section><h2><span class="n">07</span>Navigation shells</h2><p class="lede">Two surfaces that share tokens and nothing else. No component crosses between them.</p>
+<div class="shelf">
+<div><div class="tag">Customer web · no navbar</div><div class="phone">
+<div class="cw-header"><button class="back" aria-label="ย้อนกลับ"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M12.5 4 6.5 10l6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span class="name">ร้านสมใจ คอฟฟี่</span></div>
+<div class="body">
+<div class="card" style="display:flex;gap:1.2rem;align-items:center"><div class="skel" style="width:64px;height:64px;border-radius:8px"></div><div style="flex:1"><b>ลาเต้เย็น</b><p class="note-plain">นมสดกับเอสเพรสโซ่ 2 ช็อต</p></div><b class="num">฿65</b></div>
+<div class="card" style="display:flex;gap:1.2rem;align-items:center"><div class="skel" style="width:64px;height:64px;border-radius:8px"></div><div style="flex:1"><b>อเมริกาโน่เย็น</b><p class="note-plain">คั่วกลาง</p></div><b class="num">฿55</b></div>
+<div class="card" style="display:flex;gap:1.2rem;align-items:center;opacity:.5"><div class="skel" style="width:64px;height:64px;border-radius:8px"></div><div style="flex:1"><b>มัทฉะลาเต้</b><p class="note-plain">หมดชั่วคราว</p></div><b class="num">฿70</b></div>
+</div>
+<div class="cw-cartbar"><span class="cw-sum">2 แก้ว · ฿110</span><button class="btn">ดูตะกร้า</button></div>
+</div><p class="note-plain" style="max-width:375px;margin-top:1.2rem">A thin header with the store name and a back control. The cart is the only persistent element. Nothing invites browsing.</p></div>
+
+<div><div class="tag">Owner console · 5-slot bottom nav</div><div class="phone">
+<div class="body" style="justify-content:flex-end">
+<div class="card"><p class="note-plain">ยอดขายวันนี้</p><div class="money money--revenue" style="font-size:var(--text-6)">฿3,240</div></div>
+<div class="card"><p class="note-plain">กำไรสุทธิวันนี้</p><div class="money money--unknown" style="font-size:var(--text-6)">—</div><p class="note-plain" style="margin-top:.6rem">ยังไม่ได้บันทึกต้นทุน จึงยังคำนวณกำไรไม่ได้</p></div>
+</div>
+<nav class="oc-nav">
+<button class="is-active"><span class="glyph"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 11 12 4l8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></span>หน้าหลัก</button>
+<button><span class="glyph"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M5 7h14l-1 12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 7a3 3 0 0 1 6 0" stroke="currentColor" stroke-width="1.7"/></svg></span><span class="oc-badge num">3</span>ออเดอร์</button>
+<button class="slot-sell"><span class="glyph"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M5 8h11a3 3 0 0 1 0 6h-.6M5 8l1.2 9.5A2 2 0 0 0 8.2 19h5.3a2 2 0 0 0 2-1.5L16 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span>ขายหน้าร้าน</button>
+<button><span class="glyph"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M5 19V9m5 10V5m5 14v-7m5 7V8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>รายงาน</button>
+<button><span class="glyph"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M12 3.5v2m0 13v2M3.5 12h2m13 0h2M6 6l1.4 1.4M16.6 16.6 18 18M18 6l-1.4 1.4M7.4 16.6 6 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>ตั้งค่า</button>
+</nav>
+</div><p class="note-plain" style="max-width:375px;margin-top:1.2rem">ขายหน้าร้าน takes the centre slot and lifts above the bar — it is the most frequent and most time-critical action. The ออเดอร์ badge persists until she opens the screen.</p></div>
+
+<div><div class="tag">Owner console · sidebar at 1280</div><div class="desknav"><div class="oc-side"><div class="wordmark">BrewLedger</div>
+<button class="is-active">หน้าหลัก</button><button>ออเดอร์ <span style="margin-left:auto"><span class="st st--cancelled num" style="padding:.1rem .8rem">3</span></span></button><button>ขายหน้าร้าน</button><button>รายงาน</button><button>ตั้งค่า</button></div></div></div>
+</div></section>
+
+<section><h2><span class="n">08</span>Component states</h2><p class="lede">Every interactive component ships all eight. Empty states are designed first, not last — a new shop sees them before it sees anything else.</p>
+<div class="states">
+<div class="statebox"><span class="tag">Default</span><button class="btn btn--primary">เริ่มทำ</button></div>
+<div class="statebox"><span class="tag">Press · scale .95</span><button class="btn btn--primary" style="transform:scale(.95)">เริ่มทำ</button></div>
+<div class="statebox"><span class="tag">Focus</span><button class="btn btn--primary" style="outline:2px solid var(--green-ledger);outline-offset:3px">เริ่มทำ</button></div>
+<div class="statebox"><span class="tag">Disabled</span><button class="btn btn--primary is-disabled">เริ่มทำ</button></div>
+<div class="statebox"><span class="tag">Loading</span><button class="btn btn--primary is-loading">เริ่มทำ</button></div>
+<div class="statebox"><span class="tag">Secondary / danger</span><div style="display:flex;gap:1rem;flex-wrap:wrap"><button class="btn btn--outline">แก้ไข</button><button class="btn btn--danger">ยกเลิกออเดอร์</button></div></div>
+<div class="statebox"><span class="tag">Input · default</span><div class="field" style="width:100%"><label>ชื่อผู้สั่ง</label><input class="input" placeholder="ชื่อที่ใช้เรียกรับเครื่องดื่ม"></div></div>
+<div class="statebox"><span class="tag">Input · valid</span><div class="field" style="width:100%"><label>เบอร์โทร</label><input class="input is-valid" value="081-234-5678"></div></div>
+<div class="statebox"><span class="tag">Input · error</span><div class="field" style="width:100%"><label>รหัสยืนยัน</label><input class="input is-error" value="123456"><span class="err">รหัสไม่ถูกต้อง กรุณาลองใหม่</span></div></div>
+<div class="statebox"><span class="tag">Loading skeleton</span><div style="width:100%;display:grid;gap:.8rem"><div class="skel" style="height:14px;width:60%"></div><div class="skel" style="height:14px;width:90%"></div><div class="skel" style="height:14px;width:40%"></div></div></div>
+<div class="statebox" style="grid-column:span 2"><span class="tag">Empty</span><div class="empty" style="width:100%"><div style="width:52px;height:52px;border-radius:var(--radius-circle);background:var(--green-mist)"></div><h4>ยังไม่มีออเดอร์วันนี้</h4><p class="note-plain">ลูกค้าสั่งผ่านลิงก์ร้านของคุณได้เลย</p><button class="btn btn--outline">ดูลิงก์ร้าน</button></div></div>
+</div></section>
+
+<section><h2><span class="n">09</span>Design system components, live</h2><p class="lede">Rendered from the Brewledger bundle — the console and customer surfaces compose from these rather than restyled markup.</p>
+<div id="ds-demo" class="card" style="display:flex;flex-wrap:wrap;gap:var(--space-3);align-items:center"></div></section>
+
+<section class="callout"><h3>Two rules that do not bend</h3>
+<p><b>Customer web never shows cost data.</b> No cost, profit, margin, expense, stock level, or store-wide total appears on any customer screen — including its loading and error states. The customer is a stranger holding a public link.</p>
+<p><b>An unknown value is an em dash.</b> <span class="big">—</span></p></section>
+</div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/_ds_bundle.js"></script>
+<script>
+(function(){var DS=window.BrewledgerDesignSystem_07c182||{},e=React.createElement,root=document.getElementById('ds-demo');
+var items=[];
+if(DS.Button){items.push(e(DS.Button,{key:'b1',variant:'primary'},'สั่งเลย'),e(DS.Button,{key:'b2',variant:'secondary'},'ดูเมนู'));}
+if(DS.Input){items.push(e('div',{key:'i',style:{minWidth:'240px'}},e(DS.Input,{label:'เบอร์โทร',placeholder:'08X-XXX-XXXX'})));}
+if(DS.Card){items.push(e(DS.Card,{key:'c'},e('b',null,'Card'),e('p',{className:'note-plain'},'พื้นผิวมาตรฐาน 12px radius')));}
+if(!items.length){root.innerHTML='<p class="note-plain">Design system bundle exposed no components.</p>';return;}
+ReactDOM.createRoot(root).render(e(React.Fragment,null,items));})();
+</script>
+</body></html>

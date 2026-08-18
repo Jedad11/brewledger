@@ -1,0 +1,15 @@
+:root{
+--green-ledger:#0b6b47;--green-brew:#14875a;--green-cask:#16302b;--green-sage:#3c5e54;--green-mist:#d7ecdf;
+--gold:#c9a15b;--gold-light:#ddc190;--gold-lightest:#faf6ec;
+--parchment:#f3f0ea;--ceramic:#eeebe6;--neutral-cool:#f8f8f7;--white:#ffffff;--black:#000000;
+--text-black:rgba(0,0,0,.87);--text-black-soft:rgba(0,0,0,.58);
+--text-white:rgba(255,255,255,1);--text-white-soft:rgba(255,255,255,.7);
+--rewards-slate:#33433d;
+--red:#c0281c;--red-tint:hsl(4 78% 43% / 6%);--yellow:#e0a728;
+--green-mist-tint:hsl(152 34% 87% / 33%);
+--input-border:#d6dbde;--hairline:#e7e7e7;
+--surface-page:var(--parchment);--surface-card:var(--white);--surface-utility:var(--ceramic);
+--brand-heading:var(--green-ledger);--brand-cta:var(--green-brew);--brand-band:var(--green-cask);
+--overlay-black-06:rgba(0,0,0,.06);--overlay-black-24:rgba(0,0,0,.24);--overlay-black-60:rgba(0,0,0,.6);
+--overlay-white-10:rgba(255,255,255,.1);--overlay-white-60:rgba(255,255,255,.6);--overlay-white-90:rgba(255,255,255,.9);
+}

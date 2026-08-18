@@ -1,0 +1,323 @@
+{
+  "plugins": [
+    "react",
+    "import"
+  ],
+  "rules": {
+    "react/forbid-elements": [
+      "warn",
+      {
+        "forbid": []
+      }
+    ],
+    "no-restricted-imports": [
+      "warn",
+      {
+        "patterns": [
+          {
+            "group": [
+              "components/actions/**",
+              "components/feedback/**",
+              "components/forms/**",
+              "components/navigation/**",
+              "components/surfaces/**",
+              "ui_kits/brewledger-web/**"
+            ],
+            "message": "Import design-system components from 'index.js', not component internals."
+          }
+        ]
+      }
+    ],
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "Literal[value=/#[0-9a-fA-F]{3,8}\\b/]",
+        "message": "Raw hex color — use a design-system color token via var()."
+      },
+      {
+        "selector": "Literal[value=/\\b\\d+px\\b/]",
+        "message": "Raw px value — use a design-system spacing token via var()."
+      },
+      {
+        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Manrope|Lora|Kalam))/i]",
+        "message": "Font not provided by the design system. Available: Manrope, Lora, Kalam."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='AccordionItem'] > JSXAttribute > JSXIdentifier[name!=/^(?:q|a|key|ref|className|style|children)$/]",
+        "message": "<AccordionItem> doesn't accept that prop. Declared props: q, a."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute > JSXIdentifier[name!=/^(?:variant|size|disabled|onClick|style|children|key|ref|className|style|children)$/]",
+        "message": "<Button> doesn't accept that prop. Declared props: variant, size, disabled, onClick, style, children."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute[name.name='variant'] > Literal[value!=/^(?:primary|outline|dark|dark-outline|inverted|outline-on-dark)$/]",
+        "message": "<Button> variant must be one of 'primary' | 'outline' | 'dark' | 'dark-outline' | 'inverted' | 'outline-on-dark'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:md|lg)$/]",
+        "message": "<Button> size must be one of 'md' | 'lg'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Card'] > JSXAttribute > JSXIdentifier[name!=/^(?:padding|style|children|key|ref|className|style|children)$/]",
+        "message": "<Card> doesn't accept that prop. Declared props: padding, style, children."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='FeatureBand'] > JSXAttribute > JSXIdentifier[name!=/^(?:heading|body|align|children|key|ref|className|style|children)$/]",
+        "message": "<FeatureBand> doesn't accept that prop. Declared props: heading, body, align, children."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='FeatureBand'] > JSXAttribute[name.name='align'] > Literal[value!=/^(?:left|right)$/]",
+        "message": "<FeatureBand> align must be one of 'left' | 'right'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='FloatingOrderButton'] > JSXAttribute > JSXIdentifier[name!=/^(?:size|key|ref|className|style|children)$/]",
+        "message": "<FloatingOrderButton> doesn't accept that prop. Declared props: size."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Input'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|value|defaultValue|onChange|state|type|key|ref|className|style|children)$/]",
+        "message": "<Input> doesn't accept that prop. Declared props: label, value, defaultValue, onChange, state, type."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Input'] > JSXAttribute[name.name='state'] > Literal[value!=/^(?:default|valid|invalid)$/]",
+        "message": "<Input> state must be one of 'default' | 'valid' | 'invalid'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='NavBar'] > JSXAttribute > JSXIdentifier[name!=/^(?:links|key|ref|className|style|children)$/]",
+        "message": "<NavBar> doesn't accept that prop. Declared props: links."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='RewardsPill'] > JSXAttribute > JSXIdentifier[name!=/^(?:stars|label|key|ref|className|style|children)$/]",
+        "message": "<RewardsPill> doesn't accept that prop. Declared props: stars, label."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='StatusPanel'] > JSXAttribute > JSXIdentifier[name!=/^(?:tier|benefits|key|ref|className|style|children)$/]",
+        "message": "<StatusPanel> doesn't accept that prop. Declared props: tier, benefits."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='StatusPanel'] > JSXAttribute[name.name='tier'] > Literal[value!=/^(?:bronze|silver|gold)$/]",
+        "message": "<StatusPanel> tier must be one of 'bronze' | 'silver' | 'gold'."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/index.js"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ],
+  "x-omelette": {
+    "components": {
+      "AccordionItem": {
+        "replaces": []
+      },
+      "Button": {
+        "replaces": []
+      },
+      "Card": {
+        "replaces": []
+      },
+      "FeatureBand": {
+        "replaces": []
+      },
+      "FloatingOrderButton": {
+        "replaces": []
+      },
+      "Input": {
+        "replaces": []
+      },
+      "NavBar": {
+        "replaces": []
+      },
+      "RewardsPill": {
+        "replaces": []
+      },
+      "StatusPanel": {
+        "replaces": []
+      }
+    },
+    "tokens": [
+      "--black",
+      "--brand-band",
+      "--brand-cta",
+      "--brand-heading",
+      "--ceramic",
+      "--col-lg",
+      "--col-md",
+      "--col-sm",
+      "--col-xl",
+      "--duration-fast",
+      "--duration-slow",
+      "--duration-standard",
+      "--ease-spring",
+      "--ease-standard",
+      "--font-sans",
+      "--font-script",
+      "--font-serif",
+      "--gold",
+      "--gold-light",
+      "--gold-lightest",
+      "--green-brew",
+      "--green-cask",
+      "--green-ledger",
+      "--green-mist",
+      "--green-mist-tint",
+      "--green-sage",
+      "--gutter-lg",
+      "--gutter-md",
+      "--gutter-sm",
+      "--hairline",
+      "--input-border",
+      "--lh-compact",
+      "--lh-normal",
+      "--neutral-cool",
+      "--overlay-black-06",
+      "--overlay-black-24",
+      "--overlay-black-60",
+      "--overlay-white-10",
+      "--overlay-white-60",
+      "--overlay-white-90",
+      "--parchment",
+      "--press-scale",
+      "--radius-card",
+      "--radius-circle",
+      "--radius-input",
+      "--radius-pill",
+      "--red",
+      "--red-tint",
+      "--rewards-slate",
+      "--shadow-card",
+      "--shadow-fab-ambient",
+      "--shadow-fab-ambient-active",
+      "--shadow-fab-base",
+      "--shadow-nav",
+      "--space-1",
+      "--space-2",
+      "--space-3",
+      "--space-4",
+      "--space-5",
+      "--space-6",
+      "--space-7",
+      "--space-8",
+      "--space-9",
+      "--surface-card",
+      "--surface-page",
+      "--surface-utility",
+      "--text-1",
+      "--text-10",
+      "--text-2",
+      "--text-3",
+      "--text-4",
+      "--text-5",
+      "--text-6",
+      "--text-7",
+      "--text-8",
+      "--text-9",
+      "--text-black",
+      "--text-black-soft",
+      "--text-white",
+      "--text-white-soft",
+      "--tracking-loose",
+      "--tracking-looser",
+      "--tracking-normal",
+      "--white",
+      "--yellow"
+    ],
+    "tokenKinds": {
+      "--green-ledger": "color",
+      "--green-brew": "color",
+      "--green-cask": "color",
+      "--green-sage": "color",
+      "--green-mist": "color",
+      "--gold": "color",
+      "--gold-light": "color",
+      "--gold-lightest": "color",
+      "--parchment": "color",
+      "--ceramic": "color",
+      "--neutral-cool": "color",
+      "--white": "color",
+      "--black": "color",
+      "--text-black": "font",
+      "--text-black-soft": "font",
+      "--text-white": "font",
+      "--text-white-soft": "font",
+      "--rewards-slate": "color",
+      "--red": "color",
+      "--red-tint": "color",
+      "--yellow": "color",
+      "--green-mist-tint": "color",
+      "--input-border": "color",
+      "--hairline": "color",
+      "--surface-page": "color",
+      "--surface-card": "color",
+      "--surface-utility": "color",
+      "--brand-heading": "color",
+      "--brand-cta": "color",
+      "--brand-band": "color",
+      "--overlay-black-06": "color",
+      "--overlay-black-24": "color",
+      "--overlay-black-60": "color",
+      "--overlay-white-10": "color",
+      "--overlay-white-60": "color",
+      "--overlay-white-90": "color",
+      "--font-sans": "font",
+      "--font-serif": "font",
+      "--font-script": "font",
+      "--tracking-normal": "font",
+      "--tracking-loose": "font",
+      "--tracking-looser": "font",
+      "--lh-normal": "other",
+      "--lh-compact": "other",
+      "--text-1": "font",
+      "--text-2": "font",
+      "--text-3": "font",
+      "--text-4": "font",
+      "--text-5": "font",
+      "--text-6": "font",
+      "--text-7": "font",
+      "--text-8": "font",
+      "--text-9": "font",
+      "--text-10": "font",
+      "--space-1": "spacing",
+      "--space-2": "spacing",
+      "--space-3": "spacing",
+      "--space-4": "spacing",
+      "--space-5": "spacing",
+      "--space-6": "spacing",
+      "--space-7": "spacing",
+      "--space-8": "spacing",
+      "--space-9": "spacing",
+      "--gutter-sm": "spacing",
+      "--gutter-md": "spacing",
+      "--gutter-lg": "spacing",
+      "--col-sm": "spacing",
+      "--col-md": "spacing",
+      "--col-lg": "spacing",
+      "--col-xl": "spacing",
+      "--radius-card": "radius",
+      "--radius-pill": "radius",
+      "--radius-circle": "radius",
+      "--radius-input": "radius",
+      "--shadow-card": "shadow",
+      "--shadow-nav": "shadow",
+      "--shadow-fab-base": "shadow",
+      "--shadow-fab-ambient": "shadow",
+      "--shadow-fab-ambient-active": "shadow",
+      "--ease-standard": "other",
+      "--ease-spring": "other",
+      "--duration-fast": "other",
+      "--duration-standard": "other",
+      "--duration-slow": "other",
+      "--press-scale": "other"
+    },
+    "fontFamilies": [
+      "Kalam",
+      "Lora",
+      "Manrope"
+    ]
+  }
+}

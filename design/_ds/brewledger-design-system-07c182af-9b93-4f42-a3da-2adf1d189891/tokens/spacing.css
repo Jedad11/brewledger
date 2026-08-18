@@ -1,0 +1,7 @@
+:root{
+font-size:62.5%;
+--space-1:.4rem;--space-2:.8rem;--space-3:1.6rem;--space-4:2.4rem;--space-5:3.2rem;
+--space-6:4rem;--space-7:4.8rem;--space-8:5.6rem;--space-9:6.4rem;
+--gutter-sm:1.6rem;--gutter-md:2.4rem;--gutter-lg:4rem;
+--col-sm:343px;--col-md:500px;--col-lg:720px;--col-xl:1440px;
+}

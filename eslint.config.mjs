@@ -1,5 +1,6 @@
 // Root-level lint pass: enforces the RL-3 import boundary (WBS 3.1).
-// apps/console and apps/api lint themselves with their own configs
+// apps/console lints itself with its own config.
+// apps/api (NestJS) is being removed — see MIGRATION_PLAN.md step 4.
 // (`pnpm --filter <app> lint`); this config only checks cross-app imports.
 //
 // The rule: apps/shop (Customer Web, public/unauthenticated) may never import
@@ -50,6 +51,12 @@ export default [
               from: "./apps/console",
               message:
                 "apps/shop (Customer Web) may never import apps/console (Owner Console) — RL-3.",
+            },
+            {
+              target: "./apps/shop",
+              from: "./packages/costing",
+              message:
+                "apps/shop (Customer Web) may never import packages/costing — cost, margin and BOM logic is merchant-only. RL-3.",
             },
             {
               target: "./apps/shop",

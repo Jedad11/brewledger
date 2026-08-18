@@ -11,9 +11,11 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2"
+    "@supabase/supabase-js": "^2",
+    "zod": "^3"
   },
   "devDependencies": {
+    "@brewledger/db": "workspace:*",
     "typescript": "^5",
     "vitest": "^4.1.10"
   }

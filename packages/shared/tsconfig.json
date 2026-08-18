@@ -2,7 +2,13 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    // WBS 3.8: packages/shared/src/storage/compress.ts runs client-side and
+    // uses Image/document/canvas/URL.createObjectURL — real browser-only
+    // globals with no Node equivalent. This package already ships into the
+    // apps/shop and apps/console browser bundles (see supabase/client.ts),
+    // so DOM lib types belong here, not just for this one file.
+    "lib": ["ES2022", "DOM"]
   },
   "include": ["src"]
 }

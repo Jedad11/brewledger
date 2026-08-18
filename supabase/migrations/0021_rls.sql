@@ -10,6 +10,33 @@
 -- and §2.2 first — both omissions are deliberate.
 -- ============================================================================
 
+-- SECTION 0: PostgREST role grants
+--
+-- A hosted Supabase project's own bootstrap already grants anon/authenticated/
+-- service_role broad table-level privileges in schema public (verified: the
+-- engineer leg's ad hoc curl tests against the real linked brewledger-dev
+-- project returned correctly-filtered [] results, not 42501 permission
+-- errors). A fresh LOCAL `supabase start` does not reproduce that bootstrap
+-- and `supabase/config.toml`'s `auto_expose_new_tables` does not default to
+-- exposing new tables on this CLI version, so every PostgREST request 42501s
+-- regardless of RLS -- found by qa_engineer's adversarial suite failing 42/51
+-- assertions on permission-denied rather than a real filtering defect.
+--
+-- This is SAFE to grant broadly: every table below has RLS enabled (SECTION
+-- 1) with an explicit deny-by-default policy set (or no policy at all, e.g.
+-- job_queue/menu_categories per §2.1/§2.2) -- a GRANT only permits the
+-- *attempt*; RLS decides which rows, if any, are actually visible. This
+-- mirrors Supabase's own hosted-project convention rather than depending on
+-- an implicit, CLI-version-dependent local-only toggle, so local and hosted
+-- behave identically.
+grant usage on schema public to anon, authenticated, service_role;
+grant all on all tables in schema public to anon, authenticated, service_role;
+grant all on all sequences in schema public to anon, authenticated, service_role;
+grant execute on all functions in schema public to anon, authenticated, service_role;
+alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+alter default privileges in schema public grant execute on functions to anon, authenticated, service_role;
+
 -- SECTION 1: enable RLS on every table (§1)
 
 alter table merchants            enable row level security;

@@ -1,6 +1,7 @@
 // Root-level lint pass: enforces the RL-3 import boundary (WBS 3.1).
 // apps/console lints itself with its own config.
-// apps/api (NestJS) is being removed — see MIGRATION_PLAN.md step 4.
+// apps/api (NestJS) was removed in WBS 3.7 — its only endpoint (a health
+// check wired to Prisma) had no target in the Edge Function/worker split.
 // (`pnpm --filter <app> lint`); this config only checks cross-app imports.
 //
 // The rule: apps/shop (Customer Web, public/unauthenticated) may never import

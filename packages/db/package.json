@@ -5,10 +5,11 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.tests.json",
     "lint": "echo \"(no lint configured for @brewledger/db)\"",
     "build": "tsc -p tsconfig.json",
-    "prisma:generate": "prisma generate"
+    "prisma:generate": "prisma generate",
+    "test": "vitest run"
   },
   "prisma": {
     "seed": "ts-node --transpile-only seed.ts"
@@ -18,8 +19,11 @@
   },
   "devDependencies": {
     "@types/node": "^22",
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.0",
     "prisma": "^6.3.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }

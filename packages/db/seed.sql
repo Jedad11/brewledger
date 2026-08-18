@@ -19,14 +19,22 @@ declare
   v_slot_start timestamptz;
   v_bangkok_day timestamp := current_date::timestamp;
 begin
+  -- confirmation_token/recovery_token/email_change_token_new default to NULL
+  -- when omitted, but GoTrue's Go client scans them into non-nullable string
+  -- fields -- a NULL here makes auth.getUser() 500 for this user via any
+  -- console-* Edge Function's auth guard. Set to '' explicitly (a known
+  -- gotcha when inserting into auth.users directly via SQL instead of
+  -- through the Auth API). Found by WBS 3.7 qa_engineer's auth guard tests.
   insert into auth.users (
     instance_id, id, aud, role, email, encrypted_password,
     email_confirmed_at, phone, phone_confirmed_at,
+    confirmation_token, recovery_token, email_change_token_new,
     raw_app_meta_data, raw_user_meta_data, created_at, updated_at
   ) values (
     '00000000-0000-0000-0000-000000000000', v_auth_user_id, 'authenticated', 'authenticated',
     'demo-merchant@brewledger.app', crypt('brewledger-demo', gen_salt('bf')),
     now(), '+66811111111', now(),
+    '', '', '',
     '{"provider":"phone","providers":["phone"]}'::jsonb, '{}'::jsonb, now(), now()
   );
 

@@ -32,7 +32,7 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-      - name: Install postgresql-client
+      - name: Install postgresql-client (psql only -- pg_dump comes from the Supabase CLI below)
         run: |
           sudo apt-get update
           sudo apt-get install -y postgresql-client
@@ -53,13 +53,24 @@ jobs:
       - name: pg_dump prod (schema + data, --no-owner)
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           set -euo pipefail
           if [ -z "${SUPABASE_DB_URL:-}" ]; then
             echo "SUPABASE_DB_URL secret is not set — cannot back up. Failing loudly."
             exit 1
           fi
-          pg_dump "$SUPABASE_DB_URL" --no-owner --format=plain --file=dump.sql
+          # Use the Supabase CLI's own bundled pg_dump rather than the
+          # ubuntu-latest runner's system postgresql-client (16.x apt
+          # package) -- pg_dump refuses to run against a NEWER major-version
+          # server than itself, and Supabase Postgres is on 17.x. The CLI
+          # ships a version-matched pg_dump internally, sidestepping the
+          # apt-pin problem entirely. `db dump` is schema-only by default,
+          # so schema and data are dumped separately and concatenated to get
+          # the same "schema + data, one file" shape --no-owner pg_dump gave.
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f schema.sql
+          supabase db dump --db-url "$SUPABASE_DB_URL" --data-only -f data.sql
+          cat schema.sql data.sql > dump.sql
           gzip -9 dump.sql
           mv dump.sql.gz "${{ steps.names.outputs.dump_name }}"
 

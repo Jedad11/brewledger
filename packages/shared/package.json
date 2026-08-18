@@ -9,6 +9,9 @@
     "lint": "echo \"(no lint configured for @brewledger/shared)\"",
     "build": "tsc -p tsconfig.json"
   },
+  "dependencies": {
+    "@supabase/supabase-js": "^2"
+  },
   "devDependencies": {
     "typescript": "^5"
   }

@@ -1,6 +1,10 @@
 packages:
   - "apps/*"
   - "packages/*"
+  # WBS 3.7 qa_engineer leg: Node/vitest tests for the Edge Functions surface
+  # (response snapshots, auth-guard probe) — not itself a Deno function, kept
+  # as its own workspace package so it gets a normal `pnpm --filter ... test`.
+  - "supabase/functions/_tests"
 
 ignoredBuiltDependencies:
   - sharp

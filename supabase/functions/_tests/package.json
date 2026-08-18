@@ -1,0 +1,19 @@
+{
+  "name": "@brewledger/functions-tests",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WBS 3.7 qa_engineer leg: HTTP-level tests for the public-* Edge Functions surface and the console-* auth guard, run against a real local `supabase start` + `supabase functions serve` stack. Not a deployable Deno function itself, hence its own Node/vitest workspace package instead of living under a Deno tsconfig root.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "echo \"(no lint configured for @brewledger/functions-tests — supabase/functions/eslint.config.mjs's public-*/console-* zones don't match this directory by design)\"",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "^2",
+    "@types/node": "^22",
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.0",
+    "typescript": "^5",
+    "vitest": "^4.1.10"
+  }
+}

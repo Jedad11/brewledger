@@ -1,0 +1,10 @@
+{
+  "id": "<uuid>",
+  "slug": "demo-cafe",
+  "name": "Demo Cafe",
+  "pickupAddress": "123 Sukhumvit Rd, Bangkok",
+  "timezone": "Asia/Bangkok",
+  "opensAt": "07:00:00",
+  "closesAt": "18:00:00",
+  "promptpayId": "0811111111"
+}

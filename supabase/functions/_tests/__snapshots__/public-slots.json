@@ -1,0 +1,3 @@
+[
+  { "id": "<uuid>", "slotStart": "<timestamptz>", "slotEnd": "<timestamptz>", "remaining": 3 }
+]

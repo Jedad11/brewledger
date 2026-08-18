@@ -1,0 +1,49 @@
+{
+  "categories": [
+    { "id": "<uuid>", "name": "Coffee", "sortOrder": 0 }
+  ],
+  "items": [
+    {
+      "id": "<uuid>",
+      "categoryId": "<uuid>",
+      "name": "Latte",
+      "description": "Espresso with steamed milk",
+      "imageUrl": null,
+      "priceSatang": 6500,
+      "availability": "available",
+      "sortOrder": 0
+    },
+    {
+      "id": "<uuid>",
+      "categoryId": "<uuid>",
+      "name": "Americano",
+      "description": "Espresso with hot water",
+      "imageUrl": null,
+      "priceSatang": 5500,
+      "availability": "available",
+      "sortOrder": 1
+    },
+    {
+      "id": "<uuid>",
+      "categoryId": "<uuid>",
+      "name": "Cappuccino",
+      "description": "Espresso with foamed milk",
+      "imageUrl": null,
+      "priceSatang": 6500,
+      "availability": "available",
+      "sortOrder": 2
+    },
+    {
+      "id": "<uuid>",
+      "categoryId": "<uuid>",
+      "name": "Butter Cookie",
+      "description": "Baked in-house",
+      "imageUrl": null,
+      "priceSatang": 4500,
+      "availability": "available",
+      "sortOrder": 3
+    }
+  ],
+  "optionGroups": [],
+  "options": []
+}

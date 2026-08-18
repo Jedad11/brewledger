@@ -8,6 +8,7 @@
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "lint:boundary": "eslint . -c eslint.config.mjs",
+    "lint:functions": "eslint supabase/functions -c supabase/functions/eslint.config.mjs",
     "lint:adherence": "node scripts/lint-adherence.mjs",
     "typecheck": "pnpm -r typecheck",
     "db:migrate": "pnpm --filter @brewledger/db exec prisma migrate dev",

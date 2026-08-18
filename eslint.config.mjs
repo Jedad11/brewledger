@@ -14,6 +14,10 @@
 // workspace is scaffolded — until then this config has nothing to check.
 import importPlugin from "eslint-plugin-import";
 import tseslint from "typescript-eslint";
+import { fileURLToPath } from "node:url";
+import localRules from "./eslint-rules/index.cjs";
+
+const rootDir = fileURLToPath(new URL(".", import.meta.url));
 
 const importResolverSettings = {
   // eslint-plugin-import's default node resolver only tries .js/.json —
@@ -76,6 +80,26 @@ export default [
           ],
         },
       ],
+    },
+  },
+  {
+    // Anti-spread backstop (WBS 3.7, docs/api/surfaces_design.md §4) — a
+    // separate block because it needs type-checked parserOptions.project,
+    // which the plain import-boundary rule above does not. apps/shop has no
+    // tsconfig yet (not scaffolded), so this glob matches nothing today and
+    // activates automatically once the workspace exists, same as the zones
+    // above.
+    files: ["apps/shop/**/*.{ts,tsx}"],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        project: true,
+        tsconfigRootDir: rootDir,
+      },
+    },
+    plugins: { local: localRules },
+    rules: {
+      "local/no-db-row-spread": "error",
     },
   },
   {

@@ -4,6 +4,11 @@
 // not something to unify away.
 import { z } from "zod";
 
+// This package is isomorphic (Node worker, Deno Edge Function, and — via
+// the barrel — apps/console) and carries no "dom"/"node" lib, so `console`
+// isn't ambient here the way `admin.ts` handles `window` the same way.
+declare const console: { error(...args: unknown[]): void };
+
 export const publicStoreSchema = z.object({
   id: z.string().uuid(),
   slug: z.string(),

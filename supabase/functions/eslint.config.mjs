@@ -37,7 +37,7 @@ export default [
         {
           zones: [
             {
-              target: "./supabase/functions/public-*",
+              target: "./supabase/functions/public-*/**",
               from: "./supabase/functions/_shared/console",
               message: "public-* may never import _shared/console/ — RL-3, WBS 3.7.",
             },
@@ -60,7 +60,7 @@ export default [
         {
           zones: [
             {
-              target: "./supabase/functions/console-*",
+              target: "./supabase/functions/console-*/**",
               from: "./supabase/functions/_shared/public",
               message: "console-* may never import _shared/public/ — keep the scopes disjoint, WBS 3.7.",
             },

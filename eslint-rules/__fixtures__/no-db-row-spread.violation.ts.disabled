@@ -1,0 +1,27 @@
+// Proof fixture for eslint-rules/no-db-row-spread.cjs — WBS 3.7 §4.
+// qa_engineer's CI step copies this to a real .ts path under
+// supabase/functions/public-store/ (so it is covered by that config's typed
+// parserOptions.project), runs `pnpm lint:functions`, asserts it fails with
+// the exact "RL-3 violation: build public DTOs field by field. See WBS 3.7."
+// message on BOTH cases below, then removes the copy. Never commit this
+// file under a real .ts extension — it exists only to prove the rule fires.
+// The relative import below assumes that plant location; adjust the "../"
+// count if planted elsewhere.
+import type { Database } from "../../../packages/db/src/types.ts";
+
+type StoreRow = Database["public"]["Tables"]["stores"]["Row"];
+
+declare const storeRow: StoreRow;
+
+// Case 1: direct-import-type path.
+const leak1 = { ...storeRow };
+
+interface CustomIngredientRow {
+  id: string;
+  current_unit_cost_satang: number;
+}
+
+declare const localRow: CustomIngredientRow;
+
+// Case 2: local /Row$/-suffix alias path, no import link to packages/db.
+const leak2 = { ...localRow };

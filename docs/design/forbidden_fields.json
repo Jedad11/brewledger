@@ -1,0 +1,15 @@
+{
+  "forbidden_substrings": [
+    "cost_satang", "current_unit_cost_satang", "unit_cost_snapshot_satang",
+    "total_cost_snapshot_satang",
+    "margin", "profit",
+    "expense", "other_expense_satang",
+    "stock", "booked_count", "capacity",
+    "cogs", "total_cogs_satang",
+    "merchant_id", "auth_user_id",
+    "payment_confirmed_by",
+    "promptpay_verified_at",
+    "ocr_status", "review_status",
+    "payload", "last_error"
+  ]
+}

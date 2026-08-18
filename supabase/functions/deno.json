@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "@brewledger/db/types": "../../packages/db/src/types.ts",
+    "zod": "npm:zod@3"
+  }
+}

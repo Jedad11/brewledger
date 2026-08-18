@@ -1,0 +1,125 @@
+name: Keep-alive (Supabase + Render)
+
+# WBS 3.10 — Free-Tier Survival Kit.
+# A Supabase Free project pauses after ~7 days of total inactivity and goes
+# OFFLINE until someone manually resumes it from the dashboard — for a live
+# store link that is a hard outage, not a slow page. Render's free worker
+# spins down after 15 minutes idle and pays a 30-60s cold start on the next
+# request. This workflow pings both on a schedule so neither ever goes 7 days
+# untouched, plus a dedicated morning run so the worker is already warm
+# before the day's first bill-scan job lands on it.
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # Every 6 hours — the Supabase keep-alive + general Render health check.
+    - cron: "0 */6 * * *"
+    # 23:00 UTC = 06:00 Asia/Bangkok — dedicated Render morning warm-up, timed
+    # so the cold start is paid by this job, not by the shop's first
+    # customer or the worker's first OCR job of the day.
+    - cron: "0 23 * * *"
+
+jobs:
+  keepalive:
+    # Runs on workflow_dispatch and on the every-6-hours cron. Excludes the
+    # 23:00 slot so that slot's dedicated job (below) is the only thing
+    # timing the morning warm-up — this job still incidentally also matches
+    # 0/6/12/18, never 23, per the cron expression above, so no `if` gate is
+    # needed here.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase (anon SELECT against published stores)
+        id: supabase_ping
+        env:
+          SUPABASE_URL: https://xeoaoabqmqutnsssneiq.supabase.co
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          # Trivial, always-cheap anon-readable query: the four anon SELECT
+          # policies from WBS 3.6 (supabase/migrations/0021_rls.sql) include
+          # "published stores" — this returns [] or rows, never 401/403,
+          # regardless of whether any store is actually published yet.
+          status=$(curl -s -o /tmp/supabase_ping_body.json -w "%{http_code}" \
+            "$SUPABASE_URL/rest/v1/stores?select=id&is_published=eq.true&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY")
+          echo "Supabase REST responded HTTP $status"
+          cat /tmp/supabase_ping_body.json || true
+          if [ "$status" != "200" ]; then
+            echo "supabase_failed=true" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+      - name: Ping Render worker /healthz
+        id: render_ping
+        if: always()
+        env:
+          RENDER_WORKER_URL: ${{ secrets.RENDER_WORKER_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RENDER_WORKER_URL:-}" ]; then
+            echo "RENDER_WORKER_URL secret not set yet — skipping Render ping."
+            echo "render_skipped=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          status=$(curl -s -o /tmp/render_ping_body.json -w "%{http_code}" \
+            --max-time 90 "$RENDER_WORKER_URL/healthz")
+          echo "Render /healthz responded HTTP $status"
+          cat /tmp/render_ping_body.json || true
+          if [ "$status" != "200" ]; then
+            echo "render_failed=true" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+      - name: Alert on failure
+        if: failure()
+        env:
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ALERT_WEBHOOK_URL:-}" ]; then
+            echo "ALERT_WEBHOOK_URL secret not set yet — cannot deliver alert. Failing loudly in the Actions log instead."
+            exit 0
+          fi
+          curl -s -X POST "$ALERT_WEBHOOK_URL" \
+            -H "content-type: application/json" \
+            -d "{\"content\": \"[Brew Ledger] keep-alive FAILED — Supabase or Render did not respond healthy. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"
+
+  morning-warmup:
+    # 23:00 UTC / 06:00 Asia/Bangkok only — pays the Render cold start ahead
+    # of the pilot shop's opening hours so the first bill scan of the day
+    # isn't the one that pays it.
+    if: github.event_name != 'schedule' || github.event.schedule == '0 23 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Warm up Render worker
+        env:
+          RENDER_WORKER_URL: ${{ secrets.RENDER_WORKER_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RENDER_WORKER_URL:-}" ]; then
+            echo "RENDER_WORKER_URL secret not set yet — skipping morning warm-up."
+            exit 0
+          fi
+          start=$(date +%s%N)
+          status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 "$RENDER_WORKER_URL/healthz")
+          end=$(date +%s%N)
+          elapsed_ms=$(( (end - start) / 1000000 ))
+          echo "Render /healthz responded HTTP $status in ${elapsed_ms}ms"
+          if [ "$status" != "200" ]; then
+            exit 1
+          fi
+
+      - name: Alert on failure
+        if: failure()
+        env:
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ALERT_WEBHOOK_URL:-}" ]; then
+            echo "ALERT_WEBHOOK_URL secret not set yet — cannot deliver alert."
+            exit 0
+          fi
+          curl -s -X POST "$ALERT_WEBHOOK_URL" \
+            -H "content-type: application/json" \
+            -d "{\"content\": \"[Brew Ledger] morning Render warm-up FAILED. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"

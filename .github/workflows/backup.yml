@@ -1,0 +1,114 @@
+name: Nightly backup
+
+# WBS 3.10 — Free-Tier Survival Kit.
+#
+# Supabase Free has NO automatic backups of any kind, and the data at risk
+# here is merchant financial records — orders, payments, purchase invoices,
+# the stock ledger. If the project is ever lost, corrupted, or a migration
+# goes wrong, this nightly dump (plus the restore drill a human must run at
+# least once, see /docs/ops/free_tier.md) is the only recovery path.
+#
+# The dump intentionally does NOT use `pg_dump --clean` — verified locally
+# (WBS 3.10 engineer leg, against `supabase start`) that `--clean`'s
+# `DROP POLICY IF EXISTS ... ON public.<table>` statements fail outright
+# against a target that has never had that table (a fresh scratch project),
+# because `IF EXISTS` on DROP POLICY only suppresses "policy not found", not
+# "relation not found". A plain dump restores fine when replayed with
+# scripts/restore-drill.mjs, which tolerates the handful of expected
+# "already exists" / "permission denied to change default privileges"
+# errors that come from replaying a schema dump onto an already-provisioned
+# Supabase database, and checks row counts instead of psql's exit code.
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # 18:00 UTC = 01:00 Asia/Bangkok — after close.
+    - cron: "0 18 * * *"
+
+env:
+  MANIFEST_TABLES: "orders order_items payments stock_ledger purchase_invoices daily_financials"
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install postgresql-client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Compute dump filenames
+        id: names
+        run: |
+          today=$(date -u +%Y-%m-%d)
+          echo "date=$today" >> "$GITHUB_OUTPUT"
+          echo "dump_name=brewledger-$today.sql.gz" >> "$GITHUB_OUTPUT"
+          echo "manifest_name=brewledger-$today.manifest.json" >> "$GITHUB_OUTPUT"
+
+      - name: pg_dump prod (schema + data, --no-owner)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_DB_URL:-}" ]; then
+            echo "SUPABASE_DB_URL secret is not set — cannot back up. Failing loudly."
+            exit 1
+          fi
+          pg_dump "$SUPABASE_DB_URL" --no-owner --format=plain --file=dump.sql
+          gzip -9 dump.sql
+          mv dump.sql.gz "${{ steps.names.outputs.dump_name }}"
+
+      - name: Write manifest (per-table row counts)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          {
+            echo "{"
+            echo "  \"generated_at\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\","
+            echo "  \"source\": \"brewledger-prod\","
+            echo "  \"tables\": {"
+            first=true
+            for table in $MANIFEST_TABLES; do
+              count=$(psql "$SUPABASE_DB_URL" -t -A -c "select count(*) from public.$table;")
+              if [ "$first" = true ]; then first=false; else echo ","; fi
+              printf '    "%s": %s' "$table" "$count"
+            done
+            echo ""
+            echo "  }"
+            echo "}"
+          } > "${{ steps.names.outputs.manifest_name }}"
+          cat "${{ steps.names.outputs.manifest_name }}"
+
+      - name: Upload dump artifact (90-day retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.names.outputs.dump_name }}
+          path: ${{ steps.names.outputs.dump_name }}
+          retention-days: 90
+
+      - name: Upload manifest artifact (90-day retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.names.outputs.manifest_name }}
+          path: ${{ steps.names.outputs.manifest_name }}
+          retention-days: 90
+
+      - name: Alert on failure
+        if: failure()
+        env:
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ALERT_WEBHOOK_URL:-}" ]; then
+            echo "ALERT_WEBHOOK_URL secret not set yet — cannot deliver alert. Failing loudly in the Actions log instead."
+            exit 0
+          fi
+          curl -s -X POST "$ALERT_WEBHOOK_URL" \
+            -H "content-type: application/json" \
+            -d "{\"content\": \"[Brew Ledger] nightly backup FAILED. This is merchant financial data with no automatic Supabase backup. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"

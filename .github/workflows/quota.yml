@@ -1,0 +1,68 @@
+name: Quota monitor
+
+# WBS 3.10 — Free-Tier Survival Kit.
+# Supabase Free fails hard at 402 once a quota is crossed, no graceful
+# degradation. This runs daily, reports database size / storage bytes per
+# bucket / row counts of the largest tables against thresholds (70% warn,
+# 85% alert — see scripts/check-quota.mjs for the exact constants and how to
+# override them), and posts a formatted summary to ALERT_WEBHOOK_URL on
+# every run so the team sees the trend, not only the breach.
+
+on:
+  workflow_dispatch:
+    inputs:
+      warn_threshold_pct:
+        description: "Override WARN_THRESHOLD_PCT (e.g. lower it to test alerting)"
+        required: false
+        default: ""
+      alert_threshold_pct:
+        description: "Override ALERT_THRESHOLD_PCT (e.g. lower it to test alerting)"
+        required: false
+        default: ""
+  schedule:
+    - cron: "0 3 * * *" # 10:00 Asia/Bangkok — daily, well clear of the 01:00 backup window
+
+jobs:
+  quota:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Persists quota-history.json across runs so check-quota.mjs can
+      # compute a real 7-day growth-rate projection instead of reporting
+      # "not enough history" forever. Cache key is stable (not tied to
+      # commit/run) so every run reads yesterday's history and overwrites it
+      # with today's — see actions/cache docs on updating an existing key.
+      - name: Restore quota history cache
+        uses: actions/cache@v4
+        with:
+          path: quota-history.json
+          key: quota-history-v1
+          restore-keys: |
+            quota-history-v1
+
+      - name: Check quota
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+          QUOTA_HISTORY_PATH: quota-history.json
+          WARN_THRESHOLD_PCT: ${{ github.event.inputs.warn_threshold_pct }}
+          ALERT_THRESHOLD_PCT: ${{ github.event.inputs.alert_threshold_pct }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_DB_URL:-}" ]; then
+            echo "SUPABASE_DB_URL secret is not set — cannot check quota. Failing loudly."
+            exit 1
+          fi
+          node scripts/check-quota.mjs

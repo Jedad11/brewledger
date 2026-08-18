@@ -2,6 +2,9 @@ import { createServer } from "node:http";
 import { pool } from "./db";
 import { log } from "./log";
 import { getQueueDepth, startPolling, stopPolling } from "./queue";
+import { flushSentry, initSentry } from "./sentry";
+
+initSentry();
 
 const PORT = Number(process.env.PORT ?? 10000);
 const startedAt = Date.now();
@@ -48,6 +51,7 @@ async function shutdown(signal: string): Promise<void> {
   server.close();
   await stopPolling();
   await pool.end();
+  await flushSentry();
   log.info("shutdown complete", { signal });
   process.exit(0);
 }

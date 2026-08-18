@@ -12,6 +12,8 @@
     "functions:serve": "supabase functions serve --import-map supabase/functions/deno.json",
     "lint:adherence": "node scripts/lint-adherence.mjs",
     "scan:forbidden-fields": "node scripts/scan-forbidden-fields.mjs",
+    "ops:check-quota": "node scripts/check-quota.mjs",
+    "ops:restore-drill": "node scripts/restore-drill.mjs",
     "test:lint-no-db-row-spread": "bash scripts/test-lint-no-db-row-spread-regression.sh",
     "test:functions-import-boundary": "bash scripts/test-functions-import-boundary-regression.sh",
     "typecheck": "pnpm -r typecheck",
@@ -31,6 +33,7 @@
     "eslint-plugin-import": "^2",
     "husky": "^9.1.7",
     "oxlint": "^1.78.0",
+    "pg": "^8.23.0",
     "typescript": "^5",
     "typescript-eslint": "^8"
   }

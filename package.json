@@ -22,12 +22,14 @@
     "db:diff": "supabase db diff",
     "db:types": "supabase gen types typescript --linked > packages/db/src/types.ts",
     "db:generate": "pnpm --filter @brewledger/db exec prisma generate",
-    "db:validate": "pnpm --filter @brewledger/db exec prisma validate"
+    "db:validate": "pnpm --filter @brewledger/db exec prisma validate",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@typescript-eslint/utils": "^8",
     "eslint": "^9",
     "eslint-plugin-import": "^2",
+    "husky": "^9.1.7",
     "oxlint": "^1.78.0",
     "typescript": "^5",
     "typescript-eslint": "^8"

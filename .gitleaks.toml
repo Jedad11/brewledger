@@ -1,0 +1,36 @@
+# Gitleaks config (WBS 3.9). Extends the default rule set — we do not want
+# to narrow detection, only to allow-list the documented variable NAMES in
+# .env.example files, which are not secrets, and the well-known local Supabase
+# CLI demo keys that ship with every `supabase start`.
+title = "brewledger gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known-safe matches: documented env var names, local Supabase CLI demo keys"
+
+# .env.example files across the monorepo document variable NAMES only —
+# see docs/security/keys.md and docs/security/secrets.md. No real value may
+# ever be committed here; this allowlist does not exempt a file from that
+# rule, it only stops the scanner flagging the names themselves.
+paths = [
+  '''(^|/)\.env\.example$''',
+]
+
+regexes = [
+  # The Supabase CLI's hardcoded local-dev-only demo JWTs (anon and
+  # service_role) for the "supabase-demo" issuer. These are published
+  # verbatim in the Supabase CLI source and every `supabase start` output —
+  # see supabase/config.toml and packages/db/tests/helpers/db.ts's own
+  # comment on the equivalent local DB credential. Real project keys have a
+  # different `iss` claim; only this exact issuer's demo tokens are exempted.
+  '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIi[A-Za-z0-9+/=_-]*''',
+  # The Supabase CLI's local-dev-only default Postgres password ("postgres")
+  # embedded in the well-known local connection string documented in
+  # packages/db/tests/helpers/db.ts and worker/.env.example. Not a secret —
+  # it is the CLI's own fixed default for 127.0.0.1:54322, never a hosted
+  # project's credential.
+  '''postgresql://postgres:postgres@127\.0\.0\.1:54322/postgres''',
+  '''postgresql://postgres:postgres@localhost:5432/brewledger''',
+]

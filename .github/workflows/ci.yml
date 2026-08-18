@@ -15,6 +15,15 @@ jobs:
       DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/brewledger?schema=public"
     steps:
       - uses: actions/checkout@v4
+        with:
+          # gitleaks scans full history (WBS 3.9), not just this diff — a
+          # shallow checkout would only let it see the most recent commit.
+          fetch-depth: 0
+
+      - name: Secret scan (gitleaks, full history)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_CONFIG: .gitleaks.toml
 
       - uses: pnpm/action-setup@v4
         with:

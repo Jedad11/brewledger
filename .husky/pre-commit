@@ -1,0 +1,8 @@
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --redact --config .gitleaks.toml -v
+else
+  echo "WBS 3.9: gitleaks not found on PATH -- skipping local secret scan." >&2
+  echo "Install it (https://github.com/gitleaks/gitleaks#installing) so this" >&2
+  echo "hook can catch a secret before it leaves your machine. CI still runs" >&2
+  echo "the full-history scan on every push regardless." >&2
+fi

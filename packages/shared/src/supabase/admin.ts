@@ -12,7 +12,11 @@ if (typeof (globalThis as { window?: unknown }).window !== "undefined") {
   );
 }
 
-// TODO(WBS 3.5): replace with generated packages/db/src/types.ts once it exists.
+// TODO: packages/db/src/types.ts now exists (WBS 3.5), but packages/db still
+// depends on @prisma/client (Node-only). Wire this to the real Database type
+// via a type-only subpath export from packages/db once that package no
+// longer pulls Prisma into anything a browser bundle could reach — don't
+// add a runtime dependency on packages/db to this file in the meantime.
 type Database = Record<string, unknown>;
 
 export function createAdminClient(

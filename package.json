@@ -16,7 +16,7 @@
     "db:reset": "supabase db reset",
     "db:push": "supabase db push",
     "db:diff": "supabase db diff",
-    "db:types": "supabase gen types typescript --local > packages/db/src/types.ts",
+    "db:types": "supabase gen types typescript --linked > packages/db/src/types.ts",
     "db:generate": "pnpm --filter @brewledger/db exec prisma generate",
     "db:validate": "pnpm --filter @brewledger/db exec prisma validate"
   },

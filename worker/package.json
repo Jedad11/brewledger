@@ -1,0 +1,23 @@
+{
+  "name": "@brewledger/worker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo \"(no lint configured for @brewledger/worker)\""
+  },
+  "dependencies": {
+    "@brewledger/shared": "workspace:*",
+    "@supabase/supabase-js": "^2",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4",
+    "typescript": "^5"
+  }
+}

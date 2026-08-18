@@ -1,0 +1,143 @@
+import { randomUUID } from "node:crypto";
+import { pool } from "./db";
+import { getHandler } from "./handlers";
+import type { Job } from "./handlers/types";
+import { log } from "./log";
+
+const POLL_INTERVAL_MS = 30_000;
+const MAX_ATTEMPTS = 5;
+const BASE_BACKOFF_SECONDS = 30;
+
+export const workerId = `${process.env.RENDER_INSTANCE_ID ?? "local"}-${randomUUID().slice(0, 8)}`;
+
+let stopping = false;
+let inFlight: Promise<void> | null = null;
+let timer: ReturnType<typeof setTimeout> | null = null;
+let lastKnownQueueDepth = 0;
+
+// Only known status atomically claimed by FOR UPDATE SKIP LOCKED — two
+// worker instances can never claim the same row. Do not replace this with
+// a read-then-write ("optimistic") pattern; see WBS 3.3.
+async function claimJob(): Promise<Job | null> {
+  const { rows } = await pool.query<Job & { status: string }>(
+    `UPDATE job_queue SET status='processing', attempts=attempts+1,
+            claimed_at=now(), claimed_by=$1
+     WHERE id = (
+       SELECT id FROM job_queue
+       WHERE status='pending' AND (run_after IS NULL OR run_after <= now())
+       ORDER BY created_at
+       FOR UPDATE SKIP LOCKED
+       LIMIT 1
+     )
+     RETURNING id, store_id, job_type, payload, attempts`,
+    [workerId],
+  );
+  return rows[0] ?? null;
+}
+
+function backoffSeconds(attempts: number): number {
+  return Math.min(BASE_BACKOFF_SECONDS * 2 ** (attempts - 1), 3600);
+}
+
+async function markDone(jobId: string): Promise<void> {
+  await pool.query(
+    `UPDATE job_queue SET status='done', processed_at=now() WHERE id=$1`,
+    [jobId],
+  );
+}
+
+async function markFailed(job: Job, error: unknown): Promise<void> {
+  const message = error instanceof Error ? error.message : String(error);
+  if (job.attempts < MAX_ATTEMPTS) {
+    const delay = backoffSeconds(job.attempts);
+    await pool.query(
+      `UPDATE job_queue
+       SET status='pending', last_error=$2, run_after=now() + ($3 || ' seconds')::interval
+       WHERE id=$1`,
+      [job.id, message, String(delay)],
+    );
+  } else {
+    await pool.query(
+      `UPDATE job_queue SET status='failed', last_error=$2, processed_at=now() WHERE id=$1`,
+      [job.id, message],
+    );
+  }
+}
+
+async function processOne(): Promise<boolean> {
+  const job = await claimJob();
+  if (!job) return false;
+
+  const handler = getHandler(job.job_type);
+  if (!handler) {
+    log.error("no handler registered for job_type", { job_id: job.id, job_type: job.job_type });
+    await markFailed(job, new Error(`no handler registered for job_type '${job.job_type}'`));
+    return true;
+  }
+
+  try {
+    log.info("job claimed", { job_id: job.id, job_type: job.job_type, attempts: job.attempts });
+    await handler(job);
+    await markDone(job.id);
+    log.info("job done", { job_id: job.id, job_type: job.job_type });
+  } catch (err) {
+    log.error("job failed", {
+      job_id: job.id,
+      job_type: job.job_type,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    await markFailed(job, err);
+  }
+  return true;
+}
+
+async function tick(): Promise<void> {
+  if (stopping) return;
+  const work = (async () => {
+    try {
+      // Drain everything currently pending before sleeping again, instead of
+      // claiming exactly one job per 30s tick.
+      while (!stopping && (await processOne())) {
+        /* keep draining */
+      }
+    } catch (err) {
+      log.error("poller tick error", { error: err instanceof Error ? err.message : String(err) });
+    }
+  })();
+  inFlight = work;
+  await work;
+  inFlight = null;
+  if (!stopping) {
+    timer = setTimeout(tick, POLL_INTERVAL_MS);
+  }
+}
+
+export function startPolling(): void {
+  log.info("poller started", { worker_id: workerId, interval_ms: POLL_INTERVAL_MS });
+  void tick();
+}
+
+// Stops claiming new jobs and waits for the current in-flight job to finish.
+// Render sends SIGTERM on deploy and on spin-down — this is what keeps a job
+// from being abandoned mid-processing.
+export async function stopPolling(): Promise<void> {
+  stopping = true;
+  if (timer) clearTimeout(timer);
+  if (inFlight) {
+    log.info("waiting for in-flight job to finish before shutdown");
+    await inFlight;
+  }
+  log.info("poller stopped", { worker_id: workerId });
+}
+
+export async function getQueueDepth(): Promise<number> {
+  try {
+    const { rows } = await pool.query<{ count: string }>(
+      `SELECT count(*)::text AS count FROM job_queue WHERE status='pending' AND (run_after IS NULL OR run_after <= now())`,
+    );
+    lastKnownQueueDepth = Number(rows[0]?.count ?? 0);
+  } catch (err) {
+    log.error("queue depth check failed", { error: err instanceof Error ? err.message : String(err) });
+  }
+  return lastKnownQueueDepth;
+}

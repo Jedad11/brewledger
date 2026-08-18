@@ -75,11 +75,14 @@ export function loadBrowserConfig(
 // --- edge (supabase/functions/*, Deno) --------------------------------------
 // SUPABASE_SERVICE_ROLE_KEY bypasses RLS entirely (RL-3) — Edge Functions are
 // one of exactly two legitimate holders (the other is the Render worker).
-// VAPID_PRIVATE_KEY is documented at WBS 5.8 (Web Push).
+// VAPID_PRIVATE_KEY is documented at WBS 5.8 (Web Push) — that feature isn't
+// built yet, nothing reads this value today. Optional for now so requiring it
+// doesn't take down every OTHER already-shipped feature on this runtime; make
+// it required (nonEmpty) when WBS 5.8 lands and something actually consumes it.
 export const edgeConfigSchema = z.object({
   SUPABASE_URL: nonEmpty("SUPABASE_URL"),
   SUPABASE_SERVICE_ROLE_KEY: nonEmpty("SUPABASE_SERVICE_ROLE_KEY"),
-  VAPID_PRIVATE_KEY: nonEmpty("VAPID_PRIVATE_KEY"),
+  VAPID_PRIVATE_KEY: z.string().min(1).optional(),
 });
 export type EdgeConfig = z.infer<typeof edgeConfigSchema>;
 
@@ -94,10 +97,15 @@ export function loadEdgeConfig(
 // --- worker (worker/, Node on Render) ---------------------------------------
 // The edge set plus DATABASE_URL (direct Postgres, for FOR UPDATE SKIP
 // LOCKED job claims that PostgREST cannot express — see worker/src/db.ts)
-// and FLOAT16_API_KEY (Typhoon OCR, documented at WBS 6.2).
+// and FLOAT16_API_KEY (Typhoon OCR, documented at WBS 6.2). FLOAT16_API_KEY
+// is optional for the same reason VAPID_PRIVATE_KEY is above: the ocr_extract
+// handler is still a stub (WBS 6.2 not built), nothing reads this value yet,
+// and the poller/job-queue/handler-registry machinery this worker already
+// ships must not be blocked at startup by a secret an unbuilt feature needs.
+// Make it required once WBS 6.2's real handler lands and consumes it.
 export const workerConfigSchema = edgeConfigSchema.extend({
   DATABASE_URL: nonEmpty("DATABASE_URL"),
-  FLOAT16_API_KEY: nonEmpty("FLOAT16_API_KEY"),
+  FLOAT16_API_KEY: z.string().min(1).optional(),
 });
 export type WorkerConfig = z.infer<typeof workerConfigSchema>;
 

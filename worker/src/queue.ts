@@ -35,6 +35,17 @@ async function claimJob(): Promise<Job | null> {
   return rows[0] ?? null;
 }
 
+// AggregateError (thrown by Node's happy-eyeballs dual-stack connect when
+// every attempt fails, e.g. an IPv6-only host from a v4-only egress) has
+// `.message === ""` at the top level — the real reason lives in `.errors`.
+// Without this, every DB-unreachable failure logs as an unhelpful `{"error":""}`.
+function describeError(err: unknown): string {
+  if (err instanceof AggregateError) {
+    return err.errors.map((e) => (e instanceof Error ? e.message : String(e))).join("; ");
+  }
+  return err instanceof Error ? err.message : String(err);
+}
+
 function backoffSeconds(attempts: number): number {
   return Math.min(BASE_BACKOFF_SECONDS * 2 ** (attempts - 1), 3600);
 }
@@ -47,7 +58,7 @@ async function markDone(jobId: string): Promise<void> {
 }
 
 async function markFailed(job: Job, error: unknown): Promise<void> {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = describeError(error);
   if (job.attempts < MAX_ATTEMPTS) {
     const delay = backoffSeconds(job.attempts);
     await pool.query(
@@ -84,7 +95,7 @@ async function processOne(): Promise<boolean> {
     log.error("job failed", {
       job_id: job.id,
       job_type: job.job_type,
-      error: err instanceof Error ? err.message : String(err),
+      error: describeError(err),
     });
     await markFailed(job, err);
   }
@@ -101,7 +112,7 @@ async function tick(): Promise<void> {
         /* keep draining */
       }
     } catch (err) {
-      log.error("poller tick error", { error: err instanceof Error ? err.message : String(err) });
+      log.error("poller tick error", { error: describeError(err) });
     }
   })();
   inFlight = work;
@@ -137,7 +148,7 @@ export async function getQueueDepth(): Promise<number> {
     );
     lastKnownQueueDepth = Number(rows[0]?.count ?? 0);
   } catch (err) {
-    log.error("queue depth check failed", { error: err instanceof Error ? err.message : String(err) });
+    log.error("queue depth check failed", { error: describeError(err) });
   }
   return lastKnownQueueDepth;
 }

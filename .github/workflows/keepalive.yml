@@ -31,7 +31,13 @@ jobs:
       - name: Ping Supabase (anon SELECT against published stores)
         id: supabase_ping
         env:
-          SUPABASE_URL: https://xeoaoabqmqutnsssneiq.supabase.co
+          # Must be the PROD project — that's the one at risk of a 7-day
+          # inactivity pause once real customers depend on it, and the only
+          # one WBS 3.10's other secrets (SUPABASE_PROJECT_REF, SUPABASE_DB_URL)
+          # already point at. Derived from SUPABASE_PROJECT_REF rather than a
+          # separate hardcoded/secret URL so there's exactly one place this
+          # workflow's "which project" answer can drift from the others.
+          SUPABASE_URL: https://${{ secrets.SUPABASE_PROJECT_REF }}.supabase.co
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           set -euo pipefail

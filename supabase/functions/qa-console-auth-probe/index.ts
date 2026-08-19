@@ -22,10 +22,33 @@
 // zone — this file is test scaffolding, not a real console-* surface, and
 // should not be held to, or credited with covering, that zone's
 // _shared/public/ import ban).
-import { withConsoleAuth } from "../_shared/console/auth.ts";
+//
+// WBS 4.2 extension: also accepts an optional store_id (JSON body or ?query)
+// and, if present, runs it through assertOwnedStore. Still zero business
+// logic of its own -- this exists only so tenant_isolation.test.ts (qa_engineer,
+// WBS 4.2) has a real endpoint to drive the store-ownership assertion against,
+// the same reason this file exists at all for the 401 guard (see header above).
+import { assertOwnedStore, withConsoleAuth } from "../_shared/console/auth.ts";
+
+async function readStoreId(req: Request): Promise<string | null> {
+  const fromQuery = new URL(req.url).searchParams.get("store_id");
+  if (fromQuery) return fromQuery;
+
+  if (req.method === "GET" || req.method === "HEAD") return null;
+  try {
+    const body = await req.clone().json();
+    return typeof body?.store_id === "string" ? body.store_id : null;
+  } catch {
+    return null; // no/invalid JSON body -- treat as "no store_id supplied"
+  }
+}
 
 Deno.serve(
-  withConsoleAuth(async (_req, ctx) => {
+  withConsoleAuth(async (req, ctx) => {
+    const storeId = await readStoreId(req);
+    if (storeId) {
+      assertOwnedStore(ctx, storeId); // throws ForbiddenStoreError -> 403, caught by withConsoleAuth
+    }
     return new Response(JSON.stringify({ ok: true, merchantId: ctx.merchantId }), {
       status: 200,
       headers: { "Content-Type": "application/json" },

@@ -7,5 +7,27 @@
     "types": ["node", "vitest/globals"]
   },
   "include": ["**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    // console_auth_scoping.test.ts imports _shared/console/auth.ts directly
+    // (a Deno Edge Runtime source file: "npm:" specifiers, an ambient `Deno`
+    // global) to unit-test assertOwnedStore/ForbiddenStoreError against the
+    // real production implementation. Vitest runs it correctly today (its
+    // esbuild transform strips types without needing tsc's own program, and
+    // this package's vitest.config.mts aliases the one Deno-only specifier
+    // to the plain npm package already in devDependencies) -- proven by a
+    // real, passing `pnpm --filter @brewledger/functions-tests test` run.
+    // tsc's own type-checking program has no equivalent alias mechanism and
+    // no Deno global typings, so it cannot resolve that import at all; a
+    // wildcard ambient `declare module` shim (this package's existing
+    // pattern for the plain-JS scan-forbidden-fields.mjs/check-shop-has-no-
+    // auth.mjs scripts) does not help here because TS resolves a relative
+    // .ts specifier straight to the real file, never falling back to the
+    // ambient declaration the way it does for an unparseable .mjs. Excluding
+    // this one file from `tsc --noEmit` is therefore the only way to keep
+    // this package's static gate green without touching _shared/console/
+    // auth.ts (out of qa_engineer's scope) -- it does not weaken coverage of
+    // the file's OWN logic, which vitest still fully type-strips and runs.
+    "console_auth_scoping.test.ts"
+  ]
 }

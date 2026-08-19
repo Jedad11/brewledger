@@ -48,9 +48,45 @@ export async function verifyConsoleRequest(req: Request): Promise<ConsoleContext
 
   return {
     merchantId: merchant.id,
-    storeIds: (storeIds ?? []).map((row: { auth_store_ids: string }) => row.auth_store_ids),
+    // auth_store_ids() is `returns setof uuid` -- a scalar set-returning
+    // function -- so PostgREST (and supabase-js .rpc()) returns a plain
+    // array of UUID strings, not an array of { auth_store_ids: string }
+    // row objects. No .map needed; only a type-narrowing cast for the
+    // untyped RPC return.
+    storeIds: (storeIds ?? []) as string[],
     supabase,
   };
+}
+
+/**
+ * Thrown by assertOwnedStore below. A distinct class (not a bare Error) so
+ * withConsoleAuth can catch exactly this failure mode and turn it into a
+ * 403 -- any other error a handler throws is a real bug and must not be
+ * silently reshaped into an auth response.
+ */
+export class ForbiddenStoreError extends Error {
+  constructor(storeId: string) {
+    super(`store ${storeId} is not owned by the requesting merchant`);
+    this.name = "ForbiddenStoreError";
+  }
+}
+
+/**
+ * THE CENTRAL RULE (WBS 4.2): no console handler may accept a store_id from
+ * client input (body or query) and trust it. Every handler that reads a
+ * store_id off the request must call this before using it. Scoping every
+ * query through ctx.supabase (RLS-enforced) already stops a cross-tenant
+ * READ from returning rows, but a handler that echoes the client's store_id
+ * back verbatim -- into a filter, an insert, a log line -- without this
+ * check would still confirm-by-side-channel that the id exists and is
+ * merchant-owned or not. Never substitute ctx.storeIds[0] silently on a
+ * mismatch: that would hide a genuine attack (or a genuine bug) behind a
+ * response that looks like success.
+ */
+export function assertOwnedStore(ctx: ConsoleContext, storeId: string): void {
+  if (!ctx.storeIds.includes(storeId)) {
+    throw new ForbiddenStoreError(storeId);
+  }
 }
 
 /**
@@ -63,6 +99,11 @@ export async function verifyConsoleRequest(req: Request): Promise<ConsoleContext
  * lint rule for it (a runtime code-shape check has diminishing returns
  * versus review), so it is called out explicitly here as a manual review
  * item for redline_reviewer.
+ *
+ * Also the sanctioned catch point for assertOwnedStore: a handler calls
+ * assertOwnedStore(ctx, storeId) and lets ForbiddenStoreError propagate --
+ * it does not need its own try/catch to get the 403-empty-body behavior,
+ * same "hard to get wrong" posture as the 401 path above.
  */
 export function withConsoleAuth(
   handler: (req: Request, ctx: ConsoleContext) => Promise<Response>,
@@ -72,6 +113,13 @@ export function withConsoleAuth(
     if (!ctx) {
       return new Response(null, { status: 401 }); // no body -- no detail leaked
     }
-    return handler(req, ctx);
+    try {
+      return await handler(req, ctx);
+    } catch (err) {
+      if (err instanceof ForbiddenStoreError) {
+        return new Response(null, { status: 403 }); // no body -- no detail leaked
+      }
+      throw err;
+    }
   };
 }

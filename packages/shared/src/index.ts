@@ -21,3 +21,10 @@ export type { BrowserConfig } from "./config";
 // time in a browser bundle, but this barrel is imported by apps/shop — keep
 // it reachable only via the direct subpath ("@brewledger/shared/dist/supabase/admin")
 // so the eslint RL-3 zone in eslint.config.mjs can target it precisely.
+
+// merchant (MerchantCtx/MerchantStoreSummary) is deliberately NOT re-exported
+// here, same reasoning as supabase/admin above. Both types are Owner
+// Console-only — this barrel is imported by apps/shop — so keep them
+// reachable only via the direct subpath ("@brewledger/shared/dist/merchant")
+// so the eslint RL-3 zone in eslint.config.mjs can target it precisely.
+// (WBS 4.2 follow-up.)

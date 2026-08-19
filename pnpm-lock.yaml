@@ -35,6 +35,12 @@ importers:
 
   apps/console:
     dependencies:
+      '@brewledger/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@brewledger/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@brewledger/ui':
         specifier: workspace:*
         version: link:../../packages/ui

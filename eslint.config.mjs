@@ -23,8 +23,18 @@ const importResolverSettings = {
   // eslint-plugin-import's default node resolver only tries .js/.json —
   // without this, every .ts import silently fails to resolve and the
   // zone check below never fires.
+  //
+  // preserveSymlinks: false makes the resolver realpath through pnpm's
+  // node_modules/@brewledger/* symlinks before returning a resolved path.
+  // Without it (the resolver's own default is preserveSymlinks: true), a
+  // package-specifier import such as "@brewledger/shared/src/merchant"
+  // resolves to ".../apps/console/node_modules/@brewledger/shared/src/merchant.ts"
+  // — a string that never matches a zone's workspace-relative "from" (e.g.
+  // "./packages/shared/src/merchant.ts"), even though it's the identical
+  // file on disk. Every zone below that targets a packages/shared/src/*
+  // file depends on this to fire on anything but a bare relative import.
   "import/resolver": {
-    node: { extensions: [".js", ".jsx", ".ts", ".tsx", ".d.ts"] },
+    node: { extensions: [".js", ".jsx", ".ts", ".tsx", ".d.ts"], preserveSymlinks: false },
   },
 };
 
@@ -76,6 +86,12 @@ export default [
               from: "./packages/shared/src/supabase/admin.ts",
               message:
                 "apps/shop (Customer Web) may never import the service_role admin client — it has zero legitimate server-side use here; that's Edge Function / worker territory. RL-3, WBS 3.2.",
+            },
+            {
+              target: "./apps/shop",
+              from: "./packages/shared/src/merchant.ts",
+              message:
+                "apps/shop (Customer Web) may never import packages/shared/src/merchant.ts — MerchantCtx/MerchantStoreSummary are Owner Console-only, defense in depth for RL-3.",
             },
           ],
         },

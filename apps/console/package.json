@@ -11,6 +11,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@brewledger/db": "workspace:*",
+    "@brewledger/shared": "workspace:*",
     "@brewledger/ui": "workspace:*",
     "@supabase/ssr": "^0.5",
     "@supabase/supabase-js": "^2",

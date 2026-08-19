@@ -49,7 +49,29 @@ using `scripts/restore-drill.mjs`.
 
 | Date | Dump used | Rows before | Rows after | Result | Performed by |
 |---|---|---|---|---|---|
-| _(none yet)_ | | | | | |
+| 2026-08-19 | `brewledger-2026-08-19.sql.gz` (real `backup.yml` run #2, `62d904c`) from `brewledger-prod` | orders 0, order_items 0, payments 0, stock_ledger 0, purchase_invoices 0, daily_financials 0 | orders 0, order_items 0, payments 0, stock_ledger 0, purchase_invoices 0, daily_financials 0 | **PASS** — all 6 manifest tables match exactly | User + orchestrating session |
+
+Drill notes: target was a genuinely empty local `supabase start` scratch
+database (all 22 migrations applied, `db.seed` temporarily disabled so no
+demo data was present before restoring — re-enabled afterward, confirmed
+via `git diff` that the config change didn't persist). Restored via
+`docker exec -i <db container> psql -U postgres -d postgres < dump.sql`
+rather than `scripts/restore-drill.mjs` directly, because this Windows
+machine has no local `psql` binary on `PATH` for the script's `spawnSync`
+call to find — a real environment gap in the script's assumption, not
+fixed here; `psql` reached through Docker instead, and the manifest
+comparison was done by hand against the same 6 tables the script checks.
+Every error `psql` printed during replay was schema/policy/constraint
+"already exists" (58 occurrences — expected, since this target already had
+the schema from its own migrations) plus one `storage.buckets` duplicate
+key (the two WBS 3.8 buckets are provisioned locally by config, and the
+dump's `buckets` row collided with them) — no data-integrity or unexpected
+error of any kind. First restore attempt (not logged as a row here) was run
+against a target Docker crash-restarted with stale seed data still loaded,
+producing a false stock_ledger/purchase_invoices mismatch (3/1 vs the
+manifest's 0/0) — not a backup defect, a test-rig mistake (seed data
+pre-existing on the target, unrelated to anything the dump restored);
+redone from a truly clean target for the PASS row above.
 
 The engineer leg of WBS 3.10 verified the underlying restore mechanism for
 real against a local `supabase start` scratch database (not a hosted

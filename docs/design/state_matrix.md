@@ -45,6 +45,15 @@ of record is `/design/P5 Handoff.md`.
 - **Recipe editing** — live `ต้นทุนต่อแก้ว` beneath the rows.
 - **Forbidden copy anywhere on this screen:** ยังไม่ได้ใส่ / ควรใส่ / กรุณาใส่ / ไม่ครบ / ยังขาด.
 
+### ข้อมูลร้าน `/console/settings/store` **(undocumented in the delivered `P5 Handoff.md`, added by reading `console-setup.js` directly — see `/docs/design/gaps.md` GAP-5)**
+- **Default** — onboarding strip (see `OnboardingStrip`, hidden once all 3 steps are done) above a form: ชื่อร้าน / ที่อยู่สำหรับรับสินค้า / เวลาเปิด+เวลาปิด / ลิงก์ร้าน (auto-suggested from the name, editable, never blank). Slug field note beneath the input: `ลูกค้าจะเข้าที่ ` **`brewledger.app/s/{slug}`** ` · ตั้งจากชื่อร้านให้อัตโนมัติ แก้ได้ตามต้องการ`.
+- **Publish toggle** — label `เปิดให้ลูกค้าสั่งผ่านลิงก์`; note, always visible beneath it, never only on change: `เมื่อเปิด ใครก็ตามที่มีลิงก์หรือสแกน QR จะเห็นเมนูและสั่งล่วงหน้าได้ · เมื่อปิด ลิงก์จะแจ้งว่ายังไม่เปิดรับออเดอร์ และคุณยังขายหน้าร้านได้ตามปกติ`.
+- **Save** — `บันทึก`.
+- **Onboarding strip** — exactly 3 steps, never a recipe step: ข้อมูลร้าน / เมนูอย่างน้อย 1 รายการ / เชื่อมช่องทางรับเงิน.
+- **Validation** (inline, per field, not in the state matrix's delivered prototype — the prototype's `scStore()` never modeled an invalid state; authored for the real implementation) — name: `กรอกชื่อร้าน`; pick-up address: `กรอกที่อยู่สำหรับรับสินค้า`; opening time: `เลือกเวลาเปิด`; closing time: `เลือกเวลาปิด`.
+- **Save success** — `บันทึกแล้ว`.
+- **Save error** — `บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง` (same generic-failure idiom as `requestOtp.ts`, WBS 4.1).
+
 ### การรับเงิน `/console/settings/payments`
 - **Pending KYC** — `ระหว่างรอตรวจสอบเอกสาร` / `ขายหน้าร้านด้วยเงินสดได้เต็มรูปแบบตามปกติ มีเพียงการสั่งล่วงหน้าผ่านลิงก์ที่ยังปิดอยู่ ผู้ให้บริการชำระเงินมักใช้เวลา 1–2 วันทำการ`
 - **Tested** — `เชื่อมต่อสำเร็จ` / `เงินจะเข้าบัญชีชื่อ ส. สมใจ พาณิชย์ ธนาคารกสิกรไทย ลงท้าย 4821`

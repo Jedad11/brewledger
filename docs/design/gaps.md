@@ -117,6 +117,38 @@ Ledger entry) / M2 (would own the screen if one is ever specified).
 
 ---
 
+## GAP-5 — Store profile screen (`ข้อมูลร้าน`) — undocumented in the state matrix, not missing
+
+**Status:** Exists and is complete in the delivered package (`screen_inventory.md`
+already lists it). It was simply absent from `P5 Handoff.md`'s state matrix —
+the same category of gap as GAP-1, just for a single screen's copy rather
+than a whole undocumented screen.
+
+- **Implementation:** `console-setup.js`, screen key `store` (`scStore`).
+- **Route:** `/console/settings/store`.
+- **Surface / auth:** Console, authenticated.
+- **Fields:** ชื่อร้าน, ที่อยู่สำหรับรับสินค้า, เวลาเปิด/เวลาปิด, ลิงก์ร้าน
+  (auto-suggested, editable, never blank).
+- **Publish toggle:** uses the prototype's `.oc-toggle`/`.oc-sw` switch —
+  present in `Console Setup.html`'s own `<style>` block but never ported into
+  `packages/ui/src/components.css` by WBS 2.2 (that port covered the 12-item
+  inventory plus Button/Input/Card; this screen, and its switch control,
+  wasn't touched by any entry until WBS 4.3). Ported now as `Toggle`, the
+  same way Button/Input/Card were added — see `component_inventory.md`.
+- **Onboarding strip:** exactly 3 steps (`OnboardingStrip`, already built in
+  WBS 2.2 with the correct fixed 3-tuple type), never a recipe step.
+
+**Decision:** Documented, not rebuilt. Added to `/docs/design/state_matrix.md`
+by reading `console-setup.js` directly, and `Toggle` added to
+`packages/ui`/`component_inventory.md`, in the same change (WBS 4.3) that
+needed both.
+
+**Owner:** M2.
+
+**Blocks:** Nothing. Closed by this same change.
+
+---
+
 ## Adherence lint follow-up (not a screen gap, recorded here for visibility)
 
 `_ds/.../_adherence.oxlintrc.json` cannot be executed by the installed

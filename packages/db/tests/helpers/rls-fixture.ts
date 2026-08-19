@@ -444,6 +444,70 @@ export async function createVisibilityFixture(
   }
 }
 
+export interface MerchantOnlyFixtureIds {
+  authUserId: string;
+  merchantId: string;
+  phone: string;
+  cleanup: () => Promise<void>;
+}
+
+/**
+ * WBS 4.3 hotfix regression (migration 0026_stores_insert_bootstrap_fix.sql)
+ * — a merchant with ZERO stores, and nothing else. Deliberately stops right
+ * after the `merchants` row (created by WBS 4.1's
+ * on_auth_user_created_provision_merchant trigger, upserted here the same
+ * way createFullStoreFixture/createVisibilityFixture do) — no `stores` row
+ * is ever inserted via this superuser `pg` client, unlike the other two
+ * fixture builders in this file. That's the point: the whole bug this
+ * migration fixes was in the `stores` INSERT path itself for a merchant's
+ * *first* store, so the fixture must leave that path completely untouched
+ * for the calling test to exercise through a real `authenticatedClient()`.
+ */
+export async function createMerchantOnlyFixture(
+  client: Client,
+  opts: { label: string },
+): Promise<MerchantOnlyFixtureIds> {
+  const suffix = nextSuffix(opts.label);
+  const phone = `+66802${String(Math.abs(hashCode(suffix))).slice(0, 6).padStart(6, "0")}`;
+  const email = `qa-rls-${suffix}@brewledger.app`;
+
+  const { rows: userRows } = await client.query(
+    `insert into auth.users (
+       instance_id, id, aud, role, email, encrypted_password,
+       email_confirmed_at, phone, phone_confirmed_at,
+       raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+     ) values (
+       '00000000-0000-0000-0000-000000000000', gen_random_uuid(), 'authenticated', 'authenticated',
+       $1, crypt('qa-test-password', gen_salt('bf')),
+       now(), $2, now(),
+       '{"provider":"phone","providers":["phone"]}'::jsonb, '{}'::jsonb, now(), now()
+     ) returning id`,
+    [email, phone],
+  );
+  const authUserId = userRows[0].id as string;
+  const cleanup = async () => {
+    await client.query(`delete from auth.users where id = $1`, [authUserId]);
+  };
+
+  try {
+    // Same WBS 4.1 trigger note as the other two fixture builders above --
+    // upsert, not a blind insert, or this 23505s against the trigger's own
+    // row.
+    const { rows: merchantRows } = await client.query(
+      `insert into merchants (auth_user_id, phone) values ($1, $2)
+       on conflict (auth_user_id) do update set phone = excluded.phone
+       returning id`,
+      [authUserId, phone],
+    );
+    const merchantId = merchantRows[0].id as string;
+
+    return { authUserId, merchantId, phone, cleanup };
+  } catch (err) {
+    await cleanup().catch(() => undefined);
+    throw err;
+  }
+}
+
 function hashCode(input: string): number {
   let hash = 0;
   for (let i = 0; i < input.length; i += 1) {

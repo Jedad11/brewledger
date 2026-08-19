@@ -38,8 +38,10 @@ import {
 } from "./helpers/supabase-clients";
 import {
   createFullStoreFixture,
+  createMerchantOnlyFixture,
   createVisibilityFixture,
   type FullStoreFixtureIds,
+  type MerchantOnlyFixtureIds,
   type VisibilityFixtureIds,
 } from "./helpers/rls-fixture";
 
@@ -396,6 +398,312 @@ describe("§7.2, §7.5, §7.6, §7.7, §7.8 — merchant-scoped suite", () => {
 
       const { data: itemsData } = await anon.from("order_items").select("*").eq("id", fixtureA.orderItemId);
       expect((itemsData ?? []).length).toBe(0);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// WBS 4.3 hotfix regression — packages/db/migrations/0026_stores_insert_
+// bootstrap_fix.sql. merchant_rw_stores previously routed EVERY command
+// (including INSERT's WITH CHECK) through auth_store_ids(), which queries
+// stores itself -- so a brand-new row's WITH CHECK could never be satisfied
+// before the row existed, and no merchant could ever create their first
+// store ("new row violates row-level security policy for table \"stores\"").
+// The fix: stores' own policy now checks `merchant_id in (select
+// auth_merchant_id())` directly (auth_merchant_id() only reads `merchants`,
+// never `stores`, so it has no bootstrap problem), and auth_store_ids()
+// (used by every OTHER merchant-owned table) is untouched.
+//
+// Every INSERT/UPDATE/DELETE assertion below goes through a REAL
+// authenticatedClient() -- never the pg-superuser fixture bypass -- because
+// that bypass is exactly the blind spot that let the original bug ship
+// undetected (every other test file, and this file's own fixtures until
+// now, built `stores` rows through the superuser `pg` client in setup, so
+// nothing ever actually exercised this INSERT policy end-to-end).
+// ---------------------------------------------------------------------------
+describe("WBS 4.3 — stores INSERT bootstrap fix (migration 0026)", () => {
+  let freshMerchant: MerchantOnlyFixtureIds;
+  let merchantA: MerchantOnlyFixtureIds;
+  let merchantB: MerchantOnlyFixtureIds;
+
+  beforeAll(async () => {
+    if (!ready) return;
+    freshMerchant = await createMerchantOnlyFixture(pg, { label: "bootstrap-fresh" });
+    merchantA = await createMerchantOnlyFixture(pg, { label: "bootstrap-a" });
+    merchantB = await createMerchantOnlyFixture(pg, { label: "bootstrap-b" });
+  });
+
+  afterAll(async () => {
+    if (!ready) return;
+    // Deleting each fixture's auth.users row cascades merchants -> stores,
+    // so every stores row any test below created gets torn down here too --
+    // no manual store cleanup needed (see rls-fixture.ts's header comment).
+    await freshMerchant?.cleanup();
+    await merchantA?.cleanup();
+    await merchantB?.cleanup();
+  });
+
+  it("a freshly-provisioned merchant (zero stores) can INSERT a stores row naming their own merchant_id, and immediately SELECT it back", async () => {
+    if (!ready) return;
+    const client = authenticatedClient(freshMerchant.authUserId);
+
+    // Sanity: confirm the "zero stores" precondition via service_role before
+    // asserting anything about the insert that's about to happen.
+    const svc = serviceClient();
+    const { data: before } = await svc.from("stores").select("id").eq("merchant_id", freshMerchant.merchantId);
+    expect((before ?? []).length).toBe(0);
+
+    const slug = `qa-bootstrap-fresh-${Date.now()}`;
+    const { data, error } = await client
+      .from("stores")
+      .insert({ merchant_id: freshMerchant.merchantId, slug, name: "Bootstrap Fresh Store" })
+      .select("id, merchant_id, slug")
+      .single();
+
+    expect(error).toBeNull();
+    expect(data).not.toBeNull();
+    expect(data!.merchant_id).toBe(freshMerchant.merchantId);
+    expect(data!.slug).toBe(slug);
+
+    const { data: selectBack, error: selectErr } = await client
+      .from("stores")
+      .select("id, slug")
+      .eq("id", data!.id);
+    expect(selectErr).toBeNull();
+    expect(selectBack).toHaveLength(1);
+    expect(selectBack![0].slug).toBe(slug);
+  });
+
+  it("a merchant CANNOT INSERT a stores row naming a DIFFERENT merchant's merchant_id — rejected, never silently substituted (forbidden-payee-style)", async () => {
+    if (!ready) return;
+    const clientA = authenticatedClient(merchantA.authUserId);
+    const slug = `qa-bootstrap-forbidden-${Date.now()}`;
+
+    const { data, error } = await clientA
+      .from("stores")
+      .insert({ merchant_id: merchantB.merchantId, slug, name: "Should never exist" })
+      .select("id")
+      .single();
+
+    expect(data).toBeNull();
+    expect(error).not.toBeNull();
+    expect(error!.code).toBe("42501"); // RLS WITH CHECK violation
+
+    // Prove via service_role that no row with this slug exists under ANY
+    // merchant_id at all -- not merchant B's forbidden target, and not
+    // merchant A's own id either (i.e. Postgres didn't silently substitute
+    // the caller's own merchant_id in place of the forbidden one).
+    const svc = serviceClient();
+    const { data: svcCheck, error: svcErr } = await svc.from("stores").select("id, merchant_id").eq("slug", slug);
+    expect(svcErr).toBeNull();
+    expect(svcCheck ?? []).toHaveLength(0);
+  });
+
+  it(
+    "a merchant who already owns one store CAN INSERT a second one naming their own merchant_id — " +
+      "this is INTENTIONAL current behavior, not a leftover bug: stores carries no DB-level cardinality " +
+      "constraint, MVP's 'one store per merchant' is a product/UX invariant enforced at the application " +
+      "layer (apps/console), and the schema is deliberately multi-branch-ready for Phase 2. Do not 'fix' " +
+      "this later with a naive unique constraint on merchant_id without revisiting that documented design.",
+    async () => {
+      if (!ready) return;
+      const clientA = authenticatedClient(merchantA.authUserId);
+
+      const slug1 = `qa-bootstrap-a1-${Date.now()}`;
+      const first = await clientA
+        .from("stores")
+        .insert({ merchant_id: merchantA.merchantId, slug: slug1, name: "Bootstrap Store A1" })
+        .select("id, merchant_id")
+        .single();
+      expect(first.error).toBeNull();
+      expect(first.data!.merchant_id).toBe(merchantA.merchantId);
+
+      const slug2 = `qa-bootstrap-a2-${Date.now()}`;
+      const second = await clientA
+        .from("stores")
+        .insert({ merchant_id: merchantA.merchantId, slug: slug2, name: "Bootstrap Store A2" })
+        .select("id, merchant_id")
+        .single();
+      expect(second.error).toBeNull();
+      expect(second.data).not.toBeNull();
+      expect(second.data!.merchant_id).toBe(merchantA.merchantId);
+      expect(second.data!.id).not.toBe(first.data!.id);
+
+      const svc = serviceClient();
+      const { data: allForA } = await svc.from("stores").select("id").eq("merchant_id", merchantA.merchantId);
+      expect((allForA ?? []).length).toBeGreaterThanOrEqual(2);
+    },
+  );
+
+  describe("regression — cross-tenant UPDATE/SELECT/DELETE on stores after the merchant_rw_stores policy rebuild", () => {
+    let storeA: string;
+    let storeB: string;
+
+    beforeAll(async () => {
+      if (!ready) return;
+      const clientA = authenticatedClient(merchantA.authUserId);
+      const clientB = authenticatedClient(merchantB.authUserId);
+
+      const a = await clientA
+        .from("stores")
+        .insert({ merchant_id: merchantA.merchantId, slug: `qa-bootstrap-reg-a-${Date.now()}`, name: "Regression Store A" })
+        .select("id")
+        .single();
+      storeA = a.data!.id as string;
+
+      const b = await clientB
+        .from("stores")
+        .insert({ merchant_id: merchantB.merchantId, slug: `qa-bootstrap-reg-b-${Date.now()}`, name: "Regression Store B" })
+        .select("id")
+        .single();
+      storeB = b.data!.id as string;
+    });
+
+    it("merchant A can SELECT their own store but not merchant B's", async () => {
+      if (!ready) return;
+      const clientA = authenticatedClient(merchantA.authUserId);
+      const { data, error } = await clientA.from("stores").select("id").in("id", [storeA, storeB]);
+      expect(error).toBeNull();
+      const ids = (data ?? []).map((r: { id: string }) => r.id);
+      expect(ids).toContain(storeA);
+      expect(ids).not.toContain(storeB);
+    });
+
+    it("merchant A can UPDATE their own store", async () => {
+      if (!ready) return;
+      const clientA = authenticatedClient(merchantA.authUserId);
+      const { data, error } = await clientA
+        .from("stores")
+        .update({ name: "Regression Store A (renamed)" })
+        .eq("id", storeA)
+        .select("id, name");
+      expect(error).toBeNull();
+      expect(data).toHaveLength(1);
+      expect(data![0].name).toBe("Regression Store A (renamed)");
+    });
+
+    it("merchant A's UPDATE of merchant B's store affects zero rows and does not change it", async () => {
+      if (!ready) return;
+      const clientA = authenticatedClient(merchantA.authUserId);
+      const { data, error } = await clientA
+        .from("stores")
+        .update({ name: "hijacked" })
+        .eq("id", storeB)
+        .select("id, name");
+      expect(error).toBeNull();
+      expect(data ?? []).toHaveLength(0);
+
+      const svc = serviceClient();
+      const { data: svcRow } = await svc.from("stores").select("name").eq("id", storeB).single();
+      expect(svcRow!.name).toBe("Regression Store B");
+    });
+
+    it("merchant A's DELETE of merchant B's store affects zero rows; the row still exists (proven via service_role)", async () => {
+      if (!ready) return;
+      const clientA = authenticatedClient(merchantA.authUserId);
+      const { data, error } = await clientA.from("stores").delete().eq("id", storeB).select("id");
+      expect(error).toBeNull();
+      expect(data ?? []).toHaveLength(0);
+
+      const svc = serviceClient();
+      const { data: svcRow, error: svcErr } = await svc.from("stores").select("id").eq("id", storeB);
+      expect(svcErr).toBeNull();
+      expect(svcRow).toHaveLength(1); // still exists -- proves the delete above was a genuine no-op, not an empty table
+    });
+
+    it("merchant A can DELETE their own store (own-row DELETE still works after the policy rebuild)", async () => {
+      if (!ready) return;
+      const clientA = authenticatedClient(merchantA.authUserId);
+      // A disposable third store, so this doesn't remove storeA out from
+      // under any test above that may still rely on it.
+      const throwaway = await clientA
+        .from("stores")
+        .insert({ merchant_id: merchantA.merchantId, slug: `qa-bootstrap-throwaway-${Date.now()}`, name: "Throwaway" })
+        .select("id")
+        .single();
+      expect(throwaway.error).toBeNull();
+
+      const { data, error } = await clientA.from("stores").delete().eq("id", throwaway.data!.id).select("id");
+      expect(error).toBeNull();
+      expect(data).toHaveLength(1);
+
+      const svc = serviceClient();
+      const { data: svcRow } = await svc.from("stores").select("id").eq("id", throwaway.data!.id);
+      expect(svcRow ?? []).toHaveLength(0);
+    });
+  });
+
+  describe("regression — anon still cannot write stores, and publish-state visibility is unaffected", () => {
+    let ownedStoreId: string;
+
+    beforeAll(async () => {
+      if (!ready) return;
+      const clientA = authenticatedClient(merchantA.authUserId);
+      const created = await clientA
+        .from("stores")
+        // is_published defaults to false (0003_stores.sql) -- left
+        // unspecified deliberately so this row starts unpublished.
+        .insert({ merchant_id: merchantA.merchantId, slug: `qa-bootstrap-anonreg-${Date.now()}`, name: "Anon Regression Store" })
+        .select("id")
+        .single();
+      ownedStoreId = created.data!.id as string;
+    });
+
+    it("anon cannot INSERT a stores row, even naming a real merchant_id", async () => {
+      if (!ready) return;
+      const anon = anonClient();
+      const { data, error } = await anon
+        .from("stores")
+        .insert({ merchant_id: merchantA.merchantId, slug: `qa-bootstrap-anon-insert-${Date.now()}`, name: "Anon insert" })
+        .select("id")
+        .single();
+      expect(data).toBeNull();
+      expect(error).not.toBeNull();
+    });
+
+    it("anon's UPDATE of an existing store affects zero rows and does not change it", async () => {
+      if (!ready) return;
+      const anon = anonClient();
+      const { data, error } = await anon.from("stores").update({ name: "hacked" }).eq("id", ownedStoreId).select("id");
+      expect(error).toBeNull();
+      expect(data ?? []).toHaveLength(0);
+
+      const svc = serviceClient();
+      const { data: svcRow } = await svc.from("stores").select("name").eq("id", ownedStoreId).single();
+      expect(svcRow!.name).toBe("Anon Regression Store");
+    });
+
+    it("anon's DELETE of an existing store affects zero rows; the row still exists", async () => {
+      if (!ready) return;
+      const anon = anonClient();
+      const { data, error } = await anon.from("stores").delete().eq("id", ownedStoreId).select("id");
+      expect(error).toBeNull();
+      expect(data ?? []).toHaveLength(0);
+
+      const svc = serviceClient();
+      const { data: svcRow } = await svc.from("stores").select("id").eq("id", ownedStoreId);
+      expect(svcRow).toHaveLength(1);
+    });
+
+    it("the unpublished store is still invisible to anon by SELECT", async () => {
+      if (!ready) return;
+      const anon = anonClient();
+      const { data, error } = await anon.from("stores").select("id").eq("id", ownedStoreId);
+      expect(error).toBeNull();
+      expect(data ?? []).toHaveLength(0);
+    });
+
+    it("once the owning merchant publishes it, anon CAN see it (own-write path plus anon_read_published_stores both intact)", async () => {
+      if (!ready) return;
+      const clientA = authenticatedClient(merchantA.authUserId);
+      const { error: publishErr } = await clientA.from("stores").update({ is_published: true }).eq("id", ownedStoreId);
+      expect(publishErr).toBeNull();
+
+      const anon = anonClient();
+      const { data, error } = await anon.from("stores").select("id, is_published").eq("id", ownedStoreId);
+      expect(error).toBeNull();
+      expect(data).toHaveLength(1);
+      expect(data![0].is_published).toBe(true);
     });
   });
 });

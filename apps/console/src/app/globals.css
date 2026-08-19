@@ -1,3 +1,17 @@
+/* WBS 4.3 — first real page under (app)/ to render packages/ui components
+   (Card/Input/Button/Toggle/OnboardingStrip). Wired per packages/ui/README.md
+   "Consumption by apps/shop / apps/console". Existing --color-cream/-ink/
+   -brand below predate this and back the login screen's own raw Tailwind
+   classes -- left alone here; reconciling them with the generated token
+   values is a separate cleanup, not part of this entry.
+   tokens.css/components.css come BEFORE "tailwindcss": tokens.css opens with
+   its own `@import url(fonts...)`, and CSS requires every @import to precede
+   any non-@import rule in the final stylesheet -- once "tailwindcss" expands
+   to real rules, anything imported after it puts that nested font @import
+   too late and browsers drop it. Verified: this order builds with zero CSS
+   warnings; tokens.css-first, tailwindcss-second did not. */
+@import "@brewledger/ui/tokens.css";
+@import "@brewledger/ui/components.css";
 @import "tailwindcss";
 
 :root {

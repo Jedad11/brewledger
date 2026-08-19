@@ -61,7 +61,7 @@ absorbed by a loop.
 | # | Table | RLS enabled | Merchant policy (`authenticated`) | `anon` policy | Notes |
 |---|---|---|---|---|---|
 | 1 | `merchants` | yes | `FOR ALL` — `auth_user_id = auth.uid()` | none | root of merchant scoping, no `store_id` |
-| 2 | `stores` | yes | `FOR ALL` — `id in (select auth_store_ids())` | **SELECT**, published only | anon policy #1 |
+| 2 | `stores` | yes | `FOR ALL` — `merchant_id in (select auth_merchant_id())` | **SELECT**, published only | anon policy #1; exempt from the `auth_store_ids()` pattern, see §3 |
 | 3 | `menu_categories` | yes | `FOR ALL` — `store_id in (select auth_store_ids())` | **none** — see §2.1 | extends past dictionary's literal 4; decided against |
 | 4 | `menu_items` | yes | `FOR ALL` — `store_id in (select auth_store_ids())` | **SELECT**, non-hidden + published store | anon policy #2 |
 | 5 | `menu_option_groups` | yes | `FOR ALL` — `store_id in (select auth_store_ids())` | **SELECT**, visible menu item | anon policy #3 |
@@ -183,12 +183,48 @@ create policy merchant_rw_<table> on <table>
   with check (store_id in (select auth_store_ids()));
 ```
 
-Applies verbatim to: `stores` (using `id` in place of `store_id`),
-`menu_categories`, `menu_items`, `menu_option_groups`, `ingredients`,
-`bom_lines`, `pickup_slots`, `orders`, `order_items`, `payments`,
-`stock_ledger`, `purchase_invoices`, `purchase_line_items`,
-`daily_financials` — 14 tables, all with a direct `store_id` column
+Applies verbatim to: `menu_categories`, `menu_items`, `menu_option_groups`,
+`ingredients`, `bom_lines`, `pickup_slots`, `orders`, `order_items`,
+`payments`, `stock_ledger`, `purchase_invoices`, `purchase_line_items`,
+`daily_financials` — 13 tables, all with a direct `store_id` column
 (`docs/db/schema_design.md` §5).
+
+### `stores` itself — exempt from the `auth_store_ids()` pattern
+
+`stores` does **not** use the shape above, and this is not an oversight:
+`auth_store_ids()` is defined by querying `stores` (joined to `merchants`) to
+find the rows the caller owns. Routing `stores`'s own policy back through
+`auth_store_ids()` makes it self-referential — for `INSERT`, `WITH CHECK`
+evaluates against the new row before it is committed, so `auth_store_ids()`
+can never see it and a merchant can never create their first store at all.
+(This shipped in `0021_rls.sql` and was caught during WBS 4.3 — Store Profile
+Setup — against a real `supabase db reset` + psql session, fixed additively
+in `packages/db/migrations/0026_stores_insert_bootstrap_fix.sql`.)
+
+`stores` doesn't need the join in the first place: unlike every other
+merchant-owned table, it carries `merchant_id` directly on the row
+(`0003_stores.sql`), so its policy can compare straight against a second
+helper, `auth_merchant_id()`, which only ever reads `merchants` and therefore
+can't hit the same bootstrap problem:
+
+```sql
+create or replace function auth_merchant_id()
+returns setof uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select m.id
+  from merchants m
+  where m.auth_user_id = auth.uid();
+$$;
+
+create policy merchant_rw_stores on stores
+  for all to authenticated
+  using      (merchant_id in (select auth_merchant_id()))
+  with check (merchant_id in (select auth_merchant_id()));
+```
 
 ### One-join tables — `menu_options`, `order_item_options`
 

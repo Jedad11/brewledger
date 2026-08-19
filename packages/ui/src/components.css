@@ -63,6 +63,27 @@ button{font-family:inherit;letter-spacing:var(--tracking-normal)}
 .input[disabled]{background:var(--neutral-cool);color:var(--c-unknown)}
 .err{color:var(--red);font-size:var(--text-2)}
 
+/* ---- Toggle ---- */
+/* Ported from /design/Console Setup.html (.oc-toggle/.oc-sw) -- WBS 4.3,
+   Toggle.tsx. Not previously part of components.css: this screen is the
+   first consumer of the prototype's switch control.
+   redline_reviewer (post-4.3 audit): the prototype's own .oc-sw is 56x32,
+   8px under the 44px tap-min interaction_spec.md sets for "everything
+   else" -- that rule outranks the prototype in CLAUDE.md's precedence
+   table. Fix keeps the visible switch at its original 56x32 track / 26px
+   thumb: .oc-sw is now the hit target (min-height: var(--tap-min), no
+   visible chrome of its own), and .oc-sw-track/.oc-sw-thumb inside it
+   carry all the original visual styling unchanged -- same technique as
+   .cw-header .back above (icon smaller than its tap-min box). */
+.oc-toggle{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-3)}
+.oc-toggle p{max-width:56ch;margin-top:.4rem}
+.oc-sw{flex:none;display:inline-flex;align-items:center;justify-content:center;width:56px;min-height:var(--tap-min);border:0;background:none;padding:0;cursor:pointer}
+.oc-sw-track{display:block;width:56px;height:32px;border-radius:var(--radius-pill);border:1px solid var(--input-border);background:var(--neutral-cool);padding:2px;transition:background var(--duration-fast) var(--ease-standard)}
+.oc-sw-thumb{display:block;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:var(--shadow-card);transition:transform var(--duration-fast) var(--ease-standard)}
+.oc-sw.is-on .oc-sw-track{background:var(--green-brew);border-color:var(--green-brew)}
+.oc-sw.is-on .oc-sw-thumb{transform:translateX(24px)}
+.oc-sw[disabled]{opacity:.5;cursor:not-allowed}
+
 /* ---- Surfaces ---- */
 .card{background:var(--surface-card);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:var(--space-3)}
 .hair{border:0;border-top:1px solid var(--hairline);margin:0}

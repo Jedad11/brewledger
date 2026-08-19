@@ -18,6 +18,7 @@ missing, add it here first, in the same change that needs it.
 | `RecipeBlock` | `itemName`, `recipe: Row[] \| null`, `suggestion: Row[] \| null`, `onUse`, `onChange` — collapsed by default, zero validation |
 | `MetricCard` | `label`, `value: number \| null`, `role`, `note?: string` (plain grey) |
 | `NavShell` | `surface: 'console'`, `active`, `badge?: number` — bottom bar <1280px, sidebar ≥1280px |
+| `Toggle` | `label`, `description?`, `checked: boolean`, `onChange`, `disabled?` — ported `.oc-toggle`/`.oc-sw`. Not one of the original 12; added WBS 4.3 (store publish switch) the way Button/Input/Card were added in 2.2. |
 
 No new component was needed to document GAP-1 (the transaction ledger). Its
 screen composes existing patterns: a segmented control (already used

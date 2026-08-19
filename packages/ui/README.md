@@ -101,7 +101,12 @@ the 12-item inventory):
 `MoneyValue` · `OrderStatusBadge` · `OrderCard` · `SlotPicker` ·
 `ConfidenceField` · `EmptyState` · `UntrackedDisclosure` · `StatusButton` ·
 `OnboardingStrip` · `RecipeBlock` · `MetricCard` · `NavShell` · `Button` ·
-`Input` · `Card`
+`Input` · `Card` · `Toggle`
+
+`Toggle` was added in WBS 4.3 (store publish switch), the same way
+`Button`/`Input`/`Card` were added in 2.2: the prototype's `.oc-toggle`/
+`.oc-sw` switch control had no named component in the original 12-item
+inventory.
 
 Each file in `src/components/*.tsx` documents its own prop contract inline
 (JSDoc), including which red line it enforces at the type level. Read

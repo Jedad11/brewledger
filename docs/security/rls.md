@@ -33,7 +33,7 @@ silently fall back on.
 | Table | Role | Operation | Predicate | Justification |
 |---|---|---|---|---|
 | `merchants` | `authenticated` | ALL | `auth_user_id = auth.uid()` | Root of merchant scoping; no `store_id` column to key off of. |
-| `stores` | `authenticated` | ALL | `id in (select auth_store_ids())` | Merchant manages only stores they own. |
+| `stores` | `authenticated` | ALL | `merchant_id in (select auth_merchant_id())` | Merchant manages only stores they own. `stores` is exempt from the `auth_store_ids()` pattern used below — that helper queries `stores` itself, so gating `stores`'s own policy through it is self-referential and makes `INSERT` unsatisfiable (`0026_stores_insert_bootstrap_fix.sql`). `auth_merchant_id()` reads only `merchants`, avoiding the cycle. |
 | `stores` | `anon` | SELECT | `is_published = true` | A published store is public by design — the customer has the link. Anon policy #1. |
 | `menu_categories` | `authenticated` | ALL | `store_id in (select auth_store_ids())` | Merchant-owned. |
 | `menu_categories` | `anon` | — none — | — | Deliberately excluded (design §2.1). Category names are needed for menu grouping, but that need belongs to WBS 3.7's public serializer/RPC, not a table-level anon grant. Stays in the anon-zero-rows set. |

@@ -12,6 +12,7 @@
     "functions:serve": "supabase functions serve --import-map supabase/functions/deno.json",
     "lint:adherence": "node scripts/lint-adherence.mjs",
     "scan:forbidden-fields": "node scripts/scan-forbidden-fields.mjs",
+    "scan:forbidden-copy": "node scripts/scan-forbidden-copy.mjs",
     "ops:check-quota": "node scripts/check-quota.mjs",
     "ops:restore-drill": "node scripts/restore-drill.mjs",
     "test:lint-no-db-row-spread": "bash scripts/test-lint-no-db-row-spread-regression.sh",

@@ -1,0 +1,126 @@
+/* GENERATED FILE — do not hand-edit.
+ * Produced by packages/ui/scripts/build-tokens.mjs from:
+ *   design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css
+ *   design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/typography.css
+ *   design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/spacing.css
+ *   design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/effects.css
+ *   design/brewledger-tokens.css
+ * Change the source CSS and re-run `pnpm --filter @brewledger/ui build:tokens`.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Lora:ital,wght@0,500;0,600;1,500&family=Kalam:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
+:root{
+  font-size: 62.5%; /* rem basis: 1rem = 10px */
+  --green-ledger: #0b6b47; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:2 */
+  --green-brew: #14875a; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:2 */
+  --green-cask: #16302b; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:2 */
+  --green-sage: #3c5e54; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:2 */
+  --green-mist: #d7ecdf; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:2 */
+  --gold: #c9a15b; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:3 */
+  --gold-light: #ddc190; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:3 */
+  --gold-lightest: #faf6ec; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:3 */
+  --parchment: #f3f0ea; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:4 */
+  --ceramic: #eeebe6; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:4 */
+  --neutral-cool: #f8f8f7; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:4 */
+  --white: #ffffff; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:4 */
+  --black: #000000; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:4 */
+  --text-black: rgba(0,0,0,.87); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:5 */
+  --text-black-soft: rgba(0,0,0,.58); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:5 */
+  --text-white: rgba(255,255,255,1); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:6 */
+  --text-white-soft: rgba(255,255,255,.7); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:6 */
+  --rewards-slate: #33433d; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:7 */
+  --red: #c0281c; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:8 */
+  --red-tint: hsl(4 78% 43% / 6%); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:8 */
+  --yellow: #e0a728; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:8 */
+  --green-mist-tint: hsl(152 34% 87% / 33%); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:9 */
+  --input-border: #d6dbde; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:10 */
+  --hairline: #e7e7e7; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:10 */
+  --surface-page: var(--parchment); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:11 */
+  --surface-card: var(--white); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:11 */
+  --surface-utility: var(--ceramic); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:11 */
+  --brand-heading: var(--green-ledger); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:12 */
+  --brand-cta: var(--green-brew); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:12 */
+  --brand-band: var(--green-cask); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:12 */
+  --overlay-black-06: rgba(0,0,0,.06); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:13 */
+  --overlay-black-24: rgba(0,0,0,.24); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:13 */
+  --overlay-black-60: rgba(0,0,0,.6); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:13 */
+  --overlay-white-10: rgba(255,255,255,.1); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:14 */
+  --overlay-white-60: rgba(255,255,255,.6); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:14 */
+  --overlay-white-90: rgba(255,255,255,.9); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/colors.css:14 */
+  --font-sans: 'Manrope',"Helvetica Neue",Helvetica,Arial,sans-serif; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/typography.css:3 */
+  --font-serif: 'Lora',"Iowan Old Style",Georgia,serif; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/typography.css:4 */
+  --font-script: 'Kalam',"Comic Sans MS",cursive; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/typography.css:5 */
+  --tracking-normal: -0.01em; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/typography.css:6 */
+  --tracking-loose: .1em; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/typography.css:6 */
+  --tracking-looser: .15em; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/typography.css:6 */
+  --lh-normal: 1.5; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/typography.css:7 */
+  --lh-compact: 1.2; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/typography.css:7 */
+  --text-1: 1.3rem; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/typography.css:8 */
+  --text-2: 1.4rem; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/typography.css:8 */
+  --text-3: 1.6rem; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/typography.css:8 */
+  --text-4: 1.9rem; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/typography.css:8 */
+  --text-5: 2.4rem; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/typography.css:8 */
+  --text-6: 2.8rem; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/typography.css:9 */
+  --text-7: 3.2rem; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/typography.css:9 */
+  --text-8: 4.5rem; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/typography.css:9 */
+  --text-9: 5.8rem; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/typography.css:9 */
+  --text-10: 8rem; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/typography.css:9 */
+  --space-1: .4rem; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/spacing.css:3 */
+  --space-2: .8rem; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/spacing.css:3 */
+  --space-3: 1.6rem; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/spacing.css:3 */
+  --space-4: 2.4rem; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/spacing.css:3 */
+  --space-5: 3.2rem; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/spacing.css:3 */
+  --space-6: 4rem; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/spacing.css:4 */
+  --space-7: 4.8rem; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/spacing.css:4 */
+  --space-8: 5.6rem; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/spacing.css:4 */
+  --space-9: 6.4rem; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/spacing.css:4 */
+  --gutter-sm: 1.6rem; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/spacing.css:5 */
+  --gutter-md: 2.4rem; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/spacing.css:5 */
+  --gutter-lg: 4rem; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/spacing.css:5 */
+  --col-sm: 343px; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/spacing.css:6 */
+  --col-md: 500px; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/spacing.css:6 */
+  --col-lg: 720px; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/spacing.css:6 */
+  --col-xl: 1440px; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/spacing.css:6 */
+  --radius-card: 12px; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/effects.css:2 */
+  --radius-pill: 50px; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/effects.css:2 */
+  --radius-circle: 50%; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/effects.css:2 */
+  --radius-input: 4px; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/effects.css:2 */
+  --shadow-card: 0 0 .5px rgba(0,0,0,.14),0 1px 1px rgba(0,0,0,.24); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/effects.css:3 */
+  --shadow-nav: 0 1px 3px rgba(0,0,0,.1),0 2px 2px rgba(0,0,0,.06),0 0 2px rgba(0,0,0,.07); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/effects.css:4 */
+  --shadow-fab-base: 0 0 6px rgba(0,0,0,.24); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/effects.css:5 */
+  --shadow-fab-ambient: 0 8px 12px rgba(0,0,0,.14); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/effects.css:5 */
+  --shadow-fab-ambient-active: 0 8px 12px rgba(0,0,0,0); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/effects.css:6 */
+  --ease-standard: cubic-bezier(.25,.46,.45,.94); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/effects.css:7 */
+  --ease-spring: cubic-bezier(.32,2.32,.61,.27); /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/effects.css:7 */
+  --duration-fast: .2s; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/effects.css:8 */
+  --duration-standard: .3s; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/effects.css:8 */
+  --duration-slow: .4s; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/effects.css:8 */
+  --press-scale: .95; /* source: design/_ds/brewledger-design-system-07c182af-9b93-4f42-a3da-2adf1d189891/tokens/effects.css:9 */
+  --font-thai: 'Noto Sans Thai','Manrope',"Helvetica Neue",Helvetica,Arial,sans-serif; /* source: design/brewledger-tokens.css:6 */
+  --lh-thai-body: 1.5; /* source: design/brewledger-tokens.css:7 */
+  --lh-thai-head: 1.35; /* source: design/brewledger-tokens.css:7 */
+  --c-revenue: var(--green-brew); /* source: design/brewledger-tokens.css:9 */
+  --c-profit: var(--green-ledger); /* source: design/brewledger-tokens.css:9 */
+  --c-cost: oklch(.52 .085 62); /* source: design/brewledger-tokens.css:10 */
+  --c-warning: var(--yellow); /* source: design/brewledger-tokens.css:11 */
+  --c-unknown: rgba(0,0,0,.38); /* source: design/brewledger-tokens.css:11 */
+  --c-negative: var(--red); /* source: design/brewledger-tokens.css:11 */
+  --tap-min: 44px; /* source: design/brewledger-tokens.css:13 */
+  --tap-wet: 56px; /* source: design/brewledger-tokens.css:13 */
+  --st-unpaid-bg: #fdf3dd; /* source: design/brewledger-tokens.css:15 */
+  --st-unpaid-fg: #8a6410; /* source: design/brewledger-tokens.css:15 */
+  --st-accepted-bg: var(--ceramic); /* source: design/brewledger-tokens.css:16 */
+  --st-accepted-fg: var(--green-sage); /* source: design/brewledger-tokens.css:16 */
+  --st-making-bg: var(--green-mist); /* source: design/brewledger-tokens.css:17 */
+  --st-making-fg: var(--green-ledger); /* source: design/brewledger-tokens.css:17 */
+  --st-ready-bg: var(--green-brew); /* source: design/brewledger-tokens.css:18 */
+  --st-ready-fg: #fff; /* source: design/brewledger-tokens.css:18 */
+  --st-collected-bg: var(--neutral-cool); /* source: design/brewledger-tokens.css:19 */
+  --st-collected-fg: rgba(0,0,0,.58); /* source: design/brewledger-tokens.css:19 */
+  --st-cancelled-bg: var(--red-tint); /* source: design/brewledger-tokens.css:20 */
+  --st-cancelled-fg: var(--red); /* source: design/brewledger-tokens.css:20 */
+  --st-refunded-bg: var(--neutral-cool); /* source: design/brewledger-tokens.css:21 */
+  --st-refunded-fg: var(--red); /* source: design/brewledger-tokens.css:21 */
+  --st-expired-bg: var(--neutral-cool); /* source: design/brewledger-tokens.css:22 */
+  --st-expired-fg: rgba(0,0,0,.38); /* source: design/brewledger-tokens.css:22 */
+}

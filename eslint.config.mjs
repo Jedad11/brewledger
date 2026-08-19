@@ -103,6 +103,77 @@ export default [
     },
   },
   {
+    // WBS 2.2 — packages/ui is a shared leaf package imported by BOTH
+    // apps/shop (unauthenticated) and apps/console. It may never import
+    // packages/costing (cost/margin/BOM engine, merchant-only) or
+    // packages/db (it renders whatever data it's given as props, it must
+    // never reach into the DB itself), and it may not depend on either app
+    // — a shared leaf package importing a consumer would be backwards and
+    // would also drag apps/console's surface into apps/shop's bundle.
+    files: ["packages/ui/**/*.{ts,tsx}"],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        ecmaFeatures: { jsx: true },
+      },
+    },
+    plugins: { import: importPlugin },
+    settings: importResolverSettings,
+    rules: {
+      "import/no-restricted-paths": [
+        "error",
+        {
+          zones: [
+            {
+              target: "./packages/ui",
+              from: "./packages/costing",
+              message:
+                "packages/ui is imported by apps/shop (unauthenticated) — it may never import packages/costing. RL-3.",
+            },
+            {
+              target: "./packages/ui",
+              from: "./packages/db",
+              message:
+                "packages/ui renders whatever data it's given as props — it must never reach into packages/db itself. RL-3.",
+            },
+            {
+              target: "./packages/ui",
+              from: "./apps/console",
+              message:
+                "packages/ui is a shared leaf package — it may not depend on either app.",
+            },
+            {
+              target: "./packages/ui",
+              from: "./apps/shop",
+              message:
+                "packages/ui is a shared leaf package — it may not depend on either app.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // WBS 2.2 §4 content-pattern backstop — see
+    // eslint-rules/no-cost-formatting-logic.cjs. Scoped to component
+    // implementation files only (not tokens.css/gallery/scripts), excluding
+    // MoneyValue.tsx and MetricCard.tsx: the two files sanctioned to
+    // implement MoneyValue's null -> "—" handling, the one exception RL-3's
+    // acceptance line carves out.
+    files: ["packages/ui/src/components/**/*.tsx"],
+    ignores: ["packages/ui/src/components/MoneyValue.tsx", "packages/ui/src/components/MetricCard.tsx"],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        ecmaFeatures: { jsx: true },
+      },
+    },
+    plugins: { local: localRules },
+    rules: {
+      "local/no-cost-formatting-logic": "error",
+    },
+  },
+  {
     // apps/console is server-authenticated (phone OTP) and will eventually
     // have a legitimate route-handler use for the admin client. It has no
     // established client/server directory split yet (single server component

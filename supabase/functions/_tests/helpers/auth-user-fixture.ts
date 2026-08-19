@@ -24,6 +24,26 @@
 // default to '' elsewhere in the same table, e.g. phone_change_token /
 // email_change_token_current / reauthentication_token), so the positive
 // path can be proven end-to-end without touching packages/db/seed.sql.
+//
+// qa_engineer follow-up (WBS 4.1 session): the original three-column list
+// below (confirmation_token/recovery_token/email_change_token_new) was
+// NOT sufficient — `email_change` (a distinct column from
+// email_change_token_new) has no table-level default either, and running
+// this suite for real against a freshly-inserted row reproduced GoTrue's
+// /auth/v1/user 500ing with `sql: Scan error on column index 8, name
+// "email_change": converting NULL to string is unsupported` (confirmed
+// directly in the local supabase_auth_brewLedger container logs). Added
+// `email_change: ''` below to close that gap. NOTE for engineer/
+// redline_reviewer: packages/db/seed.sql's own demo-merchant insert has
+// the exact same gap (it sets confirmation_token/recovery_token/
+// email_change_token_new but not email_change) — it did not surface as a
+// failure in this session only because an earlier test in the same run
+// happens to call verifyOtp() for that same seeded number first, and
+// GoTrue's own update path incidentally backfills email_change to '' as a
+// side effect. A fresh `supabase db reset` followed directly by any
+// console-* Edge Function call against the seeded demo merchant (with no
+// prior OTP verify in between) would still 500 the same way. Flagged, not
+// fixed here — seed.sql is outside this file's ownership.
 import { Client } from "pg";
 import { randomUUID } from "node:crypto";
 
@@ -47,19 +67,27 @@ export async function createWellFormedAuthUserFixture(): Promise<AuthUserFixture
     await client.query(
       `insert into auth.users (
          instance_id, id, aud, role, phone, phone_confirmed_at,
-         confirmation_token, recovery_token, email_change_token_new,
+         confirmation_token, recovery_token, email_change_token_new, email_change,
          raw_app_meta_data, raw_user_meta_data, created_at, updated_at
        ) values (
          '00000000-0000-0000-0000-000000000000', $1, 'authenticated', 'authenticated', $2, now(),
-         '', '', '',
+         '', '', '', '',
          '{"provider":"phone","providers":["phone"]}'::jsonb, '{}'::jsonb, now(), now()
        )`,
       [authUserId, phone],
     );
 
+    // WBS 4.1's on_auth_user_created_provision_merchant trigger
+    // (packages/db/migrations/0023_merchant_auto_provision.sql) already
+    // created a merchants row for authUserId the moment auth.users was
+    // inserted above (same transaction, trigger runs synchronously) — a
+    // blind INSERT here now 23505s on merchants_auth_user_id_key. Upsert
+    // instead (same fix shape as packages/db/seed.sql's own fix for this
+    // exact regression, documented in PROGRESS.md's WBS 4.1 row).
     const merchantResult = await client.query<{ id: string }>(
       `insert into merchants (id, auth_user_id, phone, subscription_tier)
        values (gen_random_uuid(), $1, $2, 'free')
+       on conflict (auth_user_id) do update set phone = excluded.phone
        returning id`,
       [authUserId, phone],
     );

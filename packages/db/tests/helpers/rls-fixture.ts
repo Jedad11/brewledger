@@ -98,8 +98,17 @@ export async function createFullStoreFixture(
   };
 
   try {
+    // WBS 4.1's on_auth_user_created_provision_merchant trigger
+    // (packages/db/migrations/0023_merchant_auto_provision.sql) already
+    // created a merchants row for authUserId the moment auth.users was
+    // inserted above (same transaction, trigger runs synchronously) — a
+    // blind INSERT here now 23505s on merchants_auth_user_id_key. Upsert
+    // instead (same fix shape as packages/db/seed.sql's own fix for this
+    // exact regression, documented in PROGRESS.md's WBS 4.1 row).
     const { rows: merchantRows } = await client.query(
-      `insert into merchants (auth_user_id, phone) values ($1, $2) returning id`,
+      `insert into merchants (auth_user_id, phone) values ($1, $2)
+       on conflict (auth_user_id) do update set phone = excluded.phone
+       returning id`,
       [authUserId, phone],
     );
     const merchantId = merchantRows[0].id as string;
@@ -312,8 +321,12 @@ export async function createVisibilityFixture(
   };
 
   try {
+    // Same WBS 4.1 trigger note as createFullStoreFixture above — upsert,
+    // not a blind insert, or this 23505s against the trigger's own row.
     const { rows: merchantRows } = await client.query(
-      `insert into merchants (auth_user_id, phone) values ($1, $2) returning id`,
+      `insert into merchants (auth_user_id, phone) values ($1, $2)
+       on conflict (auth_user_id) do update set phone = excluded.phone
+       returning id`,
       [authUserId, phone],
     );
     const merchantId = merchantRows[0].id as string;

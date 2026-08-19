@@ -82,16 +82,21 @@ describe("§7.1 — RLS introspection", () => {
     expect(rows).toEqual([]);
   });
 
-  it("the table count actually checked is pinned at 18 (not a false pass from an empty match)", async () => {
+  it("the table count actually checked is pinned at 19 (not a false pass from an empty match)", async () => {
+    // Was 18 as of WBS 3.6; WBS 4.1's migration 0024_auth_attempts.sql adds
+    // a 19th table (auth_attempts, RLS enabled, zero policies — same shape
+    // as job_queue). Updated here rather than left stale, per this file's
+    // own stated purpose: proving the migration actually closes what it
+    // claims, against the real as-built schema.
     if (!ready) return;
     const { rows } = await pg.query(`
       select count(*)::int as n from information_schema.tables
        where table_schema = 'public' and table_type = 'BASE TABLE'
     `);
-    expect(rows[0].n).toBe(18);
+    expect(rows[0].n).toBe(19);
   });
 
-  it("all 18 real tables are present by name", async () => {
+  it("all 19 real tables are present by name", async () => {
     if (!ready) return;
     const { rows } = await pg.query(`
       select table_name from information_schema.tables
@@ -101,6 +106,7 @@ describe("§7.1 — RLS introspection", () => {
     const names = rows.map((r) => r.table_name).sort();
     expect(names).toEqual(
       [
+        "auth_attempts",
         "bom_lines",
         "daily_financials",
         "ingredients",
@@ -276,6 +282,54 @@ describe("§7.2, §7.5, §7.6, §7.7, §7.8 — merchant-scoped suite", () => {
       if (!ready) return;
       const clientA = authenticatedClient(fixtureA.authUserId);
       const { data } = await clientA.from("job_queue").select("*");
+      expect((data ?? []).length).toBe(0);
+    });
+  });
+
+  // --- extra, WBS 4.1: auth_attempts — added after this file was first
+  //     written (§7 was written against 3.6's then-18-table schema).
+  //     Same zero-policy shape as job_queue (packages/db/migrations/
+  //     0024_auth_attempts.sql's own header comment: "RLS enabled, ZERO
+  //     policies. Only service_role ... may touch this table"). Covered
+  //     here rather than left silently untested — this is a rate-limit
+  //     table, and RL-3 adversarial coverage is exactly the point of this
+  //     file. ---
+  describe("auth_attempts (WBS 4.1) has no access via anon or authenticated, same zero-policy shape as job_queue", () => {
+    let insertedId: string | undefined;
+
+    beforeAll(async () => {
+      if (!ready) return;
+      const { rows } = await pg.query(
+        `insert into auth_attempts (phone_hash, ip_hash) values ($1, $2) returning id`,
+        [`qa-rls-phone-hash-${Date.now()}`, `qa-rls-ip-hash-${Date.now()}`],
+      );
+      insertedId = rows[0].id as string;
+    });
+
+    afterAll(async () => {
+      if (!ready || !insertedId) return;
+      await pg.query(`delete from auth_attempts where id = $1`, [insertedId]);
+    });
+
+    it("anon sees zero auth_attempts rows, service_role proves the row exists", async () => {
+      if (!ready) return;
+      const anon = anonClient();
+      const { data } = await anon.from("auth_attempts").select("*");
+      expect((data ?? []).length).toBe(0);
+
+      const svc = serviceClient();
+      const { data: adminData, error } = await svc
+        .from("auth_attempts")
+        .select("id")
+        .eq("id", insertedId);
+      expect(error).toBeNull();
+      expect(adminData).toHaveLength(1);
+    });
+
+    it("an authenticated merchant also sees zero auth_attempts rows (no merchant-scoped policy exists, by design)", async () => {
+      if (!ready) return;
+      const clientA = authenticatedClient(fixtureA.authUserId);
+      const { data } = await clientA.from("auth_attempts").select("*");
       expect((data ?? []).length).toBe(0);
     });
   });

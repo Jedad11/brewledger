@@ -207,7 +207,10 @@ password_requirements = ""
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
 email_sent = 2
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
-sms_sent = 30
+# Kept below the default deliberately: Vonage trial credit was $2.00 on
+# 2026-08-19 at ~$0.03/SMS (see docs/ops/auth.md), i.e. ~66 sends total. This
+# caps a runaway bug/retry-loop's worst case, not day-to-day testing pace.
+sms_sent = 5
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
 anonymous_users = 30
 # Number of sessions that can be refreshed in a 5 minute interval per IP address.
@@ -271,13 +274,20 @@ enable_signup = true
 # If enabled, users need to confirm their phone number before signing in.
 enable_confirmations = false
 # Template for sending OTP to users
-template = "Your code is {{ .Code }}"
+# English, single GSM-7 segment (Thai/UCS-2 halves capacity to ~70 chars and
+# doubles send cost per OTP — see WBS 4.1 manual-step notes).
+template = "BrewLedger code: {{ .Code }}. Expires in 10 min. Do not share."
 # Controls the minimum amount of time that must pass before sending another sms otp.
 max_frequency = "5s"
 
 # Use pre-defined map of phone number to OTP for testing.
-# [auth.sms.test_otp]
-# 4152127777 = "123456"
+# Local Docker only — has no effect on brewledger-dev/prod, which use their
+# own dashboard-managed Vonage config (docs/ops/auth.md). Lets WBS 4.1's
+# login flow (and qa_engineer's e2e suite) exercise a real verifyOtp() call
+# against the seeded demo merchant (packages/db/seed.sql, +66811111111)
+# without a live SMS send.
+[auth.sms.test_otp]
+"+66811111111" = "123456"
 
 # Configure logged in session timeouts.
 # [auth.sessions]
@@ -297,10 +307,34 @@ max_frequency = "5s"
 # uri = "pg-functions://<database>/<schema>/<hook_name>"
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
+#
+# This is a LOCAL-DOCKER-ONLY TEST HARNESS, not real provider config. It has
+# no effect on brewledger-dev/prod — those use their own dashboard-managed
+# Vonage integration (Authentication → Providers → Phone), verified
+# end-to-end 2026-08-19, credential never committed here (docs/ops/auth.md).
+# Twilio required a card up front and was rejected outright for that (same
+# no-card-wall rule as docs/adr/001-infrastructure-choice.md); it is not
+# actually used to send anything, live or local.
+#
+# It's `enabled = true` with fake credentials only because GoTrue refuses
+# ALL phone OTP flows with `phone_provider_disabled` when no provider is
+# enabled at all — including the [auth.sms.test_otp] map below, which is
+# what local dev and qa_engineer's e2e suite actually exercise. No network
+# call to Twilio ever happens locally: test_otp intercepts before delivery.
+# auth_token substitutes to an empty string when
+# SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN is unset (the normal case) — harmless,
+# since it's never sent anywhere real.
+#
+# An earlier draft of this entry routed delivery through a custom Send SMS
+# Hook to a different, never-provisioned vendor (Thaibulksms) instead of the
+# already-verified Vonage integration. Removed as stale and inconsistent
+# with docs/ops/auth.md — do not recreate it without updating that doc
+# first; the per-phone/per-IP throttle that hook used to host now lives
+# entirely in supabase/functions/console-auth-request-otp.
 [auth.sms.twilio]
-enabled = false
-account_sid = ""
-message_service_sid = ""
+enabled = true
+account_sid = "test"
+message_service_sid = "test"
 # DO NOT commit your Twilio auth token to git. Use environment variable substitution instead:
 auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
 

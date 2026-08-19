@@ -19,28 +19,35 @@ declare
   v_slot_start timestamptz;
   v_bangkok_day timestamp := current_date::timestamp;
 begin
-  -- confirmation_token/recovery_token/email_change_token_new default to NULL
-  -- when omitted, but GoTrue's Go client scans them into non-nullable string
-  -- fields -- a NULL here makes auth.getUser() 500 for this user via any
-  -- console-* Edge Function's auth guard. Set to '' explicitly (a known
-  -- gotcha when inserting into auth.users directly via SQL instead of
-  -- through the Auth API). Found by WBS 3.7 qa_engineer's auth guard tests.
+  -- confirmation_token/recovery_token/email_change_token_new/email_change
+  -- default to NULL when omitted, but GoTrue's Go client scans them into
+  -- non-nullable string fields -- a NULL here makes auth.getUser() 500 for
+  -- this user via any console-* Edge Function's auth guard. Set to ''
+  -- explicitly (a known gotcha when inserting into auth.users directly via
+  -- SQL instead of through the Auth API). Found by WBS 3.7 qa_engineer's
+  -- auth guard tests; email_change specifically added per WBS 4.1
+  -- qa_engineer's finding (see auth-user-fixture.ts) that this column has
+  -- the identical gap and 500s GoTrue's /auth/v1/user on a fresh reset with
+  -- no prior verifyOtp call to incidentally backfill it.
   insert into auth.users (
     instance_id, id, aud, role, email, encrypted_password,
     email_confirmed_at, phone, phone_confirmed_at,
-    confirmation_token, recovery_token, email_change_token_new,
+    confirmation_token, recovery_token, email_change_token_new, email_change,
     raw_app_meta_data, raw_user_meta_data, created_at, updated_at
   ) values (
     '00000000-0000-0000-0000-000000000000', v_auth_user_id, 'authenticated', 'authenticated',
     'demo-merchant@brewledger.app', crypt('brewledger-demo', gen_salt('bf')),
     now(), '+66811111111', now(),
-    '', '', '',
+    '', '', '', '',
     '{"provider":"phone","providers":["phone"]}'::jsonb, '{}'::jsonb, now(), now()
   );
 
-  insert into merchants (id, auth_user_id, phone, subscription_tier)
-  values (gen_random_uuid(), v_auth_user_id, '+66811111111', 'free')
-  returning id into v_merchant_id;
+  -- WBS 4.1's on_auth_user_created_provision_merchant trigger already
+  -- created this row the moment auth.users was inserted above (same
+  -- transaction, trigger runs synchronously) — inserting again here would
+  -- 23505 on merchants_auth_user_id_key. Read back the id it assigned
+  -- instead of assigning our own.
+  select id into v_merchant_id from merchants where auth_user_id = v_auth_user_id;
 
   insert into stores (
     id, merchant_id, slug, name, pickup_address, timezone,

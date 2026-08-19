@@ -134,7 +134,14 @@ describe("WBS 3.5 — RL-2 zero-BOM insert and sale", () => {
       const authUserId = userRows[0].id;
 
       const { rows: merchantRows } = await client.query(
-        `insert into merchants (auth_user_id, phone) values ($1, $2) returning id`,
+        // WBS 4.1's on_auth_user_created_provision_merchant trigger already
+        // created this merchants row synchronously on the auth.users insert
+        // above — upsert, not a blind insert, or this 23505s against the
+        // trigger's own row (same fix shape as packages/db/seed.sql's own
+        // fix for this regression; see PROGRESS.md's WBS 4.1 row).
+        `insert into merchants (auth_user_id, phone) values ($1, $2)
+         on conflict (auth_user_id) do update set phone = excluded.phone
+         returning id`,
         [authUserId, "+66899999901"],
       );
       const merchantId = merchantRows[0].id;
@@ -204,7 +211,14 @@ describe("WBS 3.5 — cost snapshot trigger (trg_order_items_cost_snapshot_immut
       const authUserId = userRows[0].id;
 
       const { rows: merchantRows } = await client.query(
-        `insert into merchants (auth_user_id, phone) values ($1, $2) returning id`,
+        // WBS 4.1's on_auth_user_created_provision_merchant trigger already
+        // created this merchants row synchronously on the auth.users insert
+        // above — upsert, not a blind insert, or this 23505s against the
+        // trigger's own row (same fix shape as packages/db/seed.sql's own
+        // fix for this regression; see PROGRESS.md's WBS 4.1 row).
+        `insert into merchants (auth_user_id, phone) values ($1, $2)
+         on conflict (auth_user_id) do update set phone = excluded.phone
+         returning id`,
         [authUserId, "+66899999902"],
       );
       const merchantId = merchantRows[0].id;
@@ -304,7 +318,14 @@ describe("WBS 3.5 — cost snapshot trigger (trg_order_items_cost_snapshot_immut
       const authUserId = userRows[0].id;
 
       const { rows: merchantRows } = await client.query(
-        `insert into merchants (auth_user_id, phone) values ($1, $2) returning id`,
+        // WBS 4.1's on_auth_user_created_provision_merchant trigger already
+        // created this merchants row synchronously on the auth.users insert
+        // above — upsert, not a blind insert, or this 23505s against the
+        // trigger's own row (same fix shape as packages/db/seed.sql's own
+        // fix for this regression; see PROGRESS.md's WBS 4.1 row).
+        `insert into merchants (auth_user_id, phone) values ($1, $2)
+         on conflict (auth_user_id) do update set phone = excluded.phone
+         returning id`,
         [authUserId, "+66899999903"],
       );
       const merchantId = merchantRows[0].id;
@@ -370,7 +391,14 @@ describe("WBS 3.5 — pickup_slots.booked_count cannot exceed capacity", () => {
       `);
       const authUserId = userRows[0].id;
       const { rows: merchantRows } = await client.query(
-        `insert into merchants (auth_user_id, phone) values ($1, $2) returning id`,
+        // WBS 4.1's on_auth_user_created_provision_merchant trigger already
+        // created this merchants row synchronously on the auth.users insert
+        // above — upsert, not a blind insert, or this 23505s against the
+        // trigger's own row (same fix shape as packages/db/seed.sql's own
+        // fix for this regression; see PROGRESS.md's WBS 4.1 row).
+        `insert into merchants (auth_user_id, phone) values ($1, $2)
+         on conflict (auth_user_id) do update set phone = excluded.phone
+         returning id`,
         [authUserId, "+66899999904"],
       );
       const merchantId = merchantRows[0].id;
@@ -410,7 +438,14 @@ describe("WBS 3.5 — pickup_slots.booked_count cannot exceed capacity", () => {
       `);
       const authUserId = userRows[0].id;
       const { rows: merchantRows } = await client.query(
-        `insert into merchants (auth_user_id, phone) values ($1, $2) returning id`,
+        // WBS 4.1's on_auth_user_created_provision_merchant trigger already
+        // created this merchants row synchronously on the auth.users insert
+        // above — upsert, not a blind insert, or this 23505s against the
+        // trigger's own row (same fix shape as packages/db/seed.sql's own
+        // fix for this regression; see PROGRESS.md's WBS 4.1 row).
+        `insert into merchants (auth_user_id, phone) values ($1, $2)
+         on conflict (auth_user_id) do update set phone = excluded.phone
+         returning id`,
         [authUserId, "+66899999905"],
       );
       const merchantId = merchantRows[0].id;

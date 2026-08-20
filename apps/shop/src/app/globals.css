@@ -1,3 +1,10 @@
+/* WBS 5.1 — first apps/shop screen to render packages/ui. Same import
+   order and reasoning as apps/console/src/app/globals.css: tokens.css opens
+   with its own font @import, and CSS requires every @import to precede any
+   non-@import rule, so tokens.css/components.css must come before
+   "tailwindcss" expands to real rules. */
+@import "@brewledger/ui/tokens.css";
+@import "@brewledger/ui/components.css";
 @import "tailwindcss";
 
 :root {

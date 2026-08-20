@@ -185,6 +185,33 @@ button{font-family:inherit;letter-spacing:var(--tracking-normal)}
 .cw-slot.is-full{opacity:.5;cursor:not-allowed}
 .cw-slot[disabled]{opacity:.5;cursor:not-allowed}
 
+/* ---- Ported from /design/Customer Web.html <style> (WBS 5.1) — page
+ * shell, store header, empty-state mark, menu grouping/list/item. These
+ * classes live in that prototype file's own page-scoped <style> block, not
+ * in the shared /design/brewledger-tokens.css the 2.2 token pipeline reads
+ * from, which is why they weren't ported until the screen that needs them
+ * (the public store page) was built. Literal port, same discipline as the
+ * block above. ---- */
+.cw{min-height:100vh;display:flex;flex-direction:column;box-shadow:0 0 40px rgba(0,0,0,.06)}
+.cw-body{flex:1;padding:var(--space-3);display:flex;flex-direction:column;gap:var(--space-3)}
+.cw-header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:1.2rem;min-height:52px;padding:0 1.6rem;background:var(--white);box-shadow:var(--shadow-nav)}
+.cw-header .name{font-weight:700;font-size:var(--text-3);color:var(--green-ledger)}
+.cw-photo,.cw-hero,.cw-mark{background:var(--green-sage);opacity:.18;border-radius:8px;flex:none}
+.cw-mark{width:52px;height:52px;border-radius:var(--radius-circle);opacity:.25}
+.cw-store{display:flex;flex-direction:column;gap:.4rem}
+.cw-storehead{display:flex;align-items:center;gap:1.2rem;justify-content:space-between}
+.cw-storehead h2{font-size:var(--text-5)}
+.cw-group{display:grid;gap:1.2rem}
+.cw-group h3{font-size:var(--text-3);text-transform:none;color:var(--green-sage);letter-spacing:var(--tracking-loose)}
+.cw-list{display:grid;gap:1.2rem}
+.cw-item{display:flex;align-items:center;gap:1.4rem;width:100%;text-align:left;padding:1.2rem;border:0;border-radius:var(--radius-card);background:var(--surface-card);box-shadow:var(--shadow-card);font-family:inherit;font-size:var(--text-3);color:var(--text-black);min-height:var(--tap-min);transition:transform var(--duration-fast) var(--ease-standard)}
+.cw-item.is-out{opacity:.5;cursor:default}
+.cw-item-txt{flex:1;display:grid;gap:.2rem}
+.cw-item-txt b{font-weight:700;line-height:var(--lh-thai-head)}
+.cw-item-txt .note-plain{font-size:var(--text-2)}
+.cw-price{font-weight:700}
+@media(min-width:768px){.cw{max-width:480px;margin:0 auto}}
+
 /* ---- BrewLedger component additions (this package, not in the prototype):
  * UntrackedDisclosure's plain-text wrapper has no prototype-named class to
  * port — new, token-only rule.

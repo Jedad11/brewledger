@@ -42,3 +42,6 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: Route bundle size (apps/shop /s/[slug], WBS 5.1 — 100 KB gzipped budget)
+        run: node scripts/check-route-bundle-size.mjs

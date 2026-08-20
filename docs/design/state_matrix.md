@@ -12,6 +12,27 @@ of record is `/design/P5 Handoff.md`.
 - **Error** — `ตอนนี้เปิดหน้านี้ไม่ได้ ลองใหม่อีกครั้ง`
 - **Closed** — `ตอนนี้ร้านปิดอยู่` / `ดูเมนูได้ตามปกติ สั่งได้อีกครั้ง พรุ่งนี้ 07:00`; items disabled, cart bar reads `สั่งได้อีกครั้ง พรุ่งนี้ 07:00`.
 - **Slots full** — `ช่วงเวลารับวันนี้เต็มแล้ว` / `สั่งล่วงหน้าสำหรับ พรุ่งนี้ 07:00 ได้ที่หน้าถัดไป`
+- **Not found / unpublished** (authored for the real implementation — WBS
+  5.1. The delivered prototype's dev switcher has no equivalent state; a
+  stranger reaching a bad or since-unpublished `/s/{slug}` link is a case
+  the prototype never modelled, same "genuinely reachable, not previously
+  extracted" reasoning as WBS 4.4's "No store yet" state above) —
+  `ไม่พบร้านนี้` / `ลิงก์อาจไม่ถูกต้อง หรือร้านนี้ยังไม่เปิดให้บริการ`; HTTP 404,
+  never distinguishes "never existed" from "unpublished" (same
+  non-enumeration posture as `/o/{code}`'s Not found state below).
+- **Store open/closed pill** (WBS 5.1, from `customer-web.js`'s own
+  `scMenu()` — not previously extracted into this file) — `เปิดอยู่` /
+  `ปิดอยู่`, `st st--making` / `st st--expired`.
+- **Item temporarily unavailable** (WBS 5.1's own Claude Code Prompt §3, not
+  previously extracted into this file — verified verbatim in
+  `customer-web.js`'s `scMenu()`) — `หมดชั่วคราว`, shown in place of the
+  item's description; the item itself still renders (greyed), never
+  disappears. A `hidden` item is the one that disappears — RLS excludes it
+  from the response entirely, there is no client-side copy for that case.
+- **Opening-hours line** (WBS 5.1; store card, beneath the pickup address) —
+  `{opensAt}–{closesAt}` (e.g. `07:00–16:00`), no day-of-week qualifier — the
+  schema (`stores.opens_at`/`closes_at`) has no per-weekday column to source
+  one from, unlike the prototype's static demo text `(จ.–ส.)`.
 
 ### เลือกเวลารับ `/checkout`
 - **Default** — slots grouped by hour; `เหลือ N ที่` when ≤2 remain.

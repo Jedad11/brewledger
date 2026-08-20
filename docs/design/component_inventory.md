@@ -25,3 +25,14 @@ screen composes existing patterns: a segmented control (already used
 elsewhere in Console Reports for period selection), a summary bar of
 `MoneyValue`-shaped figures, and a table of rows — none of which required a
 new named component per the inventory above.
+
+No new component was needed for WBS 5.1 (public store page and menu browse)
+either. It composes `MoneyValue` and `EmptyState` from this inventory, plus
+the prototype's own `.cw-*` page-shell/store-header/menu-list classes
+(`design/Customer Web.html`'s page-scoped `<style>` block, not the shared
+token file 2.2 read from) — completed in `packages/ui/src/components.css` in
+the same change, same literal-port discipline as the rest of that file. The
+store open/closed pill reuses the existing `st st--<status>` badge markup
+directly (see `OrderStatusBadge`) rather than going through that component,
+since its status enum (`unpaid`/`accepted`/...) has no open/closed pair —
+only the CSS classes are shared, not the component.

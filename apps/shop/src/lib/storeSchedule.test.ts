@@ -6,7 +6,13 @@
 // here). Picked up opportunistically alongside groupSlotsByHour (this
 // entry's own new function) since it's the same file.
 import { describe, expect, it } from "vitest";
-import { computeSlotAvailability, computeStoreOpenState, formatHoursLabel, groupSlotsByHour } from "./storeSchedule";
+import {
+  computeSlotAvailability,
+  computeStoreOpenState,
+  filterSlotsForToday,
+  formatHoursLabel,
+  groupSlotsByHour,
+} from "./storeSchedule";
 
 const TZ = "Asia/Bangkok";
 
@@ -68,6 +74,46 @@ describe("computeSlotAvailability", () => {
     );
     expect(result.hasSlotsToday).toBe(false);
     expect(result.nextSlotLabel).toBe("พรุ่งนี้ 07:00");
+  });
+});
+
+describe("filterSlotsForToday", () => {
+  // Bug-fix coverage: a store's standing 7-day-ahead generation
+  // (generate_pickup_slots_for_store, days_ahead=7) means public-slots can
+  // hand the picker slots spanning a full week — this is the guard that
+  // keeps groupSlotsByHour from flattening them into duplicate, unlabeled
+  // hour headers (storeSchedule.ts's filterSlotsForToday header comment).
+  it("keeps only slots on the store-local calendar day of `now`, across a 7-day span", () => {
+    const now = new Date("2026-08-20T00:30:00Z"); // 07:30 Bangkok, 2026-08-20
+    const slots = [
+      { id: "a", slotStart: "2026-08-20T00:00:00Z" }, // 07:00 Bangkok, today
+      { id: "b", slotStart: "2026-08-20T10:00:00Z" }, // 17:00 Bangkok, today
+      { id: "c", slotStart: "2026-08-21T00:00:00Z" }, // 07:00 Bangkok, tomorrow
+      { id: "d", slotStart: "2026-08-26T00:00:00Z" }, // 07:00 Bangkok, day 6
+    ];
+    const result = filterSlotsForToday(slots, TZ, now);
+    expect(result.map((s) => s.id)).toEqual(["a", "b"]);
+  });
+
+  it("a day boundary just after midnight Bangkok excludes the prior UTC day's slots", () => {
+    // 00:30 Bangkok on 2026-08-21 = 2026-08-20T17:30:00Z.
+    const now = new Date("2026-08-20T17:30:00Z");
+    const slots = [
+      { id: "late-yesterday", slotStart: "2026-08-20T16:00:00Z" }, // 23:00 Bangkok, 2026-08-20
+      { id: "early-today", slotStart: "2026-08-20T17:15:00Z" }, // 00:15 Bangkok, 2026-08-21
+    ];
+    const result = filterSlotsForToday(slots, TZ, now);
+    expect(result.map((s) => s.id)).toEqual(["early-today"]);
+  });
+
+  it("no slots today — empty result, not an error", () => {
+    const now = new Date("2026-08-20T00:30:00Z");
+    const slots = [{ id: "tomorrow", slotStart: "2026-08-21T00:00:00Z" }];
+    expect(filterSlotsForToday(slots, TZ, now)).toEqual([]);
+  });
+
+  it("empty input yields empty output", () => {
+    expect(filterSlotsForToday([], TZ, new Date("2026-08-20T00:30:00Z"))).toEqual([]);
   });
 });
 

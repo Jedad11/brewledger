@@ -79,6 +79,51 @@ export function formatHoursLabel(opensAt: string, closesAt: string): string {
   return `${opensAt.slice(0, 5)}–${closesAt.slice(0, 5)}`;
 }
 
+// Bug fix, post-review (flagged for redline_reviewer — WBS 5.3/5.4 were
+// already `done`/`needs review` when this was found): `generate_pickup_slots_for_store`
+// (0028) generates `days_ahead=7` by default and `public-slots` returns
+// every open future slot with no date filter, so a real store's standing
+// 7-day window hands groupSlotsByHour ~560 rows spanning 7 calendar days.
+// groupSlotsByHour itself only ever grouped by 2-digit hour-of-day with no
+// notion of which day a slot fell on, so "07" from today and "07" from six
+// days later rendered as two separate, identically-labelled headers, and
+// the picker became an unbounded, undifferentiated wall of ~140 tiny
+// buttons over 15,000px of scroll — confirmed live via Playwright against a
+// real 562-slot seeded dataset.
+//
+// The delivered prototype (design/customer-web.js's scCheckout, ~line
+// 78-88) only ever renders one day's worth of hour-grouped slots — its
+// SLOTS mock is a single day — and docs/design/state_matrix.md's own
+// "เลือกเวลารับ /checkout" section names the "All full" state
+// `วันนี้เต็มทุกช่วงเวลาแล้ว` ("today is completely full"), i.e. the
+// documented default view IS today, with the existing all-full notice
+// already the intended path to "come back later" rather than a second,
+// undocumented multi-day browsing UI. Neither state_matrix.md nor
+// interaction_spec.md nor component_inventory.md mentions a day picker or
+// day-level header anywhere. Fix: filter to today's slots (store-local
+// calendar day) before grouping by hour — groupSlotsByHour's own contract
+// is untouched (still adjacency-based hour-only grouping, still assumes a
+// single day's worth of input) since day-scoping happens one step earlier,
+// in the new filterSlotsForToday. This is the smaller of the two
+// defensible fixes named in the fix brief (single day vs. multi-day list
+// with headers) — it needs no new component, no new Thai string beyond the
+// วันนี้/พรุ่งนี้ vocabulary already established in this same file's
+// computeStoreOpenState/computeSlotAvailability, and it makes the "All
+// full" notice's own title finally true (it used to fire only when EVERY
+// future slot across all 7 days was gone, never when just today was —
+// SlotPicker.tsx's allFull was `slots.length === 0` over the unfiltered
+// list). If a genuine pre-order-multiple-days-ahead browsing UI is wanted
+// later, that is new scope, not a bug fix, and belongs in its own WBS
+// entry with its own state_matrix.md section.
+export function filterSlotsForToday<T extends { slotStart: string }>(
+  slots: T[],
+  timezone: string,
+  now: Date = new Date(),
+): T[] {
+  const todayKey = partsInTimeZone(now, timezone).dateKey;
+  return slots.filter((slot) => partsInTimeZone(new Date(slot.slotStart), timezone).dateKey === todayKey);
+}
+
 export interface SlotHourGroup {
   /** "08" — 2-digit hour, store-local, per the prototype's `${g.h} น.` heading (design/customer-web.js scCheckout). */
   hourLabel: string;
@@ -89,7 +134,11 @@ export interface SlotHourGroup {
 // non-full — RLS's doing, see publicApi.ts's PublicSlot comment) list by
 // store-local hour, for the /checkout picker. Slots are already ordered by
 // slot_start ascending (public-slots' own .order call) so groups come out
-// in chronological order for free without a separate sort here.
+// in chronological order for free without a separate sort here. Callers
+// must pre-filter to a single calendar day (see filterSlotsForToday above)
+// — this function has no day awareness of its own, by design, so its
+// existing adjacency-based grouping stays simple and its existing tests
+// stay valid.
 export function groupSlotsByHour(
   slots: { id: string; slotStart: string; remaining: number }[],
   timezone: string,

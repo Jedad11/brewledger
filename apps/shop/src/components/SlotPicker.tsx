@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Input, Button, PublicMoneyValue } from "@brewledger/ui";
 import { fetchPublicSlots, createOrder, type PublicSlot } from "@/lib/publicApi";
-import { groupSlotsByHour } from "@/lib/storeSchedule";
+import { computeSlotAvailability, filterSlotsForToday, groupSlotsByHour } from "@/lib/storeSchedule";
 import { useCart, cartLineTotalSatang, cartTotalSatang, type CartLine } from "@/lib/cart";
 import type { CartDiffReason } from "@/lib/cartValidation";
 import { CartDiffNotices } from "@/components/CartDiffNotices";
@@ -67,9 +67,16 @@ export function SlotPicker({ slug, timezone, initialSlots }: { slug: string; tim
   const [diffs, setDiffs] = React.useState<CartDiffReason[] | null>(null);
   const [orderFailed, setOrderFailed] = React.useState(false);
 
-  const groups = React.useMemo(() => groupSlotsByHour(slots, timezone), [slots, timezone]);
+  // Bug fix, post-review (see storeSchedule.ts's filterSlotsForToday header
+  // comment) — the picker shows only today's store-local slots, matching
+  // the prototype's single-day scCheckout and the "วันนี้เต็มทุกช่วงเวลาแล้ว"
+  // wording already wired below; a store's standing 7-day-ahead generation
+  // no longer floods this list.
+  const todaySlots = React.useMemo(() => filterSlotsForToday(slots, timezone), [slots, timezone]);
+  const groups = React.useMemo(() => groupSlotsByHour(todaySlots, timezone), [todaySlots, timezone]);
+  const availability = React.useMemo(() => computeSlotAvailability(slots, timezone), [slots, timezone]);
   const selectedSlot = slots.find((s) => s.id === selectedId) ?? null;
-  const allFull = slots.length === 0;
+  const allFull = todaySlots.length === 0;
   const canSubmit = !!selectedSlot && name.trim().length > 0 && lines.length > 0;
   const total = cartTotalSatang(lines);
 
@@ -214,7 +221,7 @@ export function SlotPicker({ slug, timezone, initialSlots }: { slug: string; tim
       {allFull ? (
         <div className="cw-notice">
           <b>{CHECKOUT_ALL_FULL_TITLE}</b>
-          <p>{checkoutAllFullBody("พรุ่งนี้")}</p>
+          <p>{checkoutAllFullBody(availability.nextSlotLabel ?? "พรุ่งนี้")}</p>
         </div>
       ) : (
         groups.map((group) => (

@@ -1,6 +1,6 @@
 # Data Dictionary
 
-Every column in `packages/db/prisma/schema.prisma` is classified below as
+Every column in `packages/db/migrations/*.sql` is classified below as
 either `PUBLIC_SAFE` (may appear in a Customer Web / `/api/public/*`
 response) or `MERCHANT_ONLY` (must never leave `/api/console/*` — RL-3).
 

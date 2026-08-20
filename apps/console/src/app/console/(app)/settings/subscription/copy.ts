@@ -12,6 +12,14 @@ export const CURRENT_PLAN_PREFIX = "แผนปัจจุบัน";
 export const ALWAYS_AVAILABLE_NOTE =
   "ขายและรับเงินได้ครบทุกฟังก์ชันในทุกแผน ไม่มีการล็อกฟีเจอร์การขายไว้";
 
+// WBS 4.8 — RL-1: the gateway is gone, so no per-transaction fee is ever
+// attributable to BrewLedger. The parenthetical is not hedging, it is
+// accurate: a customer's own bank may charge under normal PromptPay rules,
+// and that was never ours to begin with.
+export const FEE_STATEMENT_TH =
+  "ไม่มีค่าธรรมเนียมต่อรายการ ลูกค้าโอนเข้าพร้อมเพย์ของร้านโดยตรง " +
+  "(ธนาคารของลูกค้าอาจคิดค่าธรรมเนียมตามเงื่อนไขพร้อมเพย์ปกติ ซึ่งไม่เกี่ยวกับ BrewLedger)";
+
 export const TIER_LABEL_TH: Record<SubscriptionTier, string> = {
   free: "ฟรี",
   starter: "สตาร์ทเตอร์",

@@ -5,8 +5,8 @@
 // (`pnpm --filter <app> lint`); this config only checks cross-app imports.
 //
 // The rule: apps/shop (Customer Web, public/unauthenticated) may never import
-// apps/console (Owner Console) or packages/db (Prisma client + cost/margin
-// schema). A bundle that cannot import the DB or the merchant UI cannot leak
+// apps/console (Owner Console) or packages/db (generated Supabase schema
+// types + cost/margin). A bundle that cannot import the DB or the merchant UI cannot leak
 // merchant-only data — this is the primary structural enforcement of RL-3.
 //
 // apps/shop does not exist yet (front-end work not started). The zones below

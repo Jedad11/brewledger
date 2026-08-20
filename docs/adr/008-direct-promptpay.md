@@ -67,11 +67,15 @@ Consequences of this shape, by design:
 
 - WBS 5.5/5.6 (order-level QR issuance and payment confirmation) build on
   the payload generator this ADR's implementation (WBS 4.5) introduced.
-- `packages/db/prisma/schema.prisma` and `packages/db/seed.ts` still contain
-  gateway-shaped fields (`gatewayProvider`, `gatewayMerchantId`,
-  `gatewayKycStatus`, `absorbGatewayFee`, `Payment.provider`,
-  `settledToMerchantAccount`) left over from the withdrawn plan. These are
-  Prisma-era artifacts unrelated to the live SQL migrations in
-  `packages/db/migrations/`, which were designed direct-PromptPay from the
-  start and never had gateway columns. Cleaning up the stale Prisma schema
-  is WBS 3.5's scope, not this entry's.
+- **Resolved under WBS 4.8.** `packages/db/prisma/schema.prisma` and
+  `packages/db/seed.ts` — the Prisma-era artifacts that carried
+  `gatewayProvider`, `gatewayMerchantId`, `gatewayKycStatus`,
+  `absorbGatewayFee`, `Payment.provider`, `settledToMerchantAccount` — have
+  been deleted, along with the `prisma`/`@prisma/client` dependency and the
+  now-dead `db:migrate`/`db:seed`/`db:generate`/`db:validate` scripts. They
+  were unrelated to the live SQL migrations in `packages/db/migrations/`,
+  which were designed direct-PromptPay from the start and never had gateway
+  columns; `packages/db/seed.sql` (already wired into
+  `supabase/config.toml`'s `db.seed.sql_paths`) is the one seed mechanism
+  now. `packages/db/tests/rl1_no_gateway_fee_columns.test.ts` guards against
+  reintroduction, scanning the full `public` schema.

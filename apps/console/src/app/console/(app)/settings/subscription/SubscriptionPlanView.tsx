@@ -10,6 +10,7 @@ import {
 import {
   CURRENT_PLAN_PREFIX,
   ALWAYS_AVAILABLE_NOTE,
+  FEE_STATEMENT_TH,
   TIER_LABEL_TH,
   GROUP_HEADING_TH,
   UPGRADE_BENEFIT_TH,
@@ -42,6 +43,7 @@ export function SubscriptionPlanView() {
           {TIER_LABEL_TH[subscriptionTier]}
         </p>
         <p className="mt-2 text-sm leading-[1.5] text-ink-muted">{ALWAYS_AVAILABLE_NOTE}</p>
+        <p className="mt-2 text-sm leading-[1.5] text-ink-muted">{FEE_STATEMENT_TH}</p>
       </Card>
 
       {GROUP_ORDER.map((groupTier) => {

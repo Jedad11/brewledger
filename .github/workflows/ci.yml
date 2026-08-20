@@ -8,11 +8,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      # Prisma validate/generate resolve env("DATABASE_URL") at parse time
-      # even though neither connects to a database. A real connection string
-      # is only needed for `migrate`/`db push`, which this workflow doesn't run.
-      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/brewledger?schema=public"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,9 +31,6 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Generate Prisma client
-        run: pnpm db:generate
-
       - name: Typecheck
         run: pnpm typecheck
 
@@ -47,9 +39,6 @@ jobs:
 
       - name: Lint (RL-3 import boundary)
         run: pnpm lint:boundary
-
-      - name: Validate Prisma schema
-        run: pnpm db:validate
 
       - name: Build
         run: pnpm build

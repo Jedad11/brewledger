@@ -18,14 +18,10 @@
     "test:lint-no-db-row-spread": "bash scripts/test-lint-no-db-row-spread-regression.sh",
     "test:functions-import-boundary": "bash scripts/test-functions-import-boundary-regression.sh",
     "typecheck": "pnpm --filter @brewledger/shared build && pnpm -r typecheck",
-    "db:migrate": "pnpm --filter @brewledger/db exec prisma migrate dev",
-    "db:seed": "pnpm --filter @brewledger/db exec prisma db seed",
     "db:reset": "supabase db reset",
     "db:push": "supabase db push",
     "db:diff": "supabase db diff",
     "db:types": "supabase gen types typescript --linked > packages/db/src/types.ts",
-    "db:generate": "pnpm --filter @brewledger/db exec prisma generate",
-    "db:validate": "pnpm --filter @brewledger/db exec prisma validate",
     "prepare": "husky"
   },
   "devDependencies": {

@@ -63,10 +63,18 @@ of record is `/design/P5 Handoff.md`.
 - **Save success** — `บันทึกแล้ว`.
 - **Save error** — `บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง` (same generic-failure idiom as `requestOtp.ts`, WBS 4.1).
 
-### การรับเงิน `/console/settings/payments`
-- **Pending KYC** — `ระหว่างรอตรวจสอบเอกสาร` / `ขายหน้าร้านด้วยเงินสดได้เต็มรูปแบบตามปกติ มีเพียงการสั่งล่วงหน้าผ่านลิงก์ที่ยังปิดอยู่ ผู้ให้บริการชำระเงินมักใช้เวลา 1–2 วันทำการ`
-- **Tested** — `เชื่อมต่อสำเร็จ` / `เงินจะเข้าบัญชีชื่อ ส. สมใจ พาณิชย์ ธนาคารกสิกรไทย ลงท้าย 4821`
-- **Always** — `เลขบัญชีธนาคารของคุณอยู่กับผู้ให้บริการชำระเงินเท่านั้น BrewLedger ไม่เก็บและไม่เห็นเลขบัญชีของคุณ`
+### การรับเงิน `/console/settings/payments` **(corrected in WBS 4.5 — see `/docs/design/gaps.md` GAP-6; the two states and copy this section carried before described a licensed-gateway KYC flow that stores a bank account name and branch, which both the WBS 4.5 revision note and RL-1 withdrew before this screen was built)**
+- **No store yet** (a merchant can reach this route before saving a store profile, same posture as WBS 4.4's own "No store yet" state for `/console/menu`) — `ตั้งค่าข้อมูลร้านก่อนตั้งค่าการรับเงิน` / `กรอกชื่อร้านกับที่อยู่รับสินค้าไว้ก่อน แล้วค่อยกลับมาตั้งค่าการรับเงินได้เลย` + `ไปตั้งค่าข้อมูลร้าน`.
+- **Default** — type selector เบอร์มือถือ / เลขบัตรประชาชน / เลขผู้เสียภาษี; one input, normalised and validated per type; a live QR preview beneath it, regenerated on every valid change, encoding a fixed 1.00 THB amount.
+- **Verification instruction, beside the preview, prominent (not a footnote)** — `สแกน QR นี้ด้วยแอปธนาคารของคุณเอง แล้วดูว่าชื่อผู้รับเงินเป็นชื่อคุณถูกต้องหรือไม่ (ยังไม่ต้องกดโอน)`.
+- **Preview placeholder (no valid identifier yet)** — `กรอกและตรวจสอบข้อมูลด้านบนให้ถูกต้องก่อน จึงจะแสดง QR ตัวอย่างที่นี่`.
+- **Preview render failure** — `แสดง QR ตัวอย่างไม่สำเร็จ ลองใหม่อีกครั้ง` (same generic-failure idiom as elsewhere in the console).
+- **Invalid identifier (inline, per type, shown as soon as the field is non-empty — reject early, not on blur/submit, since a typo here sends every future QR to a stranger)** — msisdn: `กรอกเบอร์มือถือ 10 หลัก ขึ้นต้นด้วย 0`; nid, shape: `กรอกเลขบัตรประชาชน 13 หลัก`; nid, failed check digit: `เลขบัตรประชาชนไม่ถูกต้อง ตรวจสอบเลขอีกครั้ง`; taxid: `กรอกเลขผู้เสียภาษี 13 หลัก`.
+- **Confirmation** — a checkbox-equivalent toggle, `ฉันสแกนแล้วและยืนยันว่าชื่อผู้รับเงินคือฉัน`, persisted as `promptpay_verified_at`; disabled until the current input normalises successfully; unchecked (and the stored timestamp cleared) automatically the instant the identifier or type is edited, since a prior verification proved the OLD value was the merchant's own, not a new one.
+- **Always visible, verbatim, never paraphrased** — `เงินจากลูกค้าโอนเข้าบัญชีพร้อมเพย์ของคุณโดยตรง ไม่ผ่าน BrewLedger` / `เราเก็บแค่เบอร์พร้อมเพย์ไว้สร้าง QR เท่านั้น ไม่เห็นและไม่เก็บเลขบัญชีธนาคารของคุณ` / `ไม่มีค่าธรรมเนียมจากเรา`.
+- **Save success** — `บันทึกแล้ว` (reused verbatim from the store profile screen's own save-success idiom, WBS 4.3).
+- **Save error** — `บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง` (same generic-failure idiom as `requestOtp.ts`/WBS 4.3's store form).
+- **Publish gating (surfaces on `/console/settings/store`, not here)** — a store with no verified PromptPay identifier cannot be published; the store profile screen shows `เชื่อมและยืนยันการรับเงินผ่านพร้อมเพย์ก่อน จึงจะเปิดขายผ่านลิงก์ได้` persistently beneath its publish toggle (never only after a failed save, never by silently disabling the toggle itself) with a link back to this screen.
 
 ### สแกนบิล `/console/expenses/capture`
 - **Processing** — `กำลังอ่านบิล...` / `ใบแรกของวันอาจใช้เวลาถึง 1 นาที ระบบต้องปลุกเครื่องอ่านก่อน` + elapsed MM:SS + `ไปทำอย่างอื่นก่อนได้` (navigation away must not cancel the job).

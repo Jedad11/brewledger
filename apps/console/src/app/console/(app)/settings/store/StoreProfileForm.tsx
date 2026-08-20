@@ -1,9 +1,11 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Card, Input, Button, Toggle, OnboardingStrip, type OnboardingStripProps } from "@brewledger/ui";
 import { generateSlugBase, slugify } from "@/lib/slug";
 import { saveStoreProfile, type StoreProfileInput } from "./actions";
+import { PUBLISH_REQUIRES_PROMPTPAY_VERIFICATION } from "./copy";
 
 // WBS 4.3 — store profile screen. Field set and copy: docs/design/state_matrix.md
 // "ข้อมูลร้าน /console/settings/store" (added in this change, see
@@ -42,6 +44,7 @@ export function StoreProfileForm({
   store: StoreProfileRow;
   onboarding: { store: boolean; menu: boolean; payments: boolean };
 }) {
+  const router = useRouter();
   const [name, setName] = React.useState(store?.name ?? "");
   const [pickupAddress, setPickupAddress] = React.useState(store?.pickup_address ?? "");
   const [opensAt, setOpensAt] = React.useState(toTimeInputValue(store?.opens_at ?? null));
@@ -178,6 +181,21 @@ export function StoreProfileForm({
             checked={isPublished}
             onChange={setIsPublished}
           />
+          {/* Persistent, not only shown after a failed save attempt --
+              WBS 4.5 acceptance: "the console says why in plain Thai,"
+              and the toggle itself is never disabled to enforce this. */}
+          {!onboarding.payments ? (
+            <p className="note-plain">
+              {PUBLISH_REQUIRES_PROMPTPAY_VERIFICATION}{" "}
+              <button
+                type="button"
+                className="underline"
+                onClick={() => router.push("/console/settings/payments")}
+              >
+                ไปตั้งค่าการรับเงิน
+              </button>
+            </p>
+          ) : null}
 
           {error ? (
             <p role="alert" className="err">

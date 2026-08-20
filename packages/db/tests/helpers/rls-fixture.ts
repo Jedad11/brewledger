@@ -115,8 +115,8 @@ export async function createFullStoreFixture(
 
     const storeSlug = `qa-rls-${suffix}`;
     const { rows: storeRows } = await client.query(
-      `insert into stores (merchant_id, slug, name, is_published, promptpay_id, promptpay_type)
-       values ($1, $2, $3, $4, '0899999999', 'msisdn') returning id`,
+      `insert into stores (merchant_id, slug, name, is_published, promptpay_id, promptpay_type, promptpay_verified_at)
+       values ($1, $2, $3, $4, '0899999999', 'msisdn', now()) returning id`,
       [merchantId, storeSlug, `QA RLS Store ${suffix}`, opts.isPublished ?? true],
     );
     const storeId = storeRows[0].id as string;
@@ -333,7 +333,8 @@ export async function createVisibilityFixture(
 
     const publishedStoreSlug = `qa-rls-vis-pub-${suffix}`;
     const { rows: pubStoreRows } = await client.query(
-      `insert into stores (merchant_id, slug, name, is_published) values ($1, $2, 'QA Visibility Published', true) returning id`,
+      `insert into stores (merchant_id, slug, name, is_published, promptpay_id, promptpay_type, promptpay_verified_at)
+       values ($1, $2, 'QA Visibility Published', true, '0899999999', 'msisdn', now()) returning id`,
       [merchantId, publishedStoreSlug],
     );
     const publishedStoreId = pubStoreRows[0].id as string;

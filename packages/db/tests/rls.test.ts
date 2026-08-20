@@ -696,7 +696,26 @@ describe("WBS 4.3 — stores INSERT bootstrap fix (migration 0026)", () => {
     it("once the owning merchant publishes it, anon CAN see it (own-write path plus anon_read_published_stores both intact)", async () => {
       if (!ready) return;
       const clientA = authenticatedClient(merchantA.authUserId);
-      const { error: publishErr } = await clientA.from("stores").update({ is_published: true }).eq("id", ownedStoreId);
+      // Migration 0027's guard_promptpay_before_publish trigger forces
+      // is_published back to false whenever it would otherwise stand
+      // published with promptpay_verified_at IS NULL (RL-1's DB-level
+      // publish gate) -- this fixture's row was created with neither set
+      // (see beforeAll above), so a bare `is_published: true` update would
+      // now be silently coerced back to false, defeating this test's own
+      // premise before it ever reaches the anon-visibility assertion below.
+      // Set a verified PromptPay identifier in the same statement, matching
+      // what a real publish flow (saveStoreProfile, only reachable once
+      // /console/settings/payments has a verified identifier) always has in
+      // place by the time it publishes.
+      const { error: publishErr } = await clientA
+        .from("stores")
+        .update({
+          is_published: true,
+          promptpay_id: "0899999999",
+          promptpay_type: "msisdn",
+          promptpay_verified_at: new Date().toISOString(),
+        })
+        .eq("id", ownedStoreId);
       expect(publishErr).toBeNull();
 
       const anon = anonClient();

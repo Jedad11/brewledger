@@ -149,6 +149,98 @@ needed both.
 
 ---
 
+## GAP-6 — Payments screen (`การรับเงิน`) — state matrix corrected, not just documented
+
+**Status:** The delivered prototype's `payments` screen (`console-setup.js`'s
+`scPayments()`) and the state matrix section transcribed from it both
+described a licensed-payment-gateway flow: a gateway merchant code field, a
+"pending KYC" state, a "tested" state showing a bank account name and
+branch (`เงินจะเข้าบัญชีชื่อ ส. สมใจ พาณิชย์ ธนาคารกสิกรไทย ลงท้าย 4821`), and
+copy claiming the bank account number "stays with the payment provider."
+
+This is a real conflict, not just an undocumented screen (unlike GAP-1/GAP-5):
+WBS 4.5's own revision note withdrew the gateway integration from the MVP
+before this screen was built (2C2P requires a ≥1-year-old commercial
+registration that excludes sole-proprietor pilot stores; gateway KYC takes
+15–20 business days, which doesn't fit the delivery window — see
+`docs/adr/008-direct-promptpay.md`), and the prototype's own "tested" state
+displays a bank account name and branch, which RL-1 forbids storing or
+showing at all ("No bank account number, name, or branch is persisted").
+Per `CLAUDE.md`'s precedence table, a red line outranks the state matrix,
+so the state matrix is corrected in the same change rather than the
+red-line violation being carried forward as "documented, working as
+designed."
+
+**Decision:** `docs/design/state_matrix.md`'s "การรับเงิน" section is
+rewritten (WBS 4.5) to describe the direct-PromptPay flow the WBS 4.5
+prompt itself specifies: a type selector (msisdn / nid / taxid), per-type
+validation, a live self-scanned QR preview as the verification step in
+place of a gateway "tested" state, and the fixed Thai explainer paragraph.
+The gateway-era copy (KYC status chip, bank account name/branch line) is
+removed outright, not preserved as a dead alternate state — it describes a
+control that no longer exists in this architecture. The underlying layout
+(card, header, form-then-note structure) is still reused per the WBS 4.5
+prompt's own instruction to "reuse the delivered layout — only the fields
+and copy change."
+
+**Owner:** M1 (screen + copy), redline_reviewer (confirms no bank-detail
+column or copy resurfaces).
+
+**Blocks:** Nothing further. Closed by this same change (WBS 4.5).
+
+---
+
+## GAP-7 — Auto-unpublish on PromptPay edit has no visible signal in the console
+
+**Status:** Real gap, introduced (as a side effect) by the WBS 4.5 redline
+fix that added `guard_promptpay_before_publish` (`packages/db/migrations/
+0027_promptpay_publish_guard.sql`). That trigger correctly forces
+`is_published` back to `false` at the database layer whenever a row would
+otherwise stand published with `promptpay_verified_at is null` — closing the
+CRITICAL/HIGH findings that a merchant editing a live store's PromptPay
+identifier (`savePromptPaySettings`) left it published with no verified
+payee, and that a direct PostgREST call could bypass the Server Action's own
+check entirely. But `savePromptPaySettings`'s result type
+(`SavePromptPayResult` — `{ ok, promptpayId, promptpayType,
+promptpayVerifiedAt }`) does not report `is_published` at all, so neither
+the Server Action's caller nor `PaymentsSettingsForm` can tell a store just
+went offline as a side effect of an ordinary identifier edit. A merchant who
+fixes a typo in their PromptPay number, without re-verifying in the same
+submission, gets silently auto-unpublished with zero visible signal
+anywhere in the product — they keep seeing "บันทึกแล้ว" and have no reason
+to suspect they've stopped taking orders.
+
+**Decision:** Not built now. This needs its own WBS-shaped follow-up with
+real `docs/design/state_matrix.md` copy before any engineer touches the UI,
+per the design precedence rules (`CLAUDE.md`: state matrix outranks the
+prototype and the WBS entry's own description; copy is never invented
+in-line by an implementer). A follow-up entry should:
+
+- Have `savePromptPaySettings` select `is_published` in its `RETURNING`
+  clause (`supabase-js`'s `.update(...).select(...)` returns the row's
+  final post-trigger state for free — no extra query needed) and add it to
+  `SavePromptPayResult` so the action can report whether the store was just
+  auto-unpublished by this write.
+- Add a `state_matrix.md` entry for a visible banner/toast in
+  `/console/settings/payments` (and possibly the store profile / dashboard
+  screens, if a merchant needs to notice this outside the payments screen)
+  with exact Thai copy for "your store just went offline because the
+  PromptPay identifier changed and hasn't been re-verified yet" — distinct
+  from the existing `SAVE_SUCCESS` ("บันทึกแล้ว") copy, since silently
+  reusing a generic success message is exactly the failure mode being
+  closed.
+- Consider whether the same signal belongs on `/console/settings/store`'s
+  publish toggle (GAP-5) for the case where the store was already
+  unpublished for this reason before the merchant navigates there.
+
+**Owner:** M1 (state_matrix copy), M2 (UI once copy exists).
+
+**Blocks:** Nothing currently scheduled — the trigger itself is safe and
+complete without this; this gap is about merchant-visible feedback, not
+correctness or a red line.
+
+---
+
 ## Adherence lint follow-up (not a screen gap, recorded here for visibility)
 
 `_ds/.../_adherence.oxlintrc.json` cannot be executed by the installed

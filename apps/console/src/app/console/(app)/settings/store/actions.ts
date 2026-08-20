@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { resolveMerchantCtx } from "@/lib/merchant";
 import { generateSlugBase, slugify, withCollisionSuffix } from "@/lib/slug";
+import { PUBLISH_REQUIRES_PROMPTPAY_VERIFICATION } from "./copy";
 
 // WBS 4.3 — create/update the merchant's store profile.
 //
@@ -82,6 +83,26 @@ export async function saveStoreProfile(
 
   const slugBase = slugify(input.slug) || generateSlugBase(name);
   const supabase = await createClient();
+
+  // RL-1 / WBS 4.5: gate publishing on a verified PromptPay identifier.
+  // A brand-new store (no storeId yet) cannot possibly have one, so it's
+  // rejected without a query; an existing store's current value is read
+  // fresh here rather than trusted from the client, since a stale page
+  // load could otherwise let a merchant publish on an identifier they
+  // never actually verified.
+  if (input.isPublished) {
+    if (!input.storeId) {
+      return { error: PUBLISH_REQUIRES_PROMPTPAY_VERIFICATION };
+    }
+    const { data: paymentsRow } = await supabase
+      .from("stores")
+      .select("promptpay_verified_at")
+      .eq("id", input.storeId)
+      .single();
+    if (!paymentsRow?.promptpay_verified_at) {
+      return { error: PUBLISH_REQUIRES_PROMPTPAY_VERIFICATION };
+    }
+  }
 
   for (let attempt = 1; attempt <= MAX_SLUG_ATTEMPTS; attempt++) {
     const slug = withCollisionSuffix(slugBase, attempt);

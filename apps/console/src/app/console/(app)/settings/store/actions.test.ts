@@ -45,6 +45,7 @@ vi.mock("@/lib/slug", async () => {
 import { createClient } from "@/lib/supabase/server";
 import { resolveMerchantCtx } from "@/lib/merchant";
 import { saveStoreProfile, type StoreProfileInput } from "./actions";
+import { PUBLISH_REQUIRES_PROMPTPAY_VERIFICATION } from "./copy";
 
 const mockedCreateClient = vi.mocked(createClient);
 const mockedResolveMerchantCtx = vi.mocked(resolveMerchantCtx);
@@ -53,12 +54,18 @@ const MERCHANT_ID = "22222222-2222-4222-8222-222222222222";
 const OWNED_STORE_ID = "33333333-3333-4333-8333-333333333333";
 const OTHER_MERCHANTS_STORE_ID = "99999999-9999-4999-8999-999999999999";
 
+// isPublished defaults to false: the ownership-guard and collision-retry
+// tests below aren't exercising the WBS 4.5 publish gate (their mocks don't
+// stub its .select("promptpay_verified_at") read), so they stay clear of it
+// by default. The dedicated "WBS 4.5 -- publish gated" describe block sets
+// isPublished explicitly on every call it makes, so this default doesn't
+// touch it.
 const BASE_INPUT: Omit<StoreProfileInput, "storeId" | "slug"> = {
   name: "Brew Ledger Cafe",
   pickupAddress: "123 Sukhumvit Rd",
   opensAt: "08:00",
   closesAt: "18:00",
-  isPublished: true,
+  isPublished: false,
 };
 
 /**
@@ -272,6 +279,103 @@ describe("saveStoreProfile", () => {
 
       expect(result).toEqual({ error: expect.any(String) });
       expect(mockedCreateClient).not.toHaveBeenCalled();
+    });
+  });
+
+  // WBS 4.5 — RL-1 primary enforcement point on the publish path: a store
+  // cannot be published as orderable without a verified PromptPay
+  // identifier. Tested directly against the Server Action, not just the UI
+  // toggle, per the WBS 4.5 Testing block -- a stale page load or a forged
+  // request could otherwise submit isPublished: true regardless of what the
+  // client-side toggle shows.
+  describe("WBS 4.5 — publish gated on promptpay_verified_at", () => {
+    /**
+     * Builds a mock whose `.from("stores")` supports BOTH the
+     * `.select("promptpay_verified_at").eq(...).single()` read the publish
+     * gate performs and the subsequent `.update(...).eq(...).select(...)
+     * .single()` write, matching the single `supabase.from("stores")` call
+     * site actions.ts reuses for both.
+     */
+    function buildPublishGateMock(paymentsRow: { promptpay_verified_at: string | null } | null, paymentsErr: unknown = null) {
+      const paymentsSingleMock = vi.fn().mockResolvedValue({ data: paymentsRow, error: paymentsErr });
+      const paymentsEqMock = vi.fn().mockReturnValue({ single: paymentsSingleMock });
+      const paymentsSelectMock = vi.fn().mockReturnValue({ eq: paymentsEqMock });
+
+      const updateSingleMock = vi
+        .fn()
+        .mockResolvedValue({ data: { id: OWNED_STORE_ID, slug: "brew-ledger-cafe" }, error: null });
+      const updateSelectMock = vi.fn().mockReturnValue({ single: updateSingleMock });
+      const updateEqMock = vi.fn().mockReturnValue({ select: updateSelectMock });
+      const updateMock = vi.fn().mockReturnValue({ eq: updateEqMock });
+
+      const fromMock = vi.fn((table: string) => {
+        if (table !== "stores") throw new Error(`unexpected table passed to .from(): ${table}`);
+        return { select: paymentsSelectMock, update: updateMock };
+      });
+
+      return { client: { from: fromMock }, paymentsSelectMock, paymentsEqMock, updateMock, fromMock };
+    }
+
+    it("publishing a brand-new store (storeId: null) is rejected without touching the DB -- it cannot possibly have a verified id yet", async () => {
+      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [], stores: [] });
+      mockedCreateClient.mockResolvedValue(buildUnreachableClient() as never);
+
+      const result = await saveStoreProfile({ ...BASE_INPUT, storeId: null, slug: "x", isPublished: true });
+
+      expect(result).toEqual({ error: PUBLISH_REQUIRES_PROMPTPAY_VERIFICATION });
+    });
+
+    it("publishing an existing store with promptpay_verified_at: null is rejected in plain Thai, and the row is never updated", async () => {
+      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+      const { client, updateMock } = buildPublishGateMock({ promptpay_verified_at: null });
+      mockedCreateClient.mockResolvedValue(client as never);
+
+      const result = await saveStoreProfile({ ...BASE_INPUT, storeId: OWNED_STORE_ID, slug: "x", isPublished: true });
+
+      expect(result).toEqual({ error: PUBLISH_REQUIRES_PROMPTPAY_VERIFICATION });
+      expect(updateMock).not.toHaveBeenCalled();
+    });
+
+    it("the promptpay_verified_at read failing is treated as unverified (fail closed), not silently allowed through", async () => {
+      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+      const { client, updateMock } = buildPublishGateMock(null, { message: "connection reset" });
+      mockedCreateClient.mockResolvedValue(client as never);
+
+      const result = await saveStoreProfile({ ...BASE_INPUT, storeId: OWNED_STORE_ID, slug: "x", isPublished: true });
+
+      expect(result).toEqual({ error: PUBLISH_REQUIRES_PROMPTPAY_VERIFICATION });
+      expect(updateMock).not.toHaveBeenCalled();
+    });
+
+    it("publishing an existing store WITH promptpay_verified_at set reads a fresh value from the DB (not a client-supplied flag) and proceeds", async () => {
+      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+      const { client, updateMock, paymentsEqMock } = buildPublishGateMock({
+        promptpay_verified_at: "2026-01-15T09:30:00.000Z",
+      });
+      mockedCreateClient.mockResolvedValue(client as never);
+
+      const result = await saveStoreProfile({ ...BASE_INPUT, storeId: OWNED_STORE_ID, slug: "Brew Ledger Cafe", isPublished: true });
+
+      expect(result).toEqual({ ok: true, store: { id: OWNED_STORE_ID, slug: "brew-ledger-cafe" } });
+      expect(paymentsEqMock).toHaveBeenCalledWith("id", OWNED_STORE_ID);
+      expect(updateMock).toHaveBeenCalled();
+    });
+
+    it("saving as an unpublished draft never checks promptpay_verified_at at all -- the gate only applies to isPublished: true", async () => {
+      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+      const { client, paymentsSelectMock, updateMock } = buildPublishGateMock({ promptpay_verified_at: null });
+      mockedCreateClient.mockResolvedValue(client as never);
+
+      const result = await saveStoreProfile({
+        ...BASE_INPUT,
+        storeId: OWNED_STORE_ID,
+        slug: "Brew Ledger Cafe",
+        isPublished: false,
+      });
+
+      expect(paymentsSelectMock).not.toHaveBeenCalled();
+      expect(updateMock).toHaveBeenCalled();
+      expect("ok" in result).toBe(true);
     });
   });
 });

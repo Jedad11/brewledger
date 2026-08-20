@@ -132,3 +132,30 @@ export const CUSTOMER_PHONE_OPTIONAL_TAG = "ไม่ใส่ก็ได้";
 export const CUSTOMER_PHONE_PLACEHOLDER = "08X-XXX-XXXX";
 export const CART_SUMMARY_TITLE = "สรุปรายการ";
 export const ORDER_CREATE_FAILED = "สั่งซื้อไม่สำเร็จ ลองใหม่อีกครั้ง";
+
+// WBS 5.5 — "ชำระเงิน /pay" (docs/design/state_matrix.md; header title and
+// static instruction/label copy sourced from design/customer-web.js's
+// scPay()). state_matrix.md documents three of the four states this
+// screen implements: waiting, returned-from-bank (checking), and expired.
+// It has no fourth "confirmed" render state — see PayScreen.tsx's own
+// header comment for why: per this file's precedence rule (state_matrix
+// over the WBS entry's own description), and because screen_inventory.md's
+// own route table names `/o/{code}` as /pay's "next" screen, "confirmed"
+// is implemented as an immediate redirect to /o/{code}, not a fourth
+// persisted UI string here.
+export const PAY_TITLE = "ชำระเงิน";
+export const PAY_AMOUNT_LABEL = "ยอดที่ต้องชำระ";
+export const PAY_INSTRUCTION = "สแกนด้วยแอปธนาคารของคุณ แล้วกลับมาที่หน้านี้";
+export const PAY_ORDER_CODE_LABEL = "รหัสออเดอร์";
+
+// Composed as prefix + <b class="num"> mm:ss </b> in JSX, same pattern
+// priceChangedDiffPrefix/PRICE_CHANGED_DIFF_MIDDLE already use above for a
+// string that embeds a differently-styled inline value.
+export const PAY_WAITING_PREFIX = "ระบบกำลังรอการชำระเงิน · หมดเวลาใน ";
+
+export const PAY_CHECKING_TITLE = "กำลังตรวจสอบการชำระเงิน";
+export const PAY_CHECKING_BODY = "ถ้าโอนแล้ว ไม่ต้องปิดหน้านี้ ระบบจะอัปเดตให้เองภายในไม่กี่วินาที";
+
+export const PAY_EXPIRED_TITLE = "QR หมดเวลาแล้ว";
+export const PAY_EXPIRED_BODY = "ยังไม่มีการตัดเงิน ขอรหัสใหม่แล้วชำระได้ตามปกติ";
+export const PAY_REISSUE_LABEL = "ขอ QR ใหม่";

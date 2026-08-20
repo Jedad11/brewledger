@@ -312,6 +312,28 @@ export function toCheckoutDiff(row: {
   }
 }
 
-// PublicPaymentIntent — deliberately not defined here. No public-checkout
-// Edge Function or PromptPay payload builder exists yet (WBS 5.5). See
-// docs/api/surfaces_design.md §2 "PublicPaymentIntent — deferred, not built".
+// WBS 5.5 — public-create-charge's response shape. Built field by field
+// from an object public-create-charge itself assembles from the payload it
+// just generated plus create_payment_charge's returned row (never a spread
+// of that row — the row also carries id/order_id/status, none of which
+// cross the boundary). See docs/api/surfaces_design.md §2, now resolved.
+export interface PublicPaymentIntent {
+  qrPayload: string;
+  amountSatang: number;
+  expiresAt: string;
+  orderCode: string;
+}
+
+export function toPublicPaymentIntent(input: {
+  qrPayload: string;
+  amountSatang: number;
+  expiresAt: string;
+  orderCode: string;
+}): PublicPaymentIntent {
+  return {
+    qrPayload: input.qrPayload,
+    amountSatang: input.amountSatang,
+    expiresAt: input.expiresAt,
+    orderCode: input.orderCode,
+  };
+}

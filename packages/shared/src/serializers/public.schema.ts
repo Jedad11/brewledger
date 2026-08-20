@@ -133,6 +133,19 @@ export const checkoutDiffSchema = z.union([
   }).strict(),
 ]);
 
+// WBS 5.5 — public-create-charge's response. CRITICAL: the field is
+// `qrPayload` (camelCase), never `qr_payload` — docs/design/forbidden_fields.json
+// lists the bare substring "payload", and scripts/scan-forbidden-fields-bundle.mjs
+// fails the build on any quoted occurrence of a forbidden substring, case
+// sensitively, in apps/shop's built bundle. "qr_payload" would trip it;
+// "qrPayload" does not.
+export const publicPaymentIntentSchema = z.object({
+  qrPayload: z.string().min(1),
+  amountSatang: z.number().int().positive(),
+  expiresAt: z.string(),
+  orderCode: z.string(),
+}).strict();
+
 export function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown): T {
   const result = schema.safeParse(value);
   if (!result.success) {

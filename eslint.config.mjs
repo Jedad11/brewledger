@@ -222,6 +222,53 @@ export default [
     },
   },
   {
+    // WBS 5.5 — RL-1 backstop. Replaces the withdrawn aggregator-era rule
+    // that failed the build on any EMVCo tag pattern outside a gateway
+    // adapter (there is no gateway anymore, so that rule no longer applies
+    // and was never present in this codebase to remove — see
+    // eslint-rules/no-emvco-payload-construction.cjs's own header). This is
+    // the narrower replacement: payload construction is confined to
+    // exactly one tested place, packages/shared/src/promptpay/.
+    //
+    // Scoped to production source trees only (apps/, packages/, supabase/
+    // functions/, worker/), NOT a bare "**/*.{ts,tsx}" — this root config
+    // previously matched none of supabase/functions/_tests/**, and a
+    // blanket glob here was found to pull those files into this config's
+    // TS-aware pass for the first time, surfacing pre-existing unrelated
+    // `eslint-disable-next-line import/no-relative-packages` comments as
+    // "rule not found" errors (the "import" plugin is never registered for
+    // that directory in this file). Test directories are qa_engineer's
+    // territory, not this rule's — excluded explicitly rather than widening
+    // this config's blast radius to fix a lint gap this entry didn't create.
+    files: [
+      "apps/**/*.{ts,tsx}",
+      "packages/**/*.{ts,tsx}",
+      "supabase/functions/**/*.{ts,tsx}",
+      "worker/**/*.{ts,tsx}",
+    ],
+    ignores: [
+      "packages/shared/src/promptpay/**",
+      "**/node_modules/**",
+      "**/.next/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/*.test.ts",
+      "**/*.test.tsx",
+      "**/_tests/**",
+      "**/__fixtures__/**",
+    ],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        ecmaFeatures: { jsx: true },
+      },
+    },
+    plugins: { local: localRules },
+    rules: {
+      "local/no-emvco-payload-construction": "error",
+    },
+  },
+  {
     // apps/console is server-authenticated (phone OTP) and will eventually
     // have a legitimate route-handler use for the admin client. It has no
     // established client/server directory split yet (single server component

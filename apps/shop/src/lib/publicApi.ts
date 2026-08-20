@@ -226,3 +226,66 @@ export async function createOrder(request: CreateOrderRequest): Promise<CreateOr
     return { kind: "error" };
   }
 }
+
+// WBS 5.5 — public-create-charge / public-order-status. Mirrors
+// packages/shared/src/serializers/public.ts's PublicPaymentIntent field
+// for field, same "authored independently, not imported" posture every
+// other DTO in this file already takes (packages/db must never resolve
+// from apps/shop).
+export interface PublicPaymentIntent {
+  qrPayload: string;
+  amountSatang: number;
+  expiresAt: string;
+  orderCode: string;
+}
+
+export type CreateChargeResult =
+  | { kind: "ok"; data: PublicPaymentIntent }
+  | { kind: "not_found" }
+  | { kind: "not_payable" }
+  | { kind: "store_not_verified" }
+  | { kind: "error" };
+
+export async function createCharge(orderCode: string): Promise<CreateChargeResult> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !anonKey) return { kind: "error" };
+
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/public-create-charge`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+      },
+      body: JSON.stringify({ orderCode }),
+    });
+
+    if (res.status === 201) return { kind: "ok", data: (await res.json()) as PublicPaymentIntent };
+    if (res.status === 404) return { kind: "not_found" };
+    if (res.status === 409) {
+      const body = (await res.json()) as { code?: string };
+      return body.code === "STORE_NOT_VERIFIED" ? { kind: "store_not_verified" } : { kind: "not_payable" };
+    }
+    return { kind: "error" };
+  } catch {
+    return { kind: "error" };
+  }
+}
+
+// public-order-status returns an array with one row per order item, all
+// sharing the same orderCode/status/pickupAt -- callers read row[0] for
+// the order-level fields. Mirrors PublicOrderStatus (public.ts) field for
+// field, same independently-authored posture as every DTO above.
+export interface PublicOrderStatusRow {
+  orderCode: string;
+  status: string;
+  pickupAt: string | null;
+  itemName: string;
+  quantity: number;
+}
+
+export function fetchOrderStatus(code: string): Promise<PublicFetchResult<PublicOrderStatusRow[]>> {
+  return callPublicFunction<PublicOrderStatusRow[]>("public-order-status", { code });
+}

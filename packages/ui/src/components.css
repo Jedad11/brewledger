@@ -119,6 +119,28 @@ button{font-family:inherit;letter-spacing:var(--tracking-normal)}
 .cw-cartbar .cw-sum{font-weight:600;font-size:var(--text-3)}
 .cw-cartbar .btn{background:#fff;color:var(--green-cask);min-height:var(--tap-min)}
 
+/* ---- Pay screen (WBS 5.5) ----
+ * Ported from `design/Customer Web.html`'s inline <style> block (its
+ * separate delivered prototype stylesheet, NOT brewledger-tokens.css --
+ * unlike the rest of this file's header comment, these rules have no
+ * brewledger-tokens.css source line to cite). Literal port, same posture
+ * as every other block here: change the source, then re-port. .spinner
+ * reuses @keyframes bl-spin already defined above (.btn.is-loading) rather
+ * than redeclaring an identical animation under a second name. */
+.cw-pay{justify-content:flex-start}
+.cw-paycard{display:grid;gap:1.6rem;justify-items:center;text-align:center}
+.cw-amount{font-size:var(--text-9);font-weight:800;line-height:1.1;color:var(--green-cask)}
+.cw-qr{width:min(320px,78vw);aspect-ratio:1;background:#fff;padding:14px;border-radius:var(--radius-card);box-shadow:var(--shadow-card)}
+.cw-qr img{width:100%;height:100%;display:block}
+.cw-instr{font-size:var(--text-3)}
+.cw-codeline{font-size:var(--text-2);color:var(--text-black-soft)}
+.cw-codeline b{color:var(--text-black);font-size:var(--text-3);letter-spacing:.08em}
+.cw-count{display:inline-flex;align-items:center;gap:.8rem;background:var(--ceramic);border-radius:var(--radius-pill);padding:.8rem 1.6rem;font-size:var(--text-2);color:var(--text-black-soft)}
+.cw-count .dot{width:8px;height:8px;border-radius:50%;background:var(--green-brew);animation:bl-pulse 1.4s infinite}
+@keyframes bl-pulse{50%{opacity:.25}}
+.cw-checking,.cw-expired{display:grid;gap:1.2rem;justify-items:center;padding:var(--space-6) 0}
+.spinner{width:32px;height:32px;border-radius:50%;border:3px solid var(--green-mist);border-top-color:var(--green-brew);animation:bl-spin .8s linear infinite}
+
 /* ---- Console shell ---- */
 .oc-nav{display:grid;grid-template-columns:repeat(5,1fr);align-items:end;background:var(--white);box-shadow:var(--shadow-nav);padding:.6rem 0 1rem}
 .oc-nav button{position:relative;display:flex;flex-direction:column;align-items:center;gap:.4rem;min-height:var(--tap-min);border:0;background:none;cursor:pointer;font-size:var(--text-1);font-weight:600;color:var(--text-black-soft);padding:.6rem 0}

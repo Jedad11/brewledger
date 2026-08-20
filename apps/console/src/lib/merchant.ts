@@ -44,13 +44,18 @@ export async function resolveMerchantCtx(): Promise<MerchantCtx | null> {
 
   const { data: merchant, error: merchantErr } = await supabase
     .from("merchants")
-    .select("id")
+    .select("id, subscription_tier")
     .eq("auth_user_id", userData.user.id)
     .single();
   if (merchantErr || !merchant) return null;
+  // WBS 4.7 — subscription_tier has a NOT NULL default of 'free' (migration
+  // 0002), so this cast is safe without a runtime fallback; the check
+  // constraint there is the single source of truth for the value set, not
+  // duplicated here.
+  const subscriptionTier = merchant.subscription_tier as MerchantCtx["subscriptionTier"];
 
   if (storeIds.length === 0) {
-    return { merchantId: merchant.id, storeIds, stores: [] };
+    return { merchantId: merchant.id, subscriptionTier, storeIds, stores: [] };
   }
 
   const { data: storeRows, error: storesErr } = await supabase
@@ -61,6 +66,7 @@ export async function resolveMerchantCtx(): Promise<MerchantCtx | null> {
 
   return {
     merchantId: merchant.id,
+    subscriptionTier,
     storeIds,
     stores: (storeRows ?? []).map((row: StoreRow) => ({
       id: row.id,

@@ -13,12 +13,28 @@
 // this test package already depends on. It changes nothing about what code
 // runs — the same @supabase/supabase-js — it only tells Node's resolver
 // where to find it.
+//
+// WBS 4.7 added a second import of this same shape: _shared/console/auth.ts
+// (transitively, via _shared/console/features.ts) now imports
+// "@brewledger/shared/features". That specifier resolves under the Deno Edge
+// Runtime via supabase/functions/deno.json's own import map
+// ("@brewledger/shared/features": "../../packages/shared/src/features.ts"),
+// but @brewledger/shared's package.json exports only "." (./dist/index.js),
+// not a "./features" subpath, so plain Node/Vite resolution fails the same
+// way the npm: specifier above did ("Cannot find package
+// '@brewledger/shared/features'"). Same fix, same rationale: alias the one
+// specifier to the real TS source (mirroring deno.json's own mapping,
+// adjusted for this file's one-directory-deeper location) rather than touch
+// _shared/console/auth.ts or add an exports subpath to packages/shared's
+// package.json (either would be a production-code change, out of scope for
+// qa_engineer).
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   resolve: {
     alias: {
       "npm:@supabase/supabase-js@2": "@supabase/supabase-js",
+      "@brewledger/shared/features": new URL("../../../packages/shared/src/features.ts", import.meta.url).pathname,
     },
   },
 });

@@ -35,7 +35,7 @@ describe("toggleMenuItemAvailability", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("a storeId not owned by the merchant is rejected before any DB call", async () => {
-    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [OWNED_STORE_ID], stores: [] });
 
     const result = await toggleMenuItemAvailability(OTHER_STORE_ID, ITEM_ID, "hidden");
 
@@ -44,7 +44,7 @@ describe("toggleMenuItemAvailability", () => {
   });
 
   it("the unreachable-client canary confirms no query is attempted for a forged storeId", async () => {
-    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [OWNED_STORE_ID], stores: [] });
     mockedCreateClient.mockResolvedValue(buildUnreachableClient() as never);
 
     await expect(toggleMenuItemAvailability(OTHER_STORE_ID, ITEM_ID, "hidden")).resolves.toEqual({
@@ -53,7 +53,7 @@ describe("toggleMenuItemAvailability", () => {
   });
 
   it("writes availability='hidden' and scopes the update by both id and store_id", async () => {
-    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [OWNED_STORE_ID], stores: [] });
     const eq2 = vi.fn().mockResolvedValue({ error: null });
     const eq1 = vi.fn().mockReturnValue({ eq: eq2 });
     const updateMock = vi.fn().mockReturnValue({ eq: eq1 });
@@ -69,7 +69,7 @@ describe("toggleMenuItemAvailability", () => {
   });
 
   it("writes availability='available' just as readily -- the toggle is bidirectional", async () => {
-    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [OWNED_STORE_ID], stores: [] });
     const eq2 = vi.fn().mockResolvedValue({ error: null });
     const eq1 = vi.fn().mockReturnValue({ eq: eq2 });
     const updateMock = vi.fn().mockReturnValue({ eq: eq1 });
@@ -83,7 +83,7 @@ describe("toggleMenuItemAvailability", () => {
   });
 
   it("a Supabase error surfaces as the generic save-error string, not the raw Postgres message", async () => {
-    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [OWNED_STORE_ID], stores: [] });
     const eq2 = vi.fn().mockResolvedValue({ error: { message: "connection reset" } });
     const eq1 = vi.fn().mockReturnValue({ eq: eq2 });
     const updateMock = vi.fn().mockReturnValue({ eq: eq1 });
@@ -101,7 +101,7 @@ describe("reorderMenuItems", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("a storeId not owned by the merchant is rejected before any DB call", async () => {
-    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [OWNED_STORE_ID], stores: [] });
 
     const result = await reorderMenuItems(OTHER_STORE_ID, ["a", "b"]);
 
@@ -110,7 +110,7 @@ describe("reorderMenuItems", () => {
   });
 
   it("writes sort_order = array index for every id in the ordered list", async () => {
-    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [OWNED_STORE_ID], stores: [] });
 
     const updateCalls: unknown[] = [];
     const eqCalls: Array<[string, unknown]> = [];
@@ -147,7 +147,7 @@ describe("reorderMenuItems", () => {
   });
 
   it("any single update failing in the batch surfaces as an overall error", async () => {
-    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [OWNED_STORE_ID], stores: [] });
 
     let call = 0;
     const fromMock = vi.fn(() => ({

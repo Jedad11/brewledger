@@ -111,7 +111,7 @@ describe("saveMenuItem — RL-2: name + price only must succeed", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("succeeds with only name and price -- description null, no option groups, no BOM/cost field anywhere in the call", async () => {
-    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [OWNED_STORE_ID], stores: [] });
     const insertedItemRows: Array<Record<string, unknown>> = [];
     mockedCreateClient.mockResolvedValue(buildSuccessClient({ insertedItemRows }) as never);
 
@@ -135,7 +135,7 @@ describe("saveMenuItem — RL-2: name + price only must succeed", () => {
   });
 
   it("also succeeds with a full payload (description + option groups with zero/negative deltas) -- optional fields are optional, not forbidden", async () => {
-    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [OWNED_STORE_ID], stores: [] });
     const insertedItemRows: Array<Record<string, unknown>> = [];
     mockedCreateClient.mockResolvedValue(buildSuccessClient({ insertedItemRows }) as never);
 
@@ -158,7 +158,7 @@ describe("saveMenuItem — RL-2: name + price only must succeed", () => {
   });
 
   it("blank name is rejected without a DB call", async () => {
-    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [OWNED_STORE_ID], stores: [] });
 
     const result = await saveMenuItem({ ...BASE_INPUT, name: "   " });
 
@@ -167,7 +167,7 @@ describe("saveMenuItem — RL-2: name + price only must succeed", () => {
   });
 
   it("price <= 0 is rejected without a DB call -- price is required, unlike everything else", async () => {
-    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [OWNED_STORE_ID], stores: [] });
 
     const result = await saveMenuItem({ ...BASE_INPUT, priceSatang: 0 });
 
@@ -176,7 +176,7 @@ describe("saveMenuItem — RL-2: name + price only must succeed", () => {
   });
 
   it("a storeId not owned by the merchant is rejected before any DB call", async () => {
-    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [OWNED_STORE_ID], stores: [] });
 
     const result = await saveMenuItem({ ...BASE_INPUT, storeId: OTHER_STORE_ID });
 
@@ -185,7 +185,7 @@ describe("saveMenuItem — RL-2: name + price only must succeed", () => {
   });
 
   it("the unreachable-client canary confirms no query is attempted for a forged storeId", async () => {
-    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [OWNED_STORE_ID], stores: [] });
     mockedCreateClient.mockResolvedValue(buildUnreachableClient() as never);
 
     await expect(saveMenuItem({ ...BASE_INPUT, storeId: OTHER_STORE_ID })).resolves.toEqual({
@@ -221,7 +221,7 @@ describe("saveMenuItem — RL-2: name + price only must succeed", () => {
   }
 
   it("editing an existing item (itemId set) goes through update, scoped by id AND store_id, inserts the new option groups, then deletes the OLD groups by id -- new-before-old", async () => {
-    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [OWNED_STORE_ID], stores: [] });
     const insertedItemRows: Array<Record<string, unknown>> = [];
     const OLD_GROUP_IDS = ["old-group-1", "old-group-2"];
     const deleteInMock = vi.fn().mockResolvedValue({ error: null });
@@ -275,7 +275,7 @@ describe("saveMenuItem — RL-2: name + price only must succeed", () => {
   });
 
   it("a later option-group insert failing leaves the PREVIOUS option groups intact -- old groups are never deleted, and the partial new insert is not the saved state", async () => {
-    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [OWNED_STORE_ID], stores: [] });
     const insertedItemRows: Array<Record<string, unknown>> = [];
     const OLD_GROUP_IDS = ["old-group-1", "old-group-2"];
     const deleteMock = vi.fn();
@@ -333,7 +333,7 @@ describe("updateMenuItemImage", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("a storeId not owned by the merchant is rejected before any DB call", async () => {
-    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [OWNED_STORE_ID], stores: [] });
 
     const result = await updateMenuItemImage(ITEM_ID, OTHER_STORE_ID, `${OTHER_STORE_ID}/${ITEM_ID}.webp`);
 
@@ -342,7 +342,7 @@ describe("updateMenuItemImage", () => {
   });
 
   it("writes image_path scoped by id and store_id", async () => {
-    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+    mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [OWNED_STORE_ID], stores: [] });
     const eq2 = vi.fn().mockResolvedValue({ error: null });
     const eq1 = vi.fn().mockReturnValue({ eq: eq2 });
     const updateMock = vi.fn().mockReturnValue({ eq: eq1 });

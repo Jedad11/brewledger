@@ -19,6 +19,7 @@ import { assertOwnedStore, ForbiddenStoreError, type ConsoleContext } from "../_
 function fakeCtx(storeIds: string[]): ConsoleContext {
   return {
     merchantId: "00000000-0000-0000-0000-0000000000aa",
+    subscriptionTier: "free",
     storeIds,
     // assertOwnedStore never touches ctx.supabase -- it only compares
     // storeIds. A real SupabaseClient is deliberately not constructed here.

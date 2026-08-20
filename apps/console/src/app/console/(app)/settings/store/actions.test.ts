@@ -130,7 +130,7 @@ describe("saveStoreProfile", () => {
         "is never invoked, so the update/insert methods can't have been either",
       async () => {
         mockedResolveMerchantCtx.mockResolvedValue({
-          merchantId: MERCHANT_ID,
+          merchantId: MERCHANT_ID, subscriptionTier: "free",
           storeIds: [OWNED_STORE_ID],
           stores: [],
         });
@@ -152,7 +152,7 @@ describe("saveStoreProfile", () => {
       // somehow got called, wiring it to a client that throws on first use
       // proves no query was attempted either.
       mockedResolveMerchantCtx.mockResolvedValue({
-        merchantId: MERCHANT_ID,
+        merchantId: MERCHANT_ID, subscriptionTier: "free",
         storeIds: [OWNED_STORE_ID],
         stores: [],
       });
@@ -165,7 +165,7 @@ describe("saveStoreProfile", () => {
 
     it("a storeId that IS in the merchant's storeIds is accepted through to the update path", async () => {
       mockedResolveMerchantCtx.mockResolvedValue({
-        merchantId: MERCHANT_ID,
+        merchantId: MERCHANT_ID, subscriptionTier: "free",
         storeIds: [OWNED_STORE_ID],
         stores: [],
       });
@@ -184,7 +184,7 @@ describe("saveStoreProfile", () => {
     });
 
     it("storeId: null (first-store creation) always passes the guard regardless of storeIds", async () => {
-      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [], stores: [] });
+      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [], stores: [] });
       const { client } = buildInsertRetryMock(0);
       mockedCreateClient.mockResolvedValue(client as never);
 
@@ -196,7 +196,7 @@ describe("saveStoreProfile", () => {
 
   describe("collision-retry sequencing on Postgres 23505 (stores_slug_key)", () => {
     it("two collisions then success: the slug sequence attempted is base, base-2, base-3", async () => {
-      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [], stores: [] });
+      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [], stores: [] });
       const { client, insertedRows } = buildInsertRetryMock(2);
       mockedCreateClient.mockResolvedValue(client as never);
 
@@ -207,7 +207,7 @@ describe("saveStoreProfile", () => {
     });
 
     it("zero collisions: only one insert attempt is made, with the unsuffixed base slug", async () => {
-      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [], stores: [] });
+      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [], stores: [] });
       const { client, insertedRows, insertMock } = buildInsertRetryMock(0);
       mockedCreateClient.mockResolvedValue(client as never);
 
@@ -218,7 +218,7 @@ describe("saveStoreProfile", () => {
     });
 
     it("a non-23505 error stops retrying immediately and surfaces the generic save error", async () => {
-      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [], stores: [] });
+      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [], stores: [] });
       const singleMock = vi.fn().mockResolvedValue({
         data: null,
         error: { code: "23502", message: "null value in column violates not-null constraint" },
@@ -236,7 +236,7 @@ describe("saveStoreProfile", () => {
     });
 
     it("exhausting all 20 attempts on continuous 23505s returns the generic save error, having tried 20 distinct slugs", async () => {
-      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [], stores: [] });
+      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [], stores: [] });
       const { client, insertedRows, insertMock } = buildInsertRetryMock(9999); // never succeeds
       mockedCreateClient.mockResolvedValue(client as never);
 
@@ -251,7 +251,7 @@ describe("saveStoreProfile", () => {
     });
 
     it("a blank slug input falls back to a transliterated slug base derived from the store name before retries start", async () => {
-      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [], stores: [] });
+      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [], stores: [] });
       const { client, insertedRows } = buildInsertRetryMock(0);
       mockedCreateClient.mockResolvedValue(client as never);
 
@@ -273,7 +273,7 @@ describe("saveStoreProfile", () => {
     });
 
     it("a blank name is rejected without a DB call", async () => {
-      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [], stores: [] });
+      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [], stores: [] });
 
       const result = await saveStoreProfile({ ...BASE_INPUT, name: "   ", storeId: null, slug: "x" });
 
@@ -317,7 +317,7 @@ describe("saveStoreProfile", () => {
     }
 
     it("publishing a brand-new store (storeId: null) is rejected without touching the DB -- it cannot possibly have a verified id yet", async () => {
-      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [], stores: [] });
+      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [], stores: [] });
       mockedCreateClient.mockResolvedValue(buildUnreachableClient() as never);
 
       const result = await saveStoreProfile({ ...BASE_INPUT, storeId: null, slug: "x", isPublished: true });
@@ -326,7 +326,7 @@ describe("saveStoreProfile", () => {
     });
 
     it("publishing an existing store with promptpay_verified_at: null is rejected in plain Thai, and the row is never updated", async () => {
-      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [OWNED_STORE_ID], stores: [] });
       const { client, updateMock } = buildPublishGateMock({ promptpay_verified_at: null });
       mockedCreateClient.mockResolvedValue(client as never);
 
@@ -337,7 +337,7 @@ describe("saveStoreProfile", () => {
     });
 
     it("the promptpay_verified_at read failing is treated as unverified (fail closed), not silently allowed through", async () => {
-      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [OWNED_STORE_ID], stores: [] });
       const { client, updateMock } = buildPublishGateMock(null, { message: "connection reset" });
       mockedCreateClient.mockResolvedValue(client as never);
 
@@ -348,7 +348,7 @@ describe("saveStoreProfile", () => {
     });
 
     it("publishing an existing store WITH promptpay_verified_at set reads a fresh value from the DB (not a client-supplied flag) and proceeds", async () => {
-      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [OWNED_STORE_ID], stores: [] });
       const { client, updateMock, paymentsEqMock } = buildPublishGateMock({
         promptpay_verified_at: "2026-01-15T09:30:00.000Z",
       });
@@ -362,7 +362,7 @@ describe("saveStoreProfile", () => {
     });
 
     it("saving as an unpublished draft never checks promptpay_verified_at at all -- the gate only applies to isPublished: true", async () => {
-      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] });
+      mockedResolveMerchantCtx.mockResolvedValue({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [OWNED_STORE_ID], stores: [] });
       const { client, paymentsSelectMock, updateMock } = buildPublishGateMock({ promptpay_verified_at: null });
       mockedCreateClient.mockResolvedValue(client as never);
 

@@ -96,7 +96,7 @@ function buildUnreachableClient() {
   return { from: fromMock };
 }
 
-const BASE_MERCHANT_CTX = { merchantId: MERCHANT_ID, storeIds: [OWNED_STORE_ID], stores: [] };
+const BASE_MERCHANT_CTX = { merchantId: MERCHANT_ID, subscriptionTier: "free" as const, storeIds: [OWNED_STORE_ID], stores: [] };
 
 describe("savePromptPaySettings", () => {
   beforeEach(() => {

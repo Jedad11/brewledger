@@ -28,6 +28,17 @@
     // this package's static gate green without touching _shared/console/
     // auth.ts (out of qa_engineer's scope) -- it does not weaken coverage of
     // the file's OWN logic, which vitest still fully type-strips and runs.
-    "console_auth_scoping.test.ts"
+    "console_auth_scoping.test.ts",
+    // console_feature_gate_free_tier.test.ts (WBS 4.7) is the same case:
+    // it imports requireFeature/FeatureNotAvailableError directly from
+    // _shared/console/features.ts, which itself imports _shared/console/
+    // auth.ts's ConsoleContext type -- pulling in the identical Deno-only
+    // "npm:" specifier and ambient `Deno` global tsc cannot resolve, for
+    // exactly the reason explained above. Vitest runs and type-strips this
+    // file correctly (same vitest.config.mts alias, extended for this
+    // entry to also cover the "@brewledger/shared/features" specifier --
+    // see that file's own header comment); only tsc's own standalone
+    // program needs the exclusion.
+    "console_feature_gate_free_tier.test.ts"
   ]
 }

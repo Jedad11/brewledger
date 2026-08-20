@@ -2,9 +2,12 @@
 // required to obtain its request context by calling withConsoleAuth below.
 // See docs/api/surfaces_design.md §5.
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
+import type { SubscriptionTier } from "@brewledger/shared/features";
+import { FeatureNotAvailableError } from "./features.ts";
 
 export interface ConsoleContext {
   merchantId: string;
+  subscriptionTier: SubscriptionTier; // WBS 4.7 — read by requireFeature(ctx, flag), features.ts
   storeIds: string[];
   supabase: SupabaseClient; // authenticated-role client, RLS applies as this user
 }
@@ -41,13 +44,17 @@ export async function verifyConsoleRequest(req: Request): Promise<ConsoleContext
 
   const { data: merchant, error: merchantErr } = await supabase
     .from("merchants")
-    .select("id")
+    .select("id, subscription_tier")
     .eq("auth_user_id", userData.user.id)
     .single();
   if (merchantErr || !merchant) return null;
 
   return {
     merchantId: merchant.id,
+    // subscription_tier has a NOT NULL default of 'free' with a check
+    // constraint over the four-tier set (migration 0002) -- safe cast, no
+    // runtime fallback duplicating that constraint here.
+    subscriptionTier: merchant.subscription_tier as SubscriptionTier,
     // auth_store_ids() is `returns setof uuid` -- a scalar set-returning
     // function -- so PostgREST (and supabase-js .rpc()) returns a plain
     // array of UUID strings, not an array of { auth_store_ids: string }
@@ -118,6 +125,17 @@ export function withConsoleAuth(
     } catch (err) {
       if (err instanceof ForbiddenStoreError) {
         return new Response(null, { status: 403 }); // no body -- no detail leaked
+      }
+      if (err instanceof FeatureNotAvailableError) {
+        // Unlike the 401/403 paths above, a body IS returned here: the WBS
+        // 4.7 prompt requires "a machine-readable reason" so the console
+        // client can render the correct upgrade-benefit copy rather than a
+        // generic failure. Nothing in `reason` is secret (it's derived
+        // entirely from FEATURE_MATRIX + the caller's own tier).
+        return new Response(JSON.stringify({ error: "feature_not_available", reason: err.reason }), {
+          status: 402,
+          headers: { "Content-Type": "application/json" },
+        });
       }
       throw err;
     }

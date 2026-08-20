@@ -57,7 +57,7 @@ interface SupabaseMockConfig {
   // reproduces the old buggy row-object shape on purpose.
   rpcData?: unknown;
   rpcErr?: unknown;
-  merchant?: { id: string } | null;
+  merchant?: { id: string; subscription_tier?: string } | null;
   merchantErr?: unknown;
   storeRows?: Array<{ id: string; slug: string; name: string; is_published: boolean }> | null;
   storesErr?: unknown;
@@ -127,7 +127,7 @@ describe("resolveMerchantCtx", () => {
         // plain array of UUID strings, not `{ auth_store_ids: string }[]`
         // row objects. This is precisely the shape the old code mishandled.
         rpcData: [STORE_ID_A, STORE_ID_B],
-        merchant: { id: MERCHANT_ID },
+        merchant: { id: MERCHANT_ID, subscription_tier: "free" },
         storeRows: [
           { id: STORE_ID_A, slug: "store-a", name: "Store A", is_published: true },
           { id: STORE_ID_B, slug: "store-b", name: "Store B", is_published: false },
@@ -139,6 +139,10 @@ describe("resolveMerchantCtx", () => {
 
       expect(ctx).not.toBeNull();
       expect(ctx!.merchantId).toBe(MERCHANT_ID);
+      // WBS 4.7 — subscription_tier read straight off the merchants row,
+      // no runtime fallback (the NOT NULL default + check constraint on the
+      // column are the single source of truth for the value set).
+      expect(ctx!.subscriptionTier).toBe("free");
 
       // The core regression assertion: storeIds must be the real UUID
       // strings, never `undefined`. Under the old
@@ -185,13 +189,13 @@ describe("resolveMerchantCtx", () => {
     const { client, storesSelectMock } = buildSupabaseMock({
       user: { id: AUTH_USER_ID },
       rpcData: [],
-      merchant: { id: MERCHANT_ID },
+      merchant: { id: MERCHANT_ID, subscription_tier: "free" },
     });
     mockedCreateClient.mockResolvedValue(client as never);
 
     const ctx = await resolveMerchantCtx();
 
-    expect(ctx).toEqual({ merchantId: MERCHANT_ID, storeIds: [], stores: [] });
+    expect(ctx).toEqual({ merchantId: MERCHANT_ID, subscriptionTier: "free", storeIds: [], stores: [] });
     // The zero-store short-circuit returns before ever calling .from("stores").
     expect(storesSelectMock).not.toHaveBeenCalled();
   });

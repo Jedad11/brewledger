@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Card, Input, Button, Toggle, OnboardingStrip, type OnboardingStripProps } from "@brewledger/ui";
-import { generateSlugBase, slugify } from "@/lib/slug";
+import { generateSlugBase, slugify, PUBLIC_STORE_HOST } from "@/lib/slug";
 import { saveStoreProfile, type StoreProfileInput } from "./actions";
 import { PUBLISH_REQUIRES_PROMPTPAY_VERIFICATION } from "./copy";
 
@@ -168,7 +168,7 @@ export function StoreProfileForm({
                   random suffix, which would make the preview change on
                   every unrelated re-render (e.g. toggling publish) while
                   the name field is still blank. */}
-              <b>brewledger.app/s/{slugify(slug) || "…"}</b>
+              <b>{PUBLIC_STORE_HOST}/s/{slugify(slug) || "…"}</b>
               {SLUG_NOTE_SUFFIX}
             </p>
           </div>

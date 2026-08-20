@@ -90,3 +90,20 @@ export function generateSlugBase(name: string): string {
 export function withCollisionSuffix(base: string, attempt: number): string {
   return attempt <= 1 ? base : `${base}-${attempt}`;
 }
+
+// WBS 4.6 — single source for the public store URL, reused by the store
+// profile screen's slug preview note (StoreProfileForm.tsx) and by
+// settings/link's QR/print sheet, so the two never drift apart. `brewledger.app`
+// is the host the state matrix's own store-profile copy already hardcodes
+// ("brewledger.app/s/{slug}") -- there is no NEXT_PUBLIC_* env var for it
+// anywhere in the repo, so this constant IS that convention, not a
+// replacement for one.
+export const PUBLIC_STORE_HOST = "brewledger.app";
+
+// RL-3: the QR/link payload is exactly this URL and nothing else -- no
+// merchant id, store id, or token. Anything more is a potential enumeration
+// vector, and this exact string is what gets printed and photographed by
+// strangers.
+export function buildPublicStoreUrl(slug: string): string {
+  return `https://${PUBLIC_STORE_HOST}/s/${slug}`;
+}

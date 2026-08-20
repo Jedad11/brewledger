@@ -76,6 +76,16 @@ of record is `/design/P5 Handoff.md`.
 - **Save error** — `บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง` (same generic-failure idiom as `requestOtp.ts`/WBS 4.3's store form).
 - **Publish gating (surfaces on `/console/settings/store`, not here)** — a store with no verified PromptPay identifier cannot be published; the store profile screen shows `เชื่อมและยืนยันการรับเงินผ่านพร้อมเพย์ก่อน จึงจะเปิดขายผ่านลิงก์ได้` persistently beneath its publish toggle (never only after a failed save, never by silently disabling the toggle itself) with a link back to this screen.
 
+### ลิงก์ร้านและ QR `/console/settings/link` **(WBS 4.6 — no counterpart in `/design/P5 Handoff.md` §2; this screen does not exist in the delivered prototype at all, unlike GAP-1/GAP-5's undocumented-but-present case. Copy authored for the real implementation, same posture as WBS 4.4's own "No store yet" state)**
+- **No store yet** (same posture as WBS 4.4/4.5's own "No store yet" states) — `ตั้งค่าข้อมูลร้านก่อนดูลิงก์และ QR` / `กรอกชื่อร้านกับที่อยู่รับสินค้าไว้ก่อน แล้วค่อยกลับมาดูลิงก์ร้านและ QR ได้เลย` + `ไปตั้งค่าข้อมูลร้าน`.
+- **Default (store published)** — live QR preview (encoding exactly `https://brewledger.app/s/{slug}`, RL-3: no other identifier); the URL beneath it as selectable text, labelled `ลิงก์ร้านของคุณ`, with a `คัดลอกลิงก์` button; `ดาวน์โหลด QR (PNG)`; a print-sheet subsection `ใบพิมพ์สำหรับติดหน้าร้าน` with an A5/A6 size choice and `ดาวน์โหลด PDF สำหรับพิมพ์`.
+- **Unpublished** — the QR renders greyed out (not a live, clickable-looking image) with `ยังไม่เปิดให้ลูกค้าสั่งผ่านลิงก์นี้` / `เปิดใช้งานที่หน้าข้อมูลร้านก่อน แล้ว QR นี้จะพาลูกค้าไปสั่งได้จริง` + `ไปเปิดใช้งานลิงก์ร้าน` (links to `/console/settings/store`, where the publish toggle lives — GAP-5); copy/download actions are disabled in this state rather than producing a QR that leads to a closed page.
+- **Copy confirmation** — inline status text beside the button, `คัดลอกลิงก์แล้ว` (same transient-status idiom as the store/payments screens' `บันทึกแล้ว`, not a floating toast component — none exists in `packages/ui`).
+- **Copy failure** — `คัดลอกลิงก์ไม่สำเร็จ ลองใหม่อีกครั้ง` (same generic-failure idiom as `PREVIEW_FAILED_NOTE` on `/console/settings/payments`).
+- **QR generation failure** — `สร้าง QR ไม่สำเร็จ ลองใหม่อีกครั้ง` (same idiom).
+- **Print PDF generation failure** — `สร้างไฟล์พิมพ์ไม่สำเร็จ ลองใหม่อีกครั้ง` (same idiom).
+- **Print sheet contents (A5 and A6, generated client-side)** — store name large at the top; QR centred at ≥60% of sheet width; the URL as readable text beneath the QR; call to action `สแกนสั่งล่วงหน้า รับที่ร้านได้เลย` (verbatim from the WBS 4.6 entry). No BrewLedger wordmark or domain footer on the sheet at all — simplest way to satisfy "no branding larger than the store's own name" is to carry no separate branding element to begin with.
+
 ### สแกนบิล `/console/expenses/capture`
 - **Processing** — `กำลังอ่านบิล...` / `ใบแรกของวันอาจใช้เวลาถึง 1 นาที ระบบต้องปลุกเครื่องอ่านก่อน` + elapsed MM:SS + `ไปทำอย่างอื่นก่อนได้` (navigation away must not cancel the job).
 - **Framing hint** — `วางบิลให้เต็มกรอบ หลีกเลี่ยงเงาและแสงสะท้อน`

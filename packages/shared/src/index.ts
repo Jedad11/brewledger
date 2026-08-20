@@ -6,6 +6,7 @@ export * from "./orderCode";
 export * from "./supabase/client";
 export * from "./storage/compress";
 export * from "./storage/bills";
+export * from "./storage/menuImages";
 export * from "./storage/usage";
 export { browserConfigSchema, loadBrowserConfig } from "./config";
 export type { BrowserConfig } from "./config";

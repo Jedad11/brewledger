@@ -88,6 +88,20 @@ redline_reviewer ตรวจซ้ำเฉพาะจุดที่แก้
 
 ---
 
+## Fast path — งานที่ไม่แตะระบบสำคัญ
+
+ถ้า WBS entry นั้น**ไม่แตะ** red line (RL-1/RL-2/RL-3), เงิน/ต้นทุน, data model,
+หรือ Customer Web — `redline_reviewer` **ไม่ต้องเริ่มตรวจใหม่ตั้งแต่ศูนย์**
+ให้เริ่มจากผลของ `qa_engineer` (เทสต์ที่รันแล้ว + สิ่งที่ qa เจอ) แล้วตรวจต่อเฉพาะจุดที่
+qa ไม่ครอบคลุม (Thai copy, RLS, arithmetic) แทนการอ่านทั้ง diff ใหม่หมด
+เป้าหมายคือเพิ่มความเร็ว ไม่ใช่ลดความละเอียด
+
+**เมื่อ entry นั้นแตะระบบสำคัญ** (ตาราง `Red Line Touch` ในดิกชันนารีระบุ RL ใดๆ, หรือแตะ
+schema/payment/Customer Web) ให้ตรวจแบบเต็มตามเดิม ไม่ใช้ fast path นี้ — WBS 4.4 เป็นตัวอย่าง
+ที่ **ห้าม** ใช้ fast path เพราะเป็น RL-2 primary enforcement point
+
+---
+
 ## Phase Gate — WBS 1.4
 
 ปิด **Phase 3.0, 5.0, 7.0**

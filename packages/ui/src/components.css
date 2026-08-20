@@ -84,6 +84,14 @@ button{font-family:inherit;letter-spacing:var(--tracking-normal)}
 .oc-sw.is-on .oc-sw-thumb{transform:translateX(24px)}
 .oc-sw[disabled]{opacity:.5;cursor:not-allowed}
 
+/* ---- Photo drop (menu editor) ---- */
+/* Ported verbatim from /design/Console Setup.html's .oc-drop/.oc-photo --
+   WBS 4.4 menu editor's photo upload field. .oc-photo's own size (48px) is
+   overridden per-instance to 72px in the prototype's scItem() markup; the
+   consuming component sets the same inline override. */
+.oc-drop{display:flex;align-items:center;gap:1.4rem;padding:1.4rem;border:1px dashed var(--input-border);border-radius:var(--radius-card);cursor:pointer}
+.oc-photo{width:48px;height:48px;border-radius:8px;background:var(--green-sage);opacity:.18;flex:none}
+
 /* ---- Surfaces ---- */
 .card{background:var(--surface-card);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:var(--space-3)}
 .hair{border:0;border-top:1px solid var(--hairline);margin:0}

@@ -39,11 +39,20 @@ of record is `/design/P5 Handoff.md`.
 - **Empty** — `ยังไม่มีออเดอร์วันนี้` / `ลูกค้าสั่งผ่านลิงก์ร้านของคุณได้เลย` + `ดูลิงก์ร้าน`
 - **New orders** — persistent banner `มีออเดอร์ใหม่ N รายการ` + `รับทราบ`; each unseen card keeps a 6px left border until opened.
 
+### เมนู `/console/menu` **(WBS 4.4 — copy sourced verbatim from `console-setup.js`'s `scMenu()`, not previously extracted into this file)**
+- **Default** — header `เมนู` with subtitle `{N} รายการ`; rows show photo/placeholder, name, price, and a `พร้อมขาย` availability switch; `เพิ่มรายการ` button beneath the list.
+- **Empty** — `ยังไม่มีรายการในเมนู` / `ใส่ชื่อกับราคาก็ขายได้แล้ว ใช้เวลาไม่ถึงหนึ่งนาที` + `เพิ่มรายการแรก`.
+- **No store yet** (authored for the real implementation — the delivered prototype's demo state always has a store; a merchant can genuinely reach `/console/menu` before saving a store profile, same blank-state possibility WBS 4.3 already handles on its own screen) — `ตั้งค่าข้อมูลร้านก่อนเพิ่มเมนู` / `กรอกชื่อร้านกับที่อยู่รับสินค้าไว้ก่อน แล้วค่อยกลับมาเพิ่มเมนูได้เลย` + `ไปตั้งค่าข้อมูลร้าน` (links to `/console/settings/store`).
+- **Reorder / availability failure** — persistent inline message, never a vanishing toast (interaction_spec.md's general rule for optimistic controls): reuses the same generic-failure idiom as `requestOtp.ts`/the store form's save error, `บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง`.
+
 ### แก้ไขรายการ `/console/menu/{id}`
 - **Recipe collapsed** — header `สูตร (ใส่ทีหลังได้)`. Saving without opening succeeds instantly: no warning, dialog, banner, toast, badge, or asterisk.
 - **Recipe suggested** — `มีสูตรมาตรฐานสำหรับรายการนี้อยู่แล้ว ใช้แล้วปรับตัวเลขให้ตรงกับร้านคุณได้เลย` + `ใช้สูตรนี้แล้วแก้ได้`
 - **Recipe editing** — live `ต้นทุนต่อแก้ว` beneath the rows.
 - **Forbidden copy anywhere on this screen:** ยังไม่ได้ใส่ / ควรใส่ / กรุณาใส่ / ไม่ครบ / ยังขาด.
+- **Validation** (inline, per field — not modeled in the delivered prototype's `scItem()`, which never validates; authored for the real implementation, same posture as WBS 4.3's own added validation states) — name: `กรอกชื่อรายการ`; price: `กรอกราคา` when blank, `ราคาต้องมากกว่า 0 บาท` when zero or negative.
+- **Save success** — `บันทึกแล้ว` (reused verbatim from the store profile screen's own save-success idiom, WBS 4.3).
+- **Save error** — `บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง` (same generic-failure idiom as `requestOtp.ts`/WBS 4.3's store form).
 
 ### ข้อมูลร้าน `/console/settings/store` **(undocumented in the delivered `P5 Handoff.md`, added by reading `console-setup.js` directly — see `/docs/design/gaps.md` GAP-5)**
 - **Default** — onboarding strip (see `OnboardingStrip`, hidden once all 3 steps are done) above a form: ชื่อร้าน / ที่อยู่สำหรับรับสินค้า / เวลาเปิด+เวลาปิด / ลิงก์ร้าน (auto-suggested from the name, editable, never blank). Slug field note beneath the input: `ลูกค้าจะเข้าที่ ` **`brewledger.app/s/{slug}`** ` · ตั้งจากชื่อร้านให้อัตโนมัติ แก้ได้ตามต้องการ`.

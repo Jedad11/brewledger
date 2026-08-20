@@ -10,5 +10,6 @@
     // so DOM lib types belong here, not just for this one file.
     "lib": ["ES2022", "DOM"]
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
 }

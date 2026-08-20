@@ -21,6 +21,15 @@
 // of relying on skipLibCheck to paper over it. A mismatch against public.ts
 // is a signal to fix here, not something to unify away — same posture
 // packages/shared/src/serializers/public.schema.ts already takes.
+//
+// WBS 5.4's CreateOrderResult below has a type-only import from
+// ./cartValidation (CartDiffReason) — cartValidation.ts already imports a
+// type from this file, so this is a type-only circular reference. TypeScript
+// erases `import type` entirely at compile time, so there is no runtime
+// circularity; it exists purely so the 409 diff shape this file returns is
+// provably the same type the cart page's existing diff UI already renders,
+// not a hand-duplicated lookalike that could drift.
+import type { CartDiffReason } from "./cartValidation";
 
 export interface PublicStore {
   id: string;
@@ -127,4 +136,93 @@ export function fetchPublicMenu(slug: string): Promise<PublicFetchResult<PublicM
 
 export function fetchPublicSlots(slug: string): Promise<PublicFetchResult<PublicSlot[]>> {
   return callPublicFunction<PublicSlot[]>("public-slots", { slug });
+}
+
+// WBS 5.4 — public-create-order. Mirrors packages/shared/src/serializers/
+// public.ts's PublicOrderCreated/CheckoutDiff field for field, authored
+// independently rather than imported, same posture as every DTO above (that
+// module's builders type against packages/db's Database row types, which
+// apps/shop must never resolve).
+export interface PublicOrderCreatedOption {
+  name: string;
+  priceDeltaSatang: number;
+}
+
+export interface PublicOrderCreatedItem {
+  name: string;
+  quantity: number;
+  unitPriceSatang: number;
+  options: PublicOrderCreatedOption[];
+}
+
+export interface PublicOrderCreated {
+  orderCode: string;
+  totalSatang: number;
+  pickupAt: string;
+  expiresAt: string;
+  items: PublicOrderCreatedItem[];
+}
+
+export interface CreateOrderOptionInput {
+  groupId: string;
+  optionId: string;
+  name: string;
+  deltaSatang: number;
+}
+
+export interface CreateOrderLineInput {
+  menuItemId: string;
+  nameSnapshot: string;
+  unitPriceSatang: number;
+  quantity: number;
+  options: CreateOrderOptionInput[];
+}
+
+export interface CreateOrderRequest {
+  storeSlug: string;
+  cart: CreateOrderLineInput[];
+  pickupSlotId: string;
+  customerName: string;
+  customerPhone?: string;
+}
+
+export type CreateOrderResult =
+  | { kind: "created"; data: PublicOrderCreated }
+  // Same CartDiffReason the cart page's existing diff UI already renders —
+  // see the type-only circular import note at the top of this file.
+  | { kind: "price_mismatch"; diffs: CartDiffReason[] }
+  | { kind: "slot_full"; slots: PublicSlot[] }
+  | { kind: "not_found" }
+  | { kind: "error" };
+
+export async function createOrder(request: CreateOrderRequest): Promise<CreateOrderResult> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !anonKey) return { kind: "error" };
+
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/public-create-order`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (res.status === 201) return { kind: "created", data: (await res.json()) as PublicOrderCreated };
+    if (res.status === 409) {
+      const body = (await res.json()) as { diffs: CartDiffReason[] };
+      return { kind: "price_mismatch", diffs: body.diffs };
+    }
+    if (res.status === 410) {
+      const body = (await res.json()) as { slots: PublicSlot[] };
+      return { kind: "slot_full", slots: body.slots };
+    }
+    if (res.status === 404) return { kind: "not_found" };
+    return { kind: "error" };
+  } catch {
+    return { kind: "error" };
+  }
 }

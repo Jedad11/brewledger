@@ -104,6 +104,8 @@ export interface UseCartResult {
   updateQuantity: (index: number, delta: number) => void;
   /** General-purpose line mutator — used by cartValidation's resolve actions (accept a new price). */
   updateLine: (index: number, updater: (line: CartLine) => CartLine) => void;
+  /** WBS 5.4 — called once an order is actually created (public-create-order 201), never on mere navigation. */
+  clearCart: () => void;
 }
 
 // One cart per store slug — a customer's cart for one shop never mixes with
@@ -149,7 +151,11 @@ export function useCart(slug: string): UseCartResult {
     [updateLine],
   );
 
-  return { lines, addLine, removeLine, updateQuantity, updateLine };
+  const clearCart = React.useCallback(() => {
+    setSnapshot(slug, []);
+  }, [slug]);
+
+  return { lines, addLine, removeLine, updateQuantity, updateLine, clearCart };
 }
 
 export function cartLineTotalSatang(line: CartLine): number {

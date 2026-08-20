@@ -2,11 +2,21 @@
 // cart against the current public menu. Kept as a standalone, pure,
 // side-effect-free function per the WBS's own Claude Code Prompt §5 ("Write
 // the re-validation itself as a standalone, testable function") so this
-// same logic can be exercised directly (unit tests, or reused verbatim by
-// WBS 5.4's checkout flow, which needs the identical check right before
-// order creation) without needing to render the cart page or hit a network
-// call itself — the caller re-fetches `fetchPublicMenu` and passes the
-// result in.
+// same logic can be exercised directly (unit tests) without needing to
+// render the cart page or hit a network call itself — the caller re-fetches
+// `fetchPublicMenu` and passes the result in.
+//
+// NOT reused verbatim by WBS 5.4's checkout flow, despite this file's own
+// prior comment claiming it would be: this function is browser code (reads
+// a client-fetched PublicMenuResponse, imports from ./publicApi) and is not
+// Deno-importable from a Supabase Edge Function, nor is a client-fetched DTO
+// the right thing to revalidate against at the one moment money is actually
+// charged — that needs live DB rows, bypassing RLS, inside the same
+// transaction as the slot reservation. `checkout_create_order`
+// (packages/db/migrations/0029_checkout_order_creation.sql) reimplements
+// the identical mismatch logic in plpgsql instead, with `kind` values that
+// mirror `CartDiffReason` below 1:1 so the diff UI this file's `kind` union
+// feeds stays reusable for a checkout-time 409 too.
 //
 // interaction_spec.md's own rule: "an item that goes unavailable while in a
 // cart is flagged at checkout, not silently removed" — this function never

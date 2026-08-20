@@ -5,19 +5,18 @@ import { fetchPublicSlots, fetchPublicStore } from "@/lib/publicApi";
 import { CHECKOUT_TITLE } from "@/lib/copy";
 import { SlotPicker } from "@/components/SlotPicker";
 
-// WBS 5.3 — "เลือกเวลารับ /checkout" (docs/design/state_matrix.md).
+// WBS 5.3/5.4 — "เลือกเวลารับ /checkout" (docs/design/state_matrix.md).
 //
-// SCOPE BOUNDARY, read before extending this file: this route implements
-// the slot-picker + name-capture screen the WBS 5.3 Claude Code Prompt asks
-// for (point 4, "Customer picker UI at apps/shop/app/s/[slug]/checkout"),
-// and nothing past it. It does NOT render the cart (WBS 5.2, built
-// concurrently elsewhere — do not import apps/shop/lib/cart.ts or the
-// cart/ route from this file, that boundary is deliberate, see the WBS 5.3
-// dispatch notes) and does NOT create an order (WBS 5.4's
-// public-create-order, not built yet). SlotPicker.tsx's own header comment
-// has the exact wiring note for where WBS 5.4 plugs in. Next.js route
-// segment, so this file existing does not preempt 5.4 — it extends this
-// same page with the cart summary and the real submit handler.
+// This route implements the slot-picker + name-capture screen the WBS 5.3
+// Claude Code Prompt asked for (point 4, "Customer picker UI at
+// apps/shop/app/s/[slug]/checkout"). The WBS 5.3-era boundary that lived in
+// this comment — "do NOT import apps/shop/lib/cart.ts... that boundary is
+// deliberate" — is CLOSED as of WBS 5.4: order creation needs the cart's
+// lines to submit, so SlotPicker.tsx now reads the cart directly via
+// useCart(slug) and calls public-create-order. This page component itself
+// still renders no cart summary of its own — that lives inside SlotPicker
+// (see its own header comment) alongside the phone field and submit
+// handler, keeping this file a thin server-rendered shell.
 //
 // Slot capacity changes frequently (interaction_spec.md: re-fetched on
 // entering /checkout) — never statically cached.

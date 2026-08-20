@@ -13,8 +13,8 @@ import { EmptyState, PublicMoneyValue } from "@brewledger/ui";
 import { cartLineTotalSatang, cartCupCount, cartTotalSatang, useCart } from "@/lib/cart";
 import { fetchPublicMenu, type PublicMenuResponse } from "@/lib/publicApi";
 import { revalidateCart, type CartDiffReason } from "@/lib/cartValidation";
+import { CartDiffNotices } from "@/components/CartDiffNotices";
 import {
-  ACCEPT_NEW_PRICE_LABEL,
   ADD_MORE_ITEMS_LABEL,
   BACK_LABEL,
   BACK_TO_MENU_LABEL,
@@ -29,12 +29,8 @@ import {
   DECREASE_QUANTITY_LABEL,
   INCREASE_QUANTITY_LABEL,
   PROCEED_TO_SLOT_LABEL,
-  PRICE_CHANGED_DIFF_MIDDLE,
   REMOVE_LABEL,
   cupsLabel,
-  itemUnavailableDiffText,
-  optionRemovedDiffText,
-  priceChangedDiffPrefix,
 } from "@/lib/copy";
 
 const BACK_ARROW = (
@@ -47,34 +43,6 @@ type RevalidationPhase = "idle" | "checking" | "blocked" | "error";
 
 function optionLabel(options: { name: string }[]): string {
   return options.map((option) => option.name).join(" · ");
-}
-
-function DiffText({ diff }: { diff: CartDiffReason }) {
-  switch (diff.kind) {
-    case "item_removed":
-    case "item_unavailable":
-      return <>{itemUnavailableDiffText(diff.nameSnapshot)}</>;
-    case "option_removed":
-      return <>{optionRemovedDiffText(diff.name)}</>;
-    case "price_changed":
-      return (
-        <>
-          {priceChangedDiffPrefix(diff.nameSnapshot)}
-          <PublicMoneyValue value={diff.oldSatang} />
-          {PRICE_CHANGED_DIFF_MIDDLE}
-          <PublicMoneyValue value={diff.newSatang} />
-        </>
-      );
-    case "option_price_changed":
-      return (
-        <>
-          {priceChangedDiffPrefix(diff.name)}
-          <PublicMoneyValue value={diff.oldSatang} />
-          {PRICE_CHANGED_DIFF_MIDDLE}
-          <PublicMoneyValue value={diff.newSatang} />
-        </>
-      );
-  }
 }
 
 export default function CartPage() {
@@ -178,25 +146,7 @@ export default function CartPage() {
           </div>
         ) : null}
 
-        {phase === "blocked"
-          ? diffs.map((diff, i) => (
-              <div className="cw-notice" key={i}>
-                <p>
-                  <DiffText diff={diff} />
-                </p>
-                <div style={{ display: "flex", gap: "1.2rem", marginTop: ".8rem" }}>
-                  {diff.kind === "price_changed" || diff.kind === "option_price_changed" ? (
-                    <button type="button" className="btn btn--outline" onClick={() => acceptDiff(diff)}>
-                      {ACCEPT_NEW_PRICE_LABEL}
-                    </button>
-                  ) : null}
-                  <button type="button" className="btn btn--quiet" onClick={() => removeLine(diff.lineIndex)}>
-                    {REMOVE_LABEL}
-                  </button>
-                </div>
-              </div>
-            ))
-          : null}
+        {phase === "blocked" ? <CartDiffNotices diffs={diffs} onAccept={acceptDiff} onRemove={removeLine} /> : null}
 
         {lines.map((line, i) => (
           <div className="card cw-line" key={i}>

@@ -70,6 +70,69 @@ export const publicOrderStatusSchema = z.object({
   quantity: z.number().int().positive(),
 }).strict();
 
+// WBS 5.4 — checkout_create_order's response shapes. .strict() at every
+// nesting level (items, item options) — the same discipline every other
+// schema in this file applies, not just at the top.
+const publicOrderCreatedOptionSchema = z.object({
+  name: z.string(),
+  priceDeltaSatang: z.number().int(),
+}).strict();
+
+const publicOrderCreatedItemSchema = z.object({
+  name: z.string(),
+  quantity: z.number().int().positive(),
+  unitPriceSatang: z.number().int().nonnegative(),
+  options: z.array(publicOrderCreatedOptionSchema),
+}).strict();
+
+export const publicOrderCreatedSchema = z.object({
+  orderCode: z.string(),
+  totalSatang: z.number().int().nonnegative(),
+  pickupAt: z.string(),
+  expiresAt: z.string(),
+  items: z.array(publicOrderCreatedItemSchema),
+}).strict();
+
+// checkout_create_order's 409 PRICE_MISMATCH path — reaches the browser, so
+// it gets the same .strict() treatment as every success-path DTO. A plain
+// union (not z.discriminatedUnion) because the five variants don't share a
+// uniform optional-field set that discriminatedUnion's stricter shape
+// checking wants; each branch is still fully .strict() on its own.
+export const checkoutDiffSchema = z.union([
+  z.object({
+    lineIndex: z.number().int().nonnegative(),
+    kind: z.enum(["item_removed", "item_unavailable"]),
+    menuItemId: z.string().uuid(),
+    nameSnapshot: z.string(),
+  }).strict(),
+  z.object({
+    lineIndex: z.number().int().nonnegative(),
+    kind: z.literal("price_changed"),
+    menuItemId: z.string().uuid(),
+    nameSnapshot: z.string(),
+    oldSatang: z.number().int(),
+    newSatang: z.number().int(),
+  }).strict(),
+  z.object({
+    lineIndex: z.number().int().nonnegative(),
+    kind: z.literal("option_removed"),
+    menuItemId: z.string().uuid(),
+    groupId: z.string().uuid(),
+    optionId: z.string().uuid(),
+    name: z.string(),
+  }).strict(),
+  z.object({
+    lineIndex: z.number().int().nonnegative(),
+    kind: z.literal("option_price_changed"),
+    menuItemId: z.string().uuid(),
+    groupId: z.string().uuid(),
+    optionId: z.string().uuid(),
+    name: z.string(),
+    oldSatang: z.number().int(),
+    newSatang: z.number().int(),
+  }).strict(),
+]);
+
 export function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown): T {
   const result = schema.safeParse(value);
   if (!result.success) {

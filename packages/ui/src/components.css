@@ -248,6 +248,7 @@ button{font-family:inherit;letter-spacing:var(--tracking-normal)}
 .cw-line-top{display:flex;justify-content:space-between;gap:1.2rem}
 .cw-line-bot{display:flex;justify-content:space-between;align-items:center}
 .cw-total{display:flex;justify-content:space-between;align-items:center;font-size:var(--text-4);font-weight:700;color:var(--green-ledger)}
+.cw-sumline{display:flex;justify-content:space-between;gap:1.2rem;padding:.8rem 0}
 
 .bl-confidence-field.is-low .input{border-color:var(--c-warning);background:#fdf7e6}
 .bl-confidence-field__hint{display:flex;align-items:center;gap:.6rem;color:var(--st-unpaid-fg);font-size:var(--text-1);font-weight:400}

@@ -120,3 +120,15 @@ export function checkoutSummaryLabel(hhmm: string | null): string {
   return hhmm ? `รับ ${hhmm} น.` : "ยังไม่ได้เลือกเวลา";
 }
 export const CHECKOUT_CTA_LABEL = "ไปชำระเงิน";
+
+// WBS 5.4 — checkout order creation. Phone field + cart summary copy
+// sourced verbatim from design/customer-web.js's scCheckout() (see
+// docs/design/state_matrix.md's "เลือกเวลารับ /checkout" section for the
+// extraction note); the order-creation-failed string has no prototype
+// equivalent (that CTA was a documented no-op stub) and was authored for
+// the real implementation, same posture as CART_REVALIDATION_ERROR.
+export const CUSTOMER_PHONE_LABEL = "เบอร์โทร";
+export const CUSTOMER_PHONE_OPTIONAL_TAG = "ไม่ใส่ก็ได้";
+export const CUSTOMER_PHONE_PLACEHOLDER = "08X-XXX-XXXX";
+export const CART_SUMMARY_TITLE = "สรุปรายการ";
+export const ORDER_CREATE_FAILED = "สั่งซื้อไม่สำเร็จ ลองใหม่อีกครั้ง";

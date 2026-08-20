@@ -160,6 +160,158 @@ export function toPublicOrderStatus(row: {
   };
 }
 
+// WBS 5.4 — checkout_create_order's own jsonb outputs. Both map an already
+// hand-shaped jsonb object built inside the RPC itself (not a raw DB row),
+// same posture as toPublicOrderStatus above — the RPC's own field list IS
+// the allow-list, this only renames snake_case to camelCase.
+
+export interface PublicOrderCreatedOption {
+  name: string;
+  priceDeltaSatang: number;
+}
+
+export interface PublicOrderCreatedItem {
+  name: string;
+  quantity: number;
+  unitPriceSatang: number;
+  options: PublicOrderCreatedOption[];
+}
+
+export interface PublicOrderCreated {
+  orderCode: string;
+  totalSatang: number;
+  pickupAt: string;
+  expiresAt: string;
+  items: PublicOrderCreatedItem[];
+}
+
+// NO cost field anywhere in this type — this is the one place in the whole
+// checkout feature where an accidental unit_cost_snapshot_satang leaking
+// into checkout_create_order's own jsonb_build_object(...) would violate
+// RL-3 directly. This function only ever reads the five named keys below;
+// the .strict() schema in public.schema.ts is the runtime backstop.
+export function toPublicOrderCreated(row: {
+  order_code: string;
+  total_satang: number;
+  pickup_at: string;
+  expires_at: string;
+  items: Array<{
+    name: string;
+    quantity: number;
+    unit_price_satang: number;
+    options: Array<{ name: string; price_delta_satang: number }>;
+  }>;
+}): PublicOrderCreated {
+  return {
+    orderCode: row.order_code,
+    totalSatang: row.total_satang,
+    pickupAt: row.pickup_at,
+    expiresAt: row.expires_at,
+    items: row.items.map((item) => ({
+      name: item.name,
+      quantity: item.quantity,
+      unitPriceSatang: item.unit_price_satang,
+      options: item.options.map((option) => ({
+        name: option.name,
+        priceDeltaSatang: option.price_delta_satang,
+      })),
+    })),
+  };
+}
+
+// CheckoutDiff — field-for-field parallel to apps/shop/src/lib/
+// cartValidation.ts's CartDiffReason `kind` union, so the existing
+// cart-page diff-rendering UI can render a checkout-time 409 unchanged.
+// checkout_create_order already builds each diff object with these exact
+// camelCase keys (unlike the rest of its response, which is snake_case,
+// matching every other RPC in this codebase) specifically so this function
+// stays a narrow allow-list/validation pass — read only the named keys,
+// discard anything else, hand the result to .strict() — rather than a
+// second case-conversion layer.
+export type CheckoutDiff =
+  | { lineIndex: number; kind: "item_removed"; menuItemId: string; nameSnapshot: string }
+  | { lineIndex: number; kind: "item_unavailable"; menuItemId: string; nameSnapshot: string }
+  | {
+      lineIndex: number;
+      kind: "price_changed";
+      menuItemId: string;
+      nameSnapshot: string;
+      oldSatang: number;
+      newSatang: number;
+    }
+  | {
+      lineIndex: number;
+      kind: "option_removed";
+      menuItemId: string;
+      groupId: string;
+      optionId: string;
+      name: string;
+    }
+  | {
+      lineIndex: number;
+      kind: "option_price_changed";
+      menuItemId: string;
+      groupId: string;
+      optionId: string;
+      name: string;
+      oldSatang: number;
+      newSatang: number;
+    };
+
+export function toCheckoutDiff(row: {
+  lineIndex: number;
+  kind: string;
+  menuItemId?: string;
+  nameSnapshot?: string;
+  groupId?: string;
+  optionId?: string;
+  name?: string;
+  oldSatang?: number;
+  newSatang?: number;
+}): CheckoutDiff {
+  switch (row.kind) {
+    case "item_removed":
+    case "item_unavailable":
+      return {
+        lineIndex: row.lineIndex,
+        kind: row.kind,
+        menuItemId: row.menuItemId!,
+        nameSnapshot: row.nameSnapshot!,
+      };
+    case "price_changed":
+      return {
+        lineIndex: row.lineIndex,
+        kind: "price_changed",
+        menuItemId: row.menuItemId!,
+        nameSnapshot: row.nameSnapshot!,
+        oldSatang: row.oldSatang!,
+        newSatang: row.newSatang!,
+      };
+    case "option_removed":
+      return {
+        lineIndex: row.lineIndex,
+        kind: "option_removed",
+        menuItemId: row.menuItemId!,
+        groupId: row.groupId!,
+        optionId: row.optionId!,
+        name: row.name!,
+      };
+    case "option_price_changed":
+      return {
+        lineIndex: row.lineIndex,
+        kind: "option_price_changed",
+        menuItemId: row.menuItemId!,
+        groupId: row.groupId!,
+        optionId: row.optionId!,
+        name: row.name!,
+        oldSatang: row.oldSatang!,
+        newSatang: row.newSatang!,
+      };
+    default:
+      throw new Error(`toCheckoutDiff: unknown diff kind "${row.kind}"`);
+  }
+}
+
 // PublicPaymentIntent — deliberately not defined here. No public-checkout
 // Edge Function or PromptPay payload builder exists yet (WBS 5.5). See
 // docs/api/surfaces_design.md §2 "PublicPaymentIntent — deferred, not built".

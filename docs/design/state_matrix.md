@@ -88,6 +88,24 @@ WBS 5.2, from `customer-web.js`'s `scCart()`, lines 69-75.
 - **Slot taken while typing** — `ช่วงเวลา 08:15 เพิ่งเต็มพอดี` / `รายการเวลาด้านล่างอัปเดตให้แล้ว เลือกเวลาใหม่ได้เลย`
 - **All full** — `วันนี้เต็มทุกช่วงเวลาแล้ว`
 - **Validation** — name required; CTA disabled until a slot is chosen.
+- **Phone (WBS 5.4 — copy sourced verbatim from `design/customer-web.js`'s
+  `scCheckout()`, not previously extracted into this file)** — label
+  `เบอร์โทร` with the trailing tag `ไม่ใส่ก็ได้`; placeholder `08X-XXX-XXXX`;
+  never rejects input client-side, no matter how it's shaped — loose
+  normalisation happens server-side in `checkout_create_order`, never a
+  client-side block.
+- **Cart summary (WBS 5.4 — same prototype source, its `สรุปรายการ` card)**
+  — heading `สรุปรายการ`, one line per cart line (`{name} × {qty}`), a
+  hairline divider, then `รวมทั้งหมด` and the total — identical shape to
+  the `/cart` screen's own summary card, just reused at the bottom of this
+  one so the customer sees what they're about to pay for one more time
+  before choosing a time.
+- **Order creation failed (WBS 5.4 — authored for the real implementation;
+  the delivered prototype's CTA was a documented no-op stub with nothing to
+  fail)** — `สั่งซื้อไม่สำเร็จ ลองใหม่อีกครั้ง`, shown for any
+  `public-create-order` outcome that isn't a 409 price-mismatch (which gets
+  its own diff notices, reusing `/cart`'s existing diff UI) or a 410
+  slot-full (which reuses this screen's own existing "slot taken" notice).
 
 ### ชำระเงิน `/pay`
 - **Waiting** — `ระบบกำลังรอการชำระเงิน · หมดเวลาใน MM:SS`

@@ -109,7 +109,7 @@ export function ItemOptionsSheet({ item, optionGroups, options, onClose, onAddTo
                         {option.priceDeltaSatang !== 0 ? (
                           <span className="num">
                             {option.priceDeltaSatang > 0 ? "+" : ""}
-                            <PublicMoneyValue value={option.priceDeltaSatang} decimals={0} />
+                            <PublicMoneyValue value={option.priceDeltaSatang} />
                           </span>
                         ) : null}
                       </button>

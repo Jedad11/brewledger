@@ -11,9 +11,9 @@
 // Two things carry real RL-3 risk, per the WBS 3.11 statement of work:
 //   1. A secret reaching a log sink (Render's dashboard, Supabase's Edge
 //      Function logs, Sentry) is a credential leak.
-//   2. A whole database row reaching a log line — `orders` joined to
-//      `order_items` carries `unit_cost_snapshot_satang` — is an RL-3 leak
-//      even though the *code path* that read the row was legitimate.
+//   2. A whole database row reaching a log line — a joined query result can
+//      carry cost/margin columns nobody meant to log — is an RL-3 leak even
+//      though the *code path* that read the row was legitimate.
 // Both are enforced here, not left to call-site discipline, because
 // call-site discipline is exactly what a rushed `console.log(job)` during
 // an incident forgets.
@@ -71,9 +71,8 @@ export class TooManyKeysError extends Error {
     super(
       `log() was given ${keyCount} fields (max ${MAX_KEYS}) — this looks like a whole ` +
         `row was passed in, which is exactly what WBS 3.11 forbids (a row can carry ` +
-        `unit_cost_snapshot_satang or other fields that must never reach a log line ` +
-        `unreviewed). Use logRow(level, msg, row, allowedKeys) to log an explicit, ` +
-        `named allow-list of fields instead.`,
+        `fields that must never reach a log line unreviewed). Use logRow(level, msg, ` +
+        `row, allowedKeys) to log an explicit, named allow-list of fields instead.`,
     );
     this.name = "TooManyKeysError";
   }

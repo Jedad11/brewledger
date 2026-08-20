@@ -1,8 +1,5 @@
 import Image from "next/image";
-// Direct dist subpath, not the "@brewledger/shared" barrel — see MenuList.tsx
-// for why (CJS output defeats tree-shaking; the barrel would otherwise pull
-// log.ts's literal "unit_cost_snapshot_satang" string into this bundle).
-import { formatSatangAsThb } from "@brewledger/shared/dist/money";
+import { PublicMoneyValue } from "@brewledger/ui";
 import type { PublicMenuItem } from "@/lib/publicApi";
 import { isAbsoluteHttpUrl } from "@/lib/menu";
 import { ITEM_UNAVAILABLE_LABEL } from "@/lib/copy";
@@ -41,17 +38,16 @@ export function MenuItemRow({ item, ordering, preloadImage }: MenuItemRowProps) 
         <b>{item.name}</b>
         <span className="note-plain">{isUnavailable ? ITEM_UNAVAILABLE_LABEL : item.description}</span>
       </span>
-      {/* Deliberately not packages/ui's MoneyValue here — RL-3, redline_reviewer
-          flag (see engineer report). This is a public selling price, never
-          `null` (PublicMenuItem.priceSatang is a plain `number`, unlike
-          cost/margin fields), so MoneyValue's whole null-handling contract
-          doesn't apply — and MoneyValue's ROLE_CLASS map embeds the literal
-          strings "money--cost"/"money--profit" in its own module regardless
-          of which role a caller passes, which put those substrings in this
-          route's built client bundle even though role="plain" never uses
-          them at runtime. packages/shared's formatSatangAsThb carries no
-          cost/margin/profit vocabulary at all. */}
-      <span className="num cw-price">{formatSatangAsThb(item.priceSatang)}</span>
+      {/* PublicMoneyValue, not packages/ui's MoneyValue — RL-3. MoneyValue's
+          ROLE_CLASS map embeds the literal strings "money--cost"/
+          "money--profit" in its own module regardless of which role a
+          caller passes, so importing it at all (even role="plain") put
+          those substrings in this route's built client bundle.
+          PublicMoneyValue has no ROLE_CLASS and no MoneyRole import — those
+          substrings never enter its module graph. */}
+      <span className="num cw-price">
+        <PublicMoneyValue value={item.priceSatang} />
+      </span>
     </div>
   );
 }

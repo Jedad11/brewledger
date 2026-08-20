@@ -9,6 +9,7 @@ export * from "./components/Input";
 export * from "./components/Card";
 
 export * from "./components/MoneyValue";
+export * from "./components/PublicMoneyValue";
 export * from "./components/OrderStatusBadge";
 export * from "./components/MetricCard";
 export * from "./components/UntrackedDisclosure";

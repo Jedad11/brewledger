@@ -45,3 +45,28 @@ jobs:
 
       - name: Route bundle size (apps/shop /s/[slug], WBS 5.1 — 100 KB gzipped budget)
         run: node scripts/check-route-bundle-size.mjs
+
+      - name: Forbidden-field scan (apps/shop built client bundle, WBS 5.1)
+        run: node scripts/scan-forbidden-fields-bundle.mjs
+
+      - name: Forbidden-field scan (committed snapshot fixtures, WBS 3.7)
+        run: pnpm scan:forbidden-fields
+
+      # `-r --if-present` skips workspaces with no "test" script (apps/shop,
+      # worker) rather than erroring. Every plain vitest suite that needs a
+      # real local Supabase stack (packages/db/tests, packages/shared's
+      # storage.test.ts, supabase/functions/_tests) SKIPS itself — not fails
+      # — when that stack isn't reachable; this runner never starts one, so
+      # those suites report "skipped" here. apps/console's
+      # tests/e2e/otp-login.e2e.test.ts is a different case: a
+      # Playwright-driven test against a live `next dev`/`next start` server
+      # and real GoTrue that does NOT self-skip (it just times out) and is
+      # separately rate-limited (5 logins/hour against the one seeded local
+      # test_otp number) — unsuited to routine CI, by its own file header's
+      # design ("run manually / by qa_engineer with the stack up"). Excluded
+      # via apps/console's own package.json "test" script
+      # (--exclude '**/*.e2e.test.ts'), not here, so `pnpm --filter
+      # @brewledger/console test` behaves the same locally; that script also
+      # adds "test:e2e" to still run it explicitly when the stack is up.
+      - name: Test (per workspace, infra-gated suites self-skip)
+        run: pnpm -r --if-present test

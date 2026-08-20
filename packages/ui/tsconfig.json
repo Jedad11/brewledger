@@ -9,5 +9,6 @@
     "lib": ["ES2022", "DOM"],
     "skipLibCheck": true
   },
-  "include": ["src", "tailwind-preset.ts"]
+  "include": ["src", "tailwind-preset.ts"],
+  "exclude": ["src/**/*.test.tsx", "src/**/*.test.ts"]
 }

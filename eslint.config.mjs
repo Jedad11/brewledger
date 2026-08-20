@@ -59,6 +59,29 @@ export default [
     plugins: { import: importPlugin },
     settings: importResolverSettings,
     rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@brewledger/ui",
+              importNames: ["MoneyValue", "MetricCard"],
+              message:
+                "apps/shop may never import MoneyValue or MetricCard — ROLE_CLASS ships " +
+                "\"money--cost\"/\"money--profit\" regardless of role used (not tree-shakeable), " +
+                "and MetricCard exists only to forward a merchant-chosen role into it. Use " +
+                "PublicMoneyValue instead. RL-3.",
+            },
+            {
+              name: "@brewledger/shared",
+              message:
+                "apps/shop may never import the bare @brewledger/shared barrel — import the " +
+                "specific dist/<subpath> you need (see packages/shared/package.json exports, " +
+                "which no longer resolves \".\"). RL-3.",
+            },
+          ],
+        },
+      ],
       "import/no-restricted-paths": [
         "error",
         {
@@ -92,6 +115,15 @@ export default [
               from: "./packages/shared/src/merchant.ts",
               message:
                 "apps/shop (Customer Web) may never import packages/shared/src/merchant.ts — MerchantCtx/MerchantStoreSummary are Owner Console-only, defense in depth for RL-3.",
+            },
+            {
+              target: "./apps/shop",
+              from: "./packages/shared/src/features.ts",
+              message:
+                "apps/shop may never import packages/shared/src/features.ts — its compiled " +
+                "output contains the feature-flag literal \"ingredient_stock_tracking\" " +
+                "(forbidden_fields.json's \"stock\" entry). Subscription-tier gating is " +
+                "Owner Console-only. RL-3.",
             },
           ],
         },

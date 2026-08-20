@@ -12,15 +12,28 @@ export interface MenuItemRowProps {
   ordering: boolean;
   /** True for the one item whose photo is the page's likely LCP element. */
   preloadImage: boolean;
+  /** WBS 5.2 — opens the item options sheet. Omitted (or item disabled) renders an inert row. */
+  onTap?: () => void;
 }
 
-export function MenuItemRow({ item, ordering, preloadImage }: MenuItemRowProps) {
+export function MenuItemRow({ item, ordering, preloadImage, onTap }: MenuItemRowProps) {
   const isUnavailable = item.availability === "out_of_stock";
   const isOut = isUnavailable || !ordering;
   const imageUrl = item.imageUrl && isAbsoluteHttpUrl(item.imageUrl) ? item.imageUrl : null;
 
   return (
-    <div className={`cw-item${isOut ? " is-out" : ""}`} aria-disabled={isOut} data-testid={`menu-item-${item.id}`}>
+    // A real <button>, matching the prototype's own scMenu() markup
+    // (`<button class="cw-item"...>`) — WBS 5.1 rendered a <div> here since
+    // nothing was tappable yet; WBS 5.2 makes it interactive, which this
+    // fixes to match fidelity rather than layering a click handler onto a
+    // non-interactive element.
+    <button
+      type="button"
+      className={`cw-item${isOut ? " is-out" : ""}`}
+      disabled={isOut}
+      onClick={onTap}
+      data-testid={`menu-item-${item.id}`}
+    >
       {imageUrl ? (
         <Image
           src={imageUrl}
@@ -48,6 +61,6 @@ export function MenuItemRow({ item, ordering, preloadImage }: MenuItemRowProps) 
       <span className="num cw-price">
         <PublicMoneyValue value={item.priceSatang} />
       </span>
-    </div>
+    </button>
   );
 }

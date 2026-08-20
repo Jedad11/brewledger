@@ -223,6 +223,32 @@ button{font-family:inherit;letter-spacing:var(--tracking-normal)}
  * prototype's own raw hex (neither matches a named token in
  * /design/brewledger-tokens.css or /design/_ds/.../tokens/colors.css), while
  * the hint text color and badge fill DO reuse existing tokens. ---- */
+/* ---- Ported from /design/Customer Web.html <style> (WBS 5.2) — item
+ * options bottom sheet and cart line items. Literal port, same discipline
+ * as the WBS 5.1 block above; these selectors were not previously ported
+ * because no screen consumed them until the sheet/cart landed. ---- */
+.cw-scrim{position:fixed;inset:0;background:var(--overlay-black-60);z-index:20}
+.cw-sheet{position:fixed;left:50%;translate:-50% 0;bottom:0;width:100%;max-width:480px;max-height:88vh;background:var(--surface-card);border-radius:16px 16px 0 0;z-index:21;display:flex;flex-direction:column;animation:up .28s var(--ease-standard)}
+@keyframes up{from{transform:translateY(24px);opacity:.4}}
+.cw-sheet-scroll{overflow:auto;padding:var(--space-3);display:grid;gap:1.2rem}
+.cw-base{font-size:var(--text-4);font-weight:700;color:var(--green-ledger)}
+.cw-optg{display:grid;gap:.8rem}.cw-optg h4{font-size:var(--text-2);color:var(--text-black-soft)}
+.cw-opts{display:flex;flex-wrap:wrap;gap:.8rem}
+.cw-opt{display:inline-flex;align-items:center;gap:.6rem;min-height:var(--tap-min);padding:0 1.8rem;border:1px solid var(--input-border);border-radius:var(--radius-pill);background:var(--white);font-family:inherit;font-size:var(--text-3);cursor:pointer;transition:transform var(--duration-fast) var(--ease-standard)}
+.cw-opt:active{transform:scale(var(--press-scale))}
+.cw-opt.is-on{background:var(--green-mist);border-color:var(--green-brew);color:var(--green-ledger);font-weight:700}
+.cw-opt[disabled]{opacity:.4;cursor:not-allowed}
+.cw-opt .num{color:var(--text-black-soft);font-size:var(--text-2)}
+.cw-step{display:inline-flex;align-items:center;gap:1.6rem;border:1px solid var(--input-border);border-radius:var(--radius-pill);padding:.2rem}
+.cw-step button{width:var(--tap-min);height:var(--tap-min);border:0;border-radius:var(--radius-circle);background:var(--ceramic);font-size:var(--text-4);cursor:pointer;color:var(--green-ledger)}
+.cw-step button:active{transform:scale(var(--press-scale))}
+.cw-step span{min-width:2ch;text-align:center;font-weight:700}
+.cw-sheet-foot{padding:var(--space-3);border-top:1px solid var(--hairline);background:var(--white)}
+.cw-line{display:grid;gap:1.2rem}
+.cw-line-top{display:flex;justify-content:space-between;gap:1.2rem}
+.cw-line-bot{display:flex;justify-content:space-between;align-items:center}
+.cw-total{display:flex;justify-content:space-between;align-items:center;font-size:var(--text-4);font-weight:700;color:var(--green-ledger)}
+
 .bl-confidence-field.is-low .input{border-color:var(--c-warning);background:#fdf7e6}
 .bl-confidence-field__hint{display:flex;align-items:center;gap:.6rem;color:var(--st-unpaid-fg);font-size:var(--text-1);font-weight:400}
 .bl-confidence-field__hint::before{content:"!";width:16px;height:16px;border-radius:50%;background:var(--c-warning);color:#5c4207;display:grid;place-items:center;font-weight:800;font-size:10px;flex-shrink:0}

@@ -14,7 +14,8 @@ import {
   closedBody,
   slotsFullBody,
 } from "@/lib/copy";
-import { MenuList } from "@/components/MenuList";
+import { MenuOrdering } from "@/components/MenuOrdering";
+import { CartBar } from "@/components/CartBar";
 
 // Store status, menu availability and slot capacity all change frequently
 // (WBS 5.1's whole Realtime requirement is about that) — never let Next
@@ -44,7 +45,7 @@ export default async function StorePage({ params }: PageProps<"/s/[slug]">) {
   if (slotsResult.kind === "not_found") notFound();
   if (slotsResult.kind === "error") throw new Error("failed to load public slots");
 
-  const { categories, items } = menuResult.data;
+  const { categories, items, optionGroups, options } = menuResult.data;
 
   if (items.length === 0) {
     return (
@@ -102,14 +103,18 @@ export default async function StorePage({ params }: PageProps<"/s/[slug]">) {
           </div>
         ) : null}
 
-        <MenuList
+        <MenuOrdering
+          slug={slug}
           storeId={store.id}
           categories={categories}
           items={items}
+          optionGroups={optionGroups}
+          options={options}
           ordering={ordering}
           firstImageItemId={firstImageItemId}
         />
       </div>
+      <CartBar slug={slug} ordering={ordering} nextOpeningLabel={openState.nextOpeningLabel ?? ""} />
     </div>
   );
 }

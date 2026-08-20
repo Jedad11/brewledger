@@ -34,6 +34,55 @@ of record is `/design/P5 Handoff.md`.
   schema (`stores.opens_at`/`closes_at`) has no per-weekday column to source
   one from, unlike the prototype's static demo text `(จ.–ส.)`.
 
+### ตัวเลือกรายการ (sheet)
+
+Bottom sheet opened by tapping a menu item on เมนูร้าน (WBS 5.2, not
+previously extracted — `customer-web.js`'s `sheet()`, lines 58-66). The
+prototype's own demo option groups (`OPTS` in `customer-web.js`) are both
+single-select (`ร้อน / เย็น / ปั่น`, `ระดับความหวาน`); WBS 5.2 generalizes the
+same markup to a `maxSelect > 1` multi-select group (checkbox-style toggle
+instead of radio-style replace) — no prototype reference exists for that
+case since the demo data never needed it.
+
+- **Option group heading** — the group's own `name` (e.g. `ร้อน / เย็น / ปั่น`).
+- **Option button** — the option's `name`, plus `+{delta}` only when the
+  price delta is non-zero (`.cw-opt .num`); selected state is `.cw-opt.is-on`.
+- **Quantity** — heading `จำนวน`; stepper buttons `aria-label="ลด"` /
+  `aria-label="เพิ่ม"` (verified verbatim in `sheet()`).
+- **Footer button** — `ใส่ตะกร้า · {line total}` (`.cw-sheet-foot .btn--primary.btn--wet`),
+  disabled until every option group's `minSelect` is satisfied.
+- **Back / close** — the shared header back arrow, `aria-label="ย้อนกลับ"`
+  (`header()`'s own markup, not previously extracted into this file — reused
+  verbatim by the cart page below since no prior WBS entry needed a back
+  button). The sheet itself closes via scrim tap (`data-close`) or Escape —
+  the Escape handler is new, no prototype equivalent (a11y addition, not a
+  visual state).
+
+### ตะกร้า `/s/{slug}/cart`
+
+WBS 5.2, from `customer-web.js`'s `scCart()`, lines 69-75.
+
+- **Default** — line items (`.cw-line`), each showing name, selected option
+  labels joined by ` · `, qty stepper, line total, and a `ลบ` remove button;
+  a `เพิ่มรายการอีก` link back to the menu; a `รวมทั้งหมด` subtotal card; sticky
+  cart bar reading `{cups} แก้ว · {total}` with a `เลือกเวลารับ` proceed button.
+- **Empty** — `ตะกร้ายังว่างอยู่` / `เลือกเครื่องดื่มจากเมนูได้เลย` / `กลับไปดูเมนู`
+  linking back to `/s/{slug}`.
+- **Stale cart at proceed** (WBS 5.2's own Claude Code Prompt §5 — authored
+  for the real implementation, no prototype equivalent: the delivered
+  prototype has no server re-validation step at all, matching
+  `interaction_spec.md`'s own rule that "an item that goes unavailable while
+  in a cart is flagged at checkout, not silently removed") —
+  `รายการในตะกร้ามีการเปลี่ยนแปลง` / `ตรวจสอบรายการด้านล่างก่อนไปต่อ`, one notice
+  per changed line naming what changed:
+  - price change — `{name} ราคาเปลี่ยนจาก {old} เป็น {new}`, with `ใช้ราคาใหม่`
+    (accept) and `ลบ` (remove) actions.
+  - item or option no longer available — `{name} หมดแล้ว ไม่สามารถสั่งได้ในตอนนี้`
+    / `{name} ไม่มีให้เลือกแล้ว`, `ลบ` (remove) only — there is no "accept" for
+    something that can no longer be sold.
+  Resolving every notice (accept or remove) clears the block and proceeds
+  automatically; a re-fetch failure shows `ตรวจสอบราคาล่าสุดไม่ได้ ลองใหม่อีกครั้ง`.
+
 ### เลือกเวลารับ `/checkout`
 - **Default** — slots grouped by hour; `เหลือ N ที่` when ≤2 remain.
 - **Slot taken while typing** — `ช่วงเวลา 08:15 เพิ่งเต็มพอดี` / `รายการเวลาด้านล่างอัปเดตให้แล้ว เลือกเวลาใหม่ได้เลย`

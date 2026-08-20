@@ -25,6 +25,8 @@ export interface MenuListProps {
   ordering: boolean;
   /** Id of the one item whose photo should be preloaded (the page's likely LCP element), or null if none has an image. */
   firstImageItemId: string | null;
+  /** WBS 5.2 — opens the item options sheet for the tapped item. Omitted disables tapping entirely. */
+  onItemTap?: (item: PublicMenuItem) => void;
 }
 
 // WBS 5.1 acceptance: "An item toggled unavailable in the console disappears
@@ -33,7 +35,14 @@ export interface MenuListProps {
 // that gates a fresh SELECT (availability <> 'hidden', published store) also
 // gates which Realtime events this channel receives, so this component never
 // sees a row it wasn't already allowed to see.
-export function MenuList({ storeId, categories, items: initialItems, ordering, firstImageItemId }: MenuListProps) {
+export function MenuList({
+  storeId,
+  categories,
+  items: initialItems,
+  ordering,
+  firstImageItemId,
+  onItemTap,
+}: MenuListProps) {
   const [items, setItems] = React.useState(initialItems);
 
   React.useEffect(() => {
@@ -78,6 +87,7 @@ export function MenuList({ storeId, categories, items: initialItems, ordering, f
                 item={item}
                 ordering={ordering}
                 preloadImage={item.id === firstImageItemId}
+                onTap={onItemTap ? () => onItemTap(item) : undefined}
               />
             ))}
           </div>

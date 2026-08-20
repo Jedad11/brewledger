@@ -2,6 +2,7 @@
   "imports": {
     "@brewledger/db/types": "../../packages/db/src/types.ts",
     "@brewledger/shared/features": "../../packages/shared/src/features.ts",
-    "zod": "npm:zod@3"
+    "zod": "npm:zod@3",
+    "promptpay-qr": "npm:promptpay-qr@0.5.0"
   }
 }

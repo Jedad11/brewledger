@@ -101,7 +101,17 @@ button{font-family:inherit;letter-spacing:var(--tracking-normal)}
 @keyframes bl-shimmer{to{background-position:-200% 0}}
 
 /* ---- Customer web shell ---- */
-.cw{max-width:480px;margin:0 auto;background:var(--surface-page);min-height:100%;position:relative}
+/* apps/shop's <body> is a flex column (layout.tsx's "flex flex-col", used
+   to let this shell fill the viewport height). That makes .cw a flex item,
+   and a flex item with auto margins on the cross axis (margin:0 auto here)
+   does NOT stretch to fill the container the way a normal block would --
+   it shrink-wraps to its own content width instead, then centers that
+   shrunk box with the auto margins. Every /s/[slug] route ended up a
+   different width depending on how wide its own content happened to be
+   (menu ~377px, cart ~222px, checkout ~309px inside a 480px viewport) --
+   an explicit width:100% forces the fill, and max-width:480px still caps
+   it exactly as before once the viewport exceeds that. */
+.cw{width:100%;max-width:480px;margin:0 auto;background:var(--surface-page);min-height:100%;position:relative}
 .cw-header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:1.2rem;min-height:52px;padding:0 1.6rem;background:var(--white);box-shadow:var(--shadow-nav)}
 .cw-header .back{width:var(--tap-min);height:var(--tap-min);margin-left:-1rem;display:grid;place-items:center;border:0;background:none;cursor:pointer;color:var(--text-black)}
 .cw-header .name{font-weight:700;font-size:var(--text-3);color:var(--green-ledger)}

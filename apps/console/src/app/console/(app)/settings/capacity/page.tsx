@@ -1,0 +1,54 @@
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { resolveMerchantCtx } from "@/lib/merchant";
+import { CapacitySettingsForm } from "./CapacitySettingsForm";
+import { PAGE_TITLE } from "./copy";
+import type { Database } from "@brewledger/db/types";
+
+type PickupSlotRow = Pick<
+  Database["public"]["Tables"]["pickup_slots"]["Row"],
+  "id" | "slot_start" | "slot_end" | "capacity" | "booked_count"
+>;
+
+export default async function CapacitySettingsPage() {
+  const merchant = await resolveMerchantCtx();
+  if (!merchant) {
+    redirect("/console/login");
+  }
+
+  const store = merchant.stores[0] ?? null;
+
+  const supabase = await createClient();
+
+  let defaultCapacity = 3;
+  let timezone = "Asia/Bangkok";
+  let slots: PickupSlotRow[] = [];
+  if (store) {
+    const [{ data: storeRow }, { data: slotRows }] = await Promise.all([
+      supabase.from("stores").select("default_slot_capacity, timezone").eq("id", store.id).single(),
+      supabase
+        .from("pickup_slots")
+        .select("id, slot_start, slot_end, capacity, booked_count")
+        .eq("store_id", store.id)
+        .eq("is_open", true)
+        .gt("slot_start", new Date().toISOString())
+        .order("slot_start", { ascending: true })
+        .limit(200),
+    ]);
+    defaultCapacity = (storeRow?.default_slot_capacity as number | undefined) ?? 3;
+    timezone = (storeRow?.timezone as string | undefined) ?? "Asia/Bangkok";
+    slots = (slotRows ?? []) as PickupSlotRow[];
+  }
+
+  return (
+    <main className="mx-auto w-full max-w-xl px-4 py-8">
+      <h1 className="mb-6 font-serif text-3xl font-bold leading-[1.35] text-ink">{PAGE_TITLE}</h1>
+      <CapacitySettingsForm
+        storeId={store?.id ?? null}
+        defaultCapacity={defaultCapacity}
+        timezone={timezone}
+        slots={slots}
+      />
+    </main>
+  );
+}

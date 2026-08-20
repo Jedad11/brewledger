@@ -93,3 +93,30 @@ export function priceChangedDiffPrefix(name: string): string {
   return `${name} ราคาเปลี่ยนจาก `;
 }
 export const PRICE_CHANGED_DIFF_MIDDLE = " เป็น ";
+
+// WBS 5.3 — "เลือกเวลารับ /checkout" (docs/design/state_matrix.md, and
+// design/customer-web.js's scCheckout — the prototype markup this screen
+// is a faithful React port of). Order creation itself (the "ไปชำระเงิน"
+// CTA's real destination) is WBS 5.4, not yet built — see
+// apps/shop/src/app/s/[slug]/checkout/page.tsx's own header comment for
+// the exact scope boundary.
+export const CHECKOUT_TITLE = "เลือกเวลารับ";
+export const CHECKOUT_ALL_FULL_TITLE = "วันนี้เต็มทุกช่วงเวลาแล้ว";
+export function checkoutAllFullBody(nextSlotLabel: string): string {
+  return `สั่งล่วงหน้าสำหรับ ${nextSlotLabel} ได้`;
+}
+export function checkoutSlotTakenTitle(hhmm: string): string {
+  return `ช่วงเวลา ${hhmm} เพิ่งเต็มพอดี`;
+}
+export const CHECKOUT_SLOT_TAKEN_BODY = "รายการเวลาด้านล่างอัปเดตให้แล้ว เลือกเวลาใหม่ได้เลย";
+export function remainingLabel(remaining: number): string | null {
+  return remaining <= 2 ? `เหลือ ${remaining} ที่` : null;
+}
+export const CUSTOMER_NAME_LABEL = "ชื่อผู้สั่ง";
+export const CUSTOMER_NAME_REQUIRED_TAG = "จำเป็น";
+export const CUSTOMER_NAME_PLACEHOLDER = "ชื่อที่ใช้เรียกรับเครื่องดื่ม";
+export const CUSTOMER_NAME_ERROR = "กรอกชื่อผู้สั่ง";
+export function checkoutSummaryLabel(hhmm: string | null): string {
+  return hhmm ? `รับ ${hhmm} น.` : "ยังไม่ได้เลือกเวลา";
+}
+export const CHECKOUT_CTA_LABEL = "ไปชำระเงิน";

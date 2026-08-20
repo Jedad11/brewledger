@@ -830,6 +830,7 @@ export type Database = {
         Row: {
           closes_at: string | null
           created_at: string
+          default_slot_capacity: number
           id: string
           is_published: boolean
           merchant_id: string
@@ -845,6 +846,7 @@ export type Database = {
         Insert: {
           closes_at?: string | null
           created_at?: string
+          default_slot_capacity?: number
           id?: string
           is_published?: boolean
           merchant_id: string
@@ -860,6 +862,7 @@ export type Database = {
         Update: {
           closes_at?: string | null
           created_at?: string
+          default_slot_capacity?: number
           id?: string
           is_published?: boolean
           merchant_id?: string

@@ -52,8 +52,11 @@ jobs:
       - name: Forbidden-field scan (committed snapshot fixtures, WBS 3.7)
         run: pnpm scan:forbidden-fields
 
-      # `-r --if-present` skips workspaces with no "test" script (apps/shop,
-      # worker) rather than erroring. Every plain vitest suite that needs a
+      # `-r --if-present` skips workspaces with no "test" script (worker)
+      # rather than erroring. apps/shop gained one in WBS 5.3
+      # (storeSchedule.test.ts / copy.test.ts, pure functions, no Supabase
+      # stack needed — these actually run and pass here, unlike the
+      # infra-gated suites below). Every plain vitest suite that needs a
       # real local Supabase stack (packages/db/tests, packages/shared's
       # storage.test.ts, supabase/functions/_tests) SKIPS itself — not fails
       # — when that stack isn't reachable; this runner never starts one, so

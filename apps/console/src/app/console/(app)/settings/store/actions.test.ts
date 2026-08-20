@@ -107,7 +107,15 @@ function buildInsertRetryMock(failCount: number) {
     return { insert: insertMock };
   });
 
-  return { client: { from: fromMock }, insertedRows, insertMock, fromMock, callCount: () => calls };
+  // WBS 5.3 — saveStoreProfile's success path also fires a best-effort
+  // supabase.rpc("enqueue_generate_slots_job", ...) call (never awaited into
+  // a failure of the save itself). Stubbed here so every existing
+  // success-path assertion in this file keeps exercising ONLY what it
+  // already asserted on, rather than every call site needing to know about
+  // an unrelated side effect this table's mock never modeled.
+  const rpcMock = vi.fn().mockResolvedValue({ error: null });
+
+  return { client: { from: fromMock, rpc: rpcMock }, insertedRows, insertMock, fromMock, rpcMock, callCount: () => calls };
 }
 
 /** A client whose from()/update()/insert() would throw if ever reached --
@@ -174,7 +182,8 @@ describe("saveStoreProfile", () => {
       const eqMock = vi.fn().mockReturnValue({ select: selectMock });
       const updateMock = vi.fn().mockReturnValue({ eq: eqMock });
       const fromMock = vi.fn().mockReturnValue({ update: updateMock });
-      mockedCreateClient.mockResolvedValue({ from: fromMock } as never);
+      const rpcMock = vi.fn().mockResolvedValue({ error: null }); // WBS 5.3 enqueue_generate_slots_job
+      mockedCreateClient.mockResolvedValue({ from: fromMock, rpc: rpcMock } as never);
 
       const result = await saveStoreProfile({ ...BASE_INPUT, storeId: OWNED_STORE_ID, slug: "Brew Ledger Cafe" });
 
@@ -312,8 +321,17 @@ describe("saveStoreProfile", () => {
         if (table !== "stores") throw new Error(`unexpected table passed to .from(): ${table}`);
         return { select: paymentsSelectMock, update: updateMock };
       });
+      // WBS 5.3 — see buildInsertRetryMock's own comment on this same stub.
+      const rpcMock = vi.fn().mockResolvedValue({ error: null });
 
-      return { client: { from: fromMock }, paymentsSelectMock, paymentsEqMock, updateMock, fromMock };
+      return {
+        client: { from: fromMock, rpc: rpcMock },
+        paymentsSelectMock,
+        paymentsEqMock,
+        updateMock,
+        fromMock,
+        rpcMock,
+      };
     }
 
     it("publishing a brand-new store (storeId: null) is rejected without touching the DB -- it cannot possibly have a verified id yet", async () => {

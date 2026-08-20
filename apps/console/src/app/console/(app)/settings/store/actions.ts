@@ -130,6 +130,18 @@ export async function saveStoreProfile(
           .single();
 
     if (!error && data) {
+      // WBS 5.3 "on demand when store hours change" -- best-effort, never
+      // blocks the save the merchant is actually waiting on. Regenerating
+      // for a store whose hours didn't change is a harmless no-op (the
+      // underlying generate_pickup_slots_for_store call is idempotent), so
+      // this fires on every successful save rather than diffing old vs new
+      // opens_at/closes_at.
+      const { error: enqueueError } = await supabase.rpc("enqueue_generate_slots_job", {
+        p_store_id: data.id,
+      });
+      if (enqueueError) {
+        console.error(`saveStoreProfile: enqueue_generate_slots_job failed for store ${data.id}`, enqueueError);
+      }
       return { ok: true, store: { id: data.id as string, slug: data.slug as string } };
     }
 

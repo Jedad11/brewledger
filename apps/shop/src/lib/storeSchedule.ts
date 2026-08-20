@@ -79,6 +79,36 @@ export function formatHoursLabel(opensAt: string, closesAt: string): string {
   return `${opensAt.slice(0, 5)}–${closesAt.slice(0, 5)}`;
 }
 
+export interface SlotHourGroup {
+  /** "08" — 2-digit hour, store-local, per the prototype's `${g.h} น.` heading (design/customer-web.js scCheckout). */
+  hourLabel: string;
+  slots: { id: string; hhmm: string; remaining: number }[];
+}
+
+// WBS 5.3 — groups public-slots' flat, already-filtered (open/future/
+// non-full — RLS's doing, see publicApi.ts's PublicSlot comment) list by
+// store-local hour, for the /checkout picker. Slots are already ordered by
+// slot_start ascending (public-slots' own .order call) so groups come out
+// in chronological order for free without a separate sort here.
+export function groupSlotsByHour(
+  slots: { id: string; slotStart: string; remaining: number }[],
+  timezone: string,
+): SlotHourGroup[] {
+  const groups: SlotHourGroup[] = [];
+  for (const slot of slots) {
+    const parts = partsInTimeZone(new Date(slot.slotStart), timezone);
+    const hourLabel = parts.hhmm.slice(0, 2);
+    const last = groups[groups.length - 1];
+    const entry = { id: slot.id, hhmm: parts.hhmm, remaining: slot.remaining };
+    if (last && last.hourLabel === hourLabel) {
+      last.slots.push(entry);
+    } else {
+      groups.push({ hourLabel, slots: [entry] });
+    }
+  }
+  return groups;
+}
+
 export interface SlotAvailabilityState {
   hasSlotsToday: boolean;
   /** Thai day/time label for the earliest upcoming slot, or null if there are none at all. */

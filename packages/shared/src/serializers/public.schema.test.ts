@@ -11,10 +11,12 @@
 // "vacuously strict" by rejecting even valid input for an unrelated reason.
 import { describe, expect, it } from "vitest";
 import {
+  checkoutDiffSchema,
   publicMenuCategorySchema,
   publicMenuItemSchema,
   publicOptionGroupSchema,
   publicOptionSchema,
+  publicOrderCreatedSchema,
   publicOrderStatusSchema,
   publicSlotSchema,
   publicStoreSchema,
@@ -171,6 +173,101 @@ describe("publicOrderStatusSchema", () => {
       ...valid,
       totalCostSnapshotSatang: 3600,
     });
+    expect(result.success).toBe(false);
+  });
+});
+
+// WBS 5.4 — checkout_create_order's response DTOs. Same discipline: a valid
+// object parses clean, and the identical object plus one cost-shaped extra
+// key is rejected -- proving .strict() actually guards this brand-new
+// schema and not just the pre-existing ones above.
+describe("publicOrderCreatedSchema", () => {
+  const valid = {
+    orderCode: "3B4CDE",
+    totalSatang: 19500,
+    pickupAt: "2026-08-21T04:00:00Z",
+    expiresAt: "2026-08-20T17:00:00Z",
+    items: [
+      {
+        name: "Latte",
+        quantity: 3,
+        unitPriceSatang: 6500,
+        options: [{ name: "Oat milk", priceDeltaSatang: 1000 }],
+      },
+    ],
+  };
+
+  it("accepts the valid DTO shape", () => {
+    expect(publicOrderCreatedSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("rejects when an extra top-level key like totalCostSnapshotSatang is present", () => {
+    const result = publicOrderCreatedSchema.safeParse({ ...valid, totalCostSnapshotSatang: 8200 });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects when an extra key like unitCostSnapshotSatang is present on a LINE ITEM (nested .strict())", () => {
+    const result = publicOrderCreatedSchema.safeParse({
+      ...valid,
+      items: [{ ...valid.items[0], unitCostSnapshotSatang: 1800 }],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects when an extra key like marginSatang is present on a LINE ITEM OPTION (nested .strict(), two levels deep)", () => {
+    const result = publicOrderCreatedSchema.safeParse({
+      ...valid,
+      items: [{ ...valid.items[0], options: [{ ...valid.items[0].options[0], marginSatang: 200 }] }],
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("checkoutDiffSchema", () => {
+  const priceChanged = {
+    lineIndex: 0,
+    kind: "price_changed" as const,
+    menuItemId: UUID_A,
+    nameSnapshot: "Latte",
+    oldSatang: 6000,
+    newSatang: 6500,
+  };
+
+  it("accepts a valid price_changed diff", () => {
+    expect(checkoutDiffSchema.safeParse(priceChanged).success).toBe(true);
+  });
+
+  it("accepts a valid item_removed diff", () => {
+    const result = checkoutDiffSchema.safeParse({
+      lineIndex: 1,
+      kind: "item_removed",
+      menuItemId: UUID_A,
+      nameSnapshot: "Discontinued Cookie",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a valid option_price_changed diff", () => {
+    const result = checkoutDiffSchema.safeParse({
+      lineIndex: 0,
+      kind: "option_price_changed",
+      menuItemId: UUID_A,
+      groupId: UUID_B,
+      optionId: UUID_A,
+      name: "Oat milk",
+      oldSatang: 1000,
+      newSatang: 1500,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects when an extra key like costSatang is present on a diff", () => {
+    const result = checkoutDiffSchema.safeParse({ ...priceChanged, costSatang: 1800 });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an unknown kind (not one of the five defined variants)", () => {
+    const result = checkoutDiffSchema.safeParse({ ...priceChanged, kind: "something_else" });
     expect(result.success).toBe(false);
   });
 });

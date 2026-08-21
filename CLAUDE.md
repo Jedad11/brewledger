@@ -73,16 +73,30 @@ docs/
 pnpm install
 pnpm dev                 # Owner Console  (apps/console)
 pnpm dev:shop            # Customer Web   (apps/shop)
+pnpm dev:worker          # Async job worker (worker/) — generate_slots, expire_orders, etc.
 pnpm build               # build all workspaces
 pnpm lint                # lint each workspace
 pnpm lint:boundary       # RL-3 import-boundary check
 pnpm typecheck           # tsc --noEmit across workspaces
 
-supabase start           # local Postgres + Auth + Storage + Edge Functions
+supabase start           # local Postgres + Auth + Storage — NOT Edge Functions, see below
+pnpm functions:serve     # Edge Functions runtime — separate process, does not auto-start
 pnpm db:push             # apply migrations to the linked project
 pnpm db:reset            # drop, re-migrate, re-seed
 pnpm db:types            # regenerate packages/db/src/types.ts from the schema
 ```
+
+Running the full local stack needs **four** long-lived processes at once:
+`supabase start` (once — daemonized), `pnpm functions:serve`, `pnpm dev:worker`,
+and `pnpm dev` / `pnpm dev:shop`. Console and Customer Web read Supabase's URL
+from each app's own `.env.local` (gitignored, not the committed `.env`) —
+`apps/console/instrumentation.ts` and `apps/shop/instrumentation.ts` refuse to
+start in dev if that value isn't `127.0.0.1`/`localhost`, specifically because
+the two apps drifted onto different backends (one local, one remote) before
+this guard existed. If `pnpm dev:worker` throws over a blank optional env var
+(`FLOAT16_API_KEY`, `VAPID_PRIVATE_KEY`), comment the line out in `worker/.env`
+rather than leaving it empty — `z.string().min(1).optional()` in
+`packages/shared/src/config.ts` accepts "absent", not "blank".
 
 ## Red lines
 

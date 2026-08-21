@@ -72,6 +72,46 @@ export function loadBrowserConfig(
   return loadConfig(browserConfigSchema, BROWSER_KEYS, "docs/security/secrets.md (WBS 3.9)", source);
 }
 
+// apps/shop and apps/console are two separate Next.js processes that each
+// read their own .env.local independently. Nothing keeps them in sync, so
+// one can silently end up on the local Supabase stack while the other is
+// still pointed at brewledger-dev (this happened: a store created via the
+// console against local Postgres 404'd on the storefront because the shop
+// process had no .env.local and fell back to its committed .env, which
+// points at remote). Every app's instrumentation.ts calls this at server
+// startup so drift like that fails loudly instead of as a confusing 404.
+const LOCAL_HOSTNAMES = new Set(["127.0.0.1", "localhost"]);
+
+export function assertLocalSupabaseInDev(
+  url: string | undefined,
+  env: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env,
+): void {
+  if (env.NODE_ENV !== "development") return;
+  if (!url) return; // loadBrowserConfig/loadConfig already reports missing vars
+
+  let hostname: string;
+  try {
+    hostname = new URL(url).hostname;
+  } catch {
+    throw new Error(
+      `NEXT_PUBLIC_SUPABASE_URL ("${url}") is not a valid URL. In local dev it ` +
+        `must point at the local Supabase stack: http://127.0.0.1:54321 ` +
+        `(run \`supabase start\`, see this app's .env.local / .env.example).`,
+    );
+  }
+
+  if (!LOCAL_HOSTNAMES.has(hostname)) {
+    throw new Error(
+      `NEXT_PUBLIC_SUPABASE_URL points at "${hostname}", not the local ` +
+        `Supabase stack. Running \`next dev\` against a remote project is how ` +
+        `apps/shop and apps/console previously drifted onto different ` +
+        `backends without anyone noticing. Set NEXT_PUBLIC_SUPABASE_URL=` +
+        `http://127.0.0.1:54321 in this app's .env.local (see .env.example) ` +
+        `and run \`supabase start\`.`,
+    );
+  }
+}
+
 // --- edge (supabase/functions/*, Deno) --------------------------------------
 // SUPABASE_SERVICE_ROLE_KEY bypasses RLS entirely (RL-3) — Edge Functions are
 // one of exactly two legitimate holders (the other is the Render worker).

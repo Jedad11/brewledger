@@ -38,9 +38,31 @@ const server = createServer((req, res) => {
   res.end(JSON.stringify({ error: "not found" }));
 });
 
+// WBS 5.6 — seeds the self-perpetuating 'expire_orders' sweep (see
+// handlers/expireOrders.ts's own header) exactly once per process start.
+// The WHERE NOT EXISTS guard matters on every redeploy: Render restarts
+// this process often (deploys, spin-down/wake), and without it each restart
+// would add a second concurrent sweep chain rather than resuming the one
+// already running.
+async function ensureExpireOrdersScheduled(): Promise<void> {
+  await pool.query(
+    `insert into job_queue (job_type, payload)
+     select 'expire_orders', '{}'::jsonb
+     where not exists (
+       select 1 from job_queue where job_type = 'expire_orders' and status in ('pending', 'processing')
+     )`,
+  );
+}
+
 server.listen(PORT, () => {
   log.info("worker http server listening", { port: PORT });
-  startPolling();
+  ensureExpireOrdersScheduled()
+    .catch((err) =>
+      log.error("failed to seed expire_orders sweep", {
+        error: err instanceof Error ? err.message : String(err),
+      }),
+    )
+    .finally(() => startPolling());
 });
 
 let shuttingDown = false;

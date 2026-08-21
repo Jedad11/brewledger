@@ -1,5 +1,6 @@
 import { log } from "../log";
 import { generateSlots } from "./slots";
+import { expireOrders } from "./expireOrders";
 import type { Job, JobHandler } from "./types";
 
 // Stub — real logic lands with the OCR WBS entries (6.x). Reads a purchase
@@ -46,6 +47,7 @@ export const handlers: Record<string, JobHandler> = {
   low_stock_check: lowStockCheck,
   push_notify: pushNotify,
   generate_slots: generateSlots,
+  expire_orders: expireOrders,
 };
 
 export function getHandler(jobType: string): JobHandler | undefined {

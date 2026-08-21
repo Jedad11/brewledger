@@ -7,7 +7,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
-    "lint": "echo \"(no lint configured for @brewledger/worker)\""
+    "lint": "echo \"(no lint configured for @brewledger/worker)\"",
+    "test": "vitest run"
   },
   "dependencies": {
     "@brewledger/shared": "workspace:*",
@@ -19,6 +20,7 @@
     "@types/node": "^20",
     "@types/pg": "^8.23.1",
     "tsx": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }

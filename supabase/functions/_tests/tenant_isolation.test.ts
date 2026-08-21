@@ -29,12 +29,21 @@
 // catches a coverage gap even in an environment where the live stack is
 // unreachable.
 //
-// Today only one console-* business Edge Function exists as a stand-in
-// (qa-console-auth-probe, the same synthetic handler console_auth_guard.test.ts
-// drives for the 401 guard -- see that function's own header comment for why
-// it's the sanctioned interim probe). As real console-* functions land in
-// later WBS entries, each one's directory name must be added to
-// ENDPOINT_MANIFEST or this suite's own completeness check fails.
+// qa-console-auth-probe is the synthetic handler console_auth_guard.test.ts
+// also drives for the 401 guard -- see that function's own header comment
+// for why it's the sanctioned interim probe. console-confirm-payment and
+// console-reject-payment (WBS 5.6, packages/db/migrations/
+// 0031_payment_confirmation.sql) are the first real business console-*
+// functions in the manifest; unlike the probe, they don't accept a
+// client-supplied store_id at all -- each looks up its own store_id from
+// the orderId in the request body (see 0031's own header) -- so their
+// `request()` builders below resolve the generic `storeId` test parameter
+// to a pre-seeded throwaway order belonging to that store, and their
+// success-path assertion is supplied via `assertSuccessBody` rather than
+// the probe's `{ok, merchantId}` shape, which these two don't share. As
+// more real console-* functions land in later WBS entries, each one's
+// directory name must be added to ENDPOINT_MANIFEST or this suite's own
+// completeness check fails.
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -66,6 +75,25 @@ interface EndpointManifestEntry {
   functionName: string;
   /** Builds the request URL + init for a call to this endpoint, optionally carrying a store_id. */
   request(opts: { jwt: string; storeId?: string }): { url: string; init: RequestInit };
+  /**
+   * Asserts the entry's own 200-success response body. Defaults to the
+   * qa-console-auth-probe shape ({ok, merchantId}) when omitted -- only
+   * entries whose real response contract differs (console-confirm-payment,
+   * console-reject-payment: {ok, already, ...}, no merchantId field) need
+   * to supply their own.
+   */
+  assertSuccessBody?(bodyText: string, expectedMerchantId: string): void;
+}
+
+function assertProbeSuccessBody(bodyText: string, expectedMerchantId: string): void {
+  const body = JSON.parse(bodyText) as { ok: boolean; merchantId: string };
+  expect(Object.keys(body).sort()).toEqual(["merchantId", "ok"]);
+  expect(body.merchantId).toBe(expectedMerchantId);
+}
+
+function assertPaymentActionSuccessBody(bodyText: string): void {
+  const body = JSON.parse(bodyText) as { ok: boolean };
+  expect(body.ok).toBe(true);
 }
 
 // THE manifest. Every console-*/qa-* Edge Function directory on disk must
@@ -80,6 +108,44 @@ const ENDPOINT_MANIFEST: EndpointManifestEntry[] = [
           : functionUrl("qa-console-auth-probe"),
       init: { headers: { apikey: LOCAL_ANON_KEY, Authorization: `Bearer ${jwt}` } },
     }),
+    assertSuccessBody: assertProbeSuccessBody,
+  },
+  {
+    functionName: "console-confirm-payment",
+    // No store_id param on this endpoint by design (0031's own header) --
+    // ownership is derived from the orderId's own store_id. `storeId` here
+    // just selects which pre-seeded throwaway order (owned by storeA or
+    // storeB) the generic tests below exercise; omitted (test 5, always
+    // called as merchant A) defaults to merchant A's own order.
+    request: ({ jwt, storeId }) => ({
+      url: functionUrl("console-confirm-payment"),
+      init: {
+        method: "POST",
+        headers: {
+          apikey: LOCAL_ANON_KEY,
+          Authorization: `Bearer ${jwt}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ orderId: storeId === storeB ? confirmOrderB : confirmOrderA }),
+      },
+    }),
+    assertSuccessBody: assertPaymentActionSuccessBody,
+  },
+  {
+    functionName: "console-reject-payment",
+    request: ({ jwt, storeId }) => ({
+      url: functionUrl("console-reject-payment"),
+      init: {
+        method: "POST",
+        headers: {
+          apikey: LOCAL_ANON_KEY,
+          Authorization: `Bearer ${jwt}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ orderId: storeId === storeB ? rejectOrderB : rejectOrderA }),
+      },
+    }),
+    assertSuccessBody: assertPaymentActionSuccessBody,
   },
 ];
 
@@ -124,6 +190,14 @@ let merchantA: AuthUserFixture | undefined;
 let merchantB: AuthUserFixture | undefined;
 let storeA: string | undefined;
 let storeB: string | undefined;
+// Throwaway PENDING_PAYMENT orders for console-confirm-payment /
+// console-reject-payment's manifest entries above -- separate order per
+// (function, store) pair so the two entries' state transitions never
+// interfere with each other's assertions.
+let confirmOrderA: string | undefined;
+let confirmOrderB: string | undefined;
+let rejectOrderA: string | undefined;
+let rejectOrderB: string | undefined;
 
 beforeAll(async () => {
   const reachable = await isFunctionReachable("qa-console-auth-probe");
@@ -143,6 +217,11 @@ beforeAll(async () => {
   merchantB = await createWellFormedAuthUserFixture();
   storeA = await insertStoreForMerchant(merchantA.merchantId, "a");
   storeB = await insertStoreForMerchant(merchantB.merchantId, "b");
+
+  confirmOrderA = await insertThrowawayOrder(storeA, "confirm-a");
+  confirmOrderB = await insertThrowawayOrder(storeB, "confirm-b");
+  rejectOrderA = await insertThrowawayOrder(storeA, "reject-a");
+  rejectOrderB = await insertThrowawayOrder(storeB, "reject-b");
 });
 
 afterAll(async () => {
@@ -163,6 +242,29 @@ async function insertStoreForMerchant(merchantId: string, label: string): Promis
     const { rows } = await client.query<{ id: string }>(
       `insert into stores (merchant_id, slug, name, is_published) values ($1, $2, $3, true) returning id`,
       [merchantId, slug, `QA Tenant Isolation Store ${label.toUpperCase()}`],
+    );
+    return rows[0].id;
+  } finally {
+    await client.end();
+  }
+}
+
+// A minimal PENDING_PAYMENT order -- no items, no payment row -- sufficient
+// for console-confirm-payment / console-reject-payment's ownership check
+// (0031_payment_confirmation.sql looks up orders.store_id and stops there
+// before ever touching order_items/payments) without dragging in the full
+// checkout fixture packages/db/tests/payment_confirmation.test.ts builds
+// for its own deeper RPC-level assertions -- this suite only needs the
+// endpoint to be callable, not its side effects verified.
+async function insertThrowawayOrder(storeId: string, label: string): Promise<string> {
+  const client = new PgClient({ connectionString: LOCAL_DB_URL });
+  await client.connect();
+  try {
+    const orderCode = `QTI${label.toUpperCase()}${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
+    const { rows } = await client.query<{ id: string }>(
+      `insert into orders (store_id, order_code, customer_name, subtotal_satang, total_satang)
+       values ($1, $2, $3, $4, $4) returning id`,
+      [storeId, orderCode, `QA Tenant Isolation Customer ${label}`, 10000],
     );
     return rows[0].id;
   } finally {
@@ -210,8 +312,7 @@ describe.each(ENDPOINT_MANIFEST)("console endpoint: $functionName", (entry) => {
     const jwtA = mintAuthenticatedJwt(merchantA!.authUserId);
     const { status, bodyText } = await callEndpoint(entry, { jwt: jwtA, storeId: storeA });
     expect(status).toBe(200);
-    const body = JSON.parse(bodyText) as { ok: boolean; merchantId: string };
-    expect(body.merchantId).toBe(merchantA!.merchantId);
+    (entry.assertSuccessBody ?? assertProbeSuccessBody)(bodyText, merchantA!.merchantId);
   });
 
   it("no store_id supplied at all -- existing 200 behavior is unaffected (regression check against the pre-WBS-4.2 probe)", async () => {
@@ -219,8 +320,7 @@ describe.each(ENDPOINT_MANIFEST)("console endpoint: $functionName", (entry) => {
     const jwtA = mintAuthenticatedJwt(merchantA!.authUserId);
     const { status, bodyText } = await callEndpoint(entry, { jwt: jwtA });
     expect(status).toBe(200);
-    const body = JSON.parse(bodyText) as { ok: boolean; merchantId: string };
-    expect(Object.keys(body).sort()).toEqual(["merchantId", "ok"]);
+    (entry.assertSuccessBody ?? assertProbeSuccessBody)(bodyText, merchantA!.merchantId);
   });
 });
 

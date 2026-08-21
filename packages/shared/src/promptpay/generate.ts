@@ -11,7 +11,7 @@
 // anyone ever proposes making the payee anything other than the merchant's
 // own alias, that is a regulatory reclassification, not a refactor.
 import generatePayload from "promptpay-qr";
-import type { PromptPayType } from "./normalize";
+import type { PromptPayType } from "./normalize.ts";
 
 export interface BuildPromptPayPayloadInput {
   promptpayId: string;

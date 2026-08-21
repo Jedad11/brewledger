@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { resolveMerchantCtx } from "@/lib/merchant";
+import { uploadCompressedMenuImage } from "@brewledger/shared/dist/storage/menuImages";
 
 // WBS 4.4 — RL-2 PRIMARY ENFORCEMENT POINT. saveMenuItem is the one place a
 // merchant creates a sellable menu item, and it must succeed with ONLY name
@@ -176,4 +177,46 @@ export async function updateMenuItemImage(
 
   if (error) return { error: SAVE_ERROR };
   return { ok: true };
+}
+
+const PHOTO_UPLOAD_ERROR = "อัปโหลดรูปไม่สำเร็จ ลองใหม่อีกครั้ง";
+
+export type UploadMenuItemPhotoResult = { ok: true } | { error: string };
+
+/**
+ * Runs the actual Storage write server-side. `compressImage` (WBS 3.8) is
+ * DOM-only and stays in the browser -- MenuItemEditorForm compresses the
+ * photo client-side and hands the resulting blob over here as FormData --
+ * but the write itself must go through this server client. The browser
+ * Supabase client can never carry the merchant's session: WBS 4.1's session
+ * cookie is httpOnly, invisible to the browser client's document.cookie
+ * read, so a browser-client storage call always runs as `anon` and
+ * merchant_insert_menu_images (0022_storage_policies.sql, `to authenticated`)
+ * rejects it -- "new row violates row-level security policy".
+ */
+export async function uploadMenuItemPhoto(
+  itemId: string,
+  storeId: string,
+  formData: FormData,
+): Promise<UploadMenuItemPhotoResult> {
+  const merchant = await resolveMerchantCtx();
+  if (!merchant) return { error: PHOTO_UPLOAD_ERROR };
+  if (!isOwnedStore(merchant, storeId)) {
+    console.error(`uploadMenuItemPhoto: rejected storeId ${storeId} -- not owned by merchant ${merchant.merchantId}`);
+    return { error: PHOTO_UPLOAD_ERROR };
+  }
+
+  const blob = formData.get("file");
+  if (!(blob instanceof Blob)) return { error: PHOTO_UPLOAD_ERROR };
+
+  const supabase = await createClient();
+  let path: string;
+  try {
+    path = await uploadCompressedMenuImage(supabase, blob, storeId, itemId);
+  } catch (err) {
+    console.error("uploadMenuItemPhoto: storage upload failed", err);
+    return { error: PHOTO_UPLOAD_ERROR };
+  }
+
+  return updateMenuItemImage(itemId, storeId, path);
 }

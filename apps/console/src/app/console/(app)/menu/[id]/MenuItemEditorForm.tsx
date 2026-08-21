@@ -4,9 +4,8 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Card, Input, Button, RecipeBlock } from "@brewledger/ui";
 import { thbToSatang, satangToThb } from "@brewledger/shared/dist/money";
-import { uploadMenuImage } from "@brewledger/shared/dist/storage/menuImages";
-import { createClient } from "@/lib/supabase/client";
-import { saveMenuItem, updateMenuItemImage, type SaveMenuItemInput } from "./actions";
+import { compressImage } from "@brewledger/shared/dist/storage/compress";
+import { saveMenuItem, uploadMenuItemPhoto, type SaveMenuItemInput } from "./actions";
 
 export interface MenuItemEditorOption {
   id: string | null;
@@ -34,6 +33,7 @@ const SAVE_SUCCESS = "บันทึกแล้ว";
 const NAME_REQUIRED = "กรอกชื่อรายการ";
 const PRICE_REQUIRED = "กรอกราคา";
 const PRICE_INVALID = "ราคาต้องมากกว่า 0 บาท";
+const PHOTO_UPLOAD_ERROR = "อัปโหลดรูปไม่สำเร็จ ลองใหม่อีกครั้ง";
 
 interface DraftOption {
   key: string;
@@ -79,6 +79,7 @@ export function MenuItemEditorForm({ storeId, item }: { storeId: string; item: M
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [savedAt, setSavedAt] = React.useState<number | null>(null);
+  const [photoError, setPhotoError] = React.useState<string | null>(null);
 
   const priceSatang = priceThb.trim() === "" ? null : thbToSatang(Number(priceThb));
   const nameError = touched && name.trim().length === 0 ? NAME_REQUIRED : undefined;
@@ -96,6 +97,7 @@ export function MenuItemEditorForm({ storeId, item }: { storeId: string; item: M
     if (!file) return;
     setPhotoFile(file);
     setPhotoPreviewUrl(URL.createObjectURL(file));
+    setPhotoError(null);
   }
 
   function addOptionGroup() {
@@ -137,6 +139,7 @@ export function MenuItemEditorForm({ storeId, item }: { storeId: string; item: M
     setSaving(true);
     setError(null);
     setSavedAt(null);
+    setPhotoError(null);
 
     const input: SaveMenuItemInput = {
       itemId,
@@ -160,15 +163,27 @@ export function MenuItemEditorForm({ storeId, item }: { storeId: string; item: M
       return;
     }
 
+    let photoUploadFailed = false;
     if (photoFile) {
       try {
-        const browserClient = createClient();
-        const path = await uploadMenuImage(browserClient, photoFile, storeId, result.item.id);
-        await updateMenuItemImage(result.item.id, storeId, path);
+        // Compression stays in the browser (WBS 3.8, Canvas-only) but the
+        // actual Storage write goes through a Server Action -- the browser
+        // Supabase client can never carry the merchant's session (the
+        // session cookie is httpOnly per WBS 4.1), so a browser-client
+        // storage call always runs as `anon` and RLS rejects it.
+        const compressed = await compressImage(photoFile, { mimeType: "image/webp" });
+        const formData = new FormData();
+        formData.set("file", compressed, "photo.webp");
+        const uploadResult = await uploadMenuItemPhoto(result.item.id, storeId, formData);
+        if ("error" in uploadResult) throw new Error(uploadResult.error);
       } catch (err) {
         // Photo upload failure never fails the item save -- the photo is
         // optional (WBS 4.4), the item itself already saved successfully.
+        // The merchant still needs to know their photo didn't stick, so this
+        // surfaces separately from `error` rather than being swallowed.
         console.error("menu item photo upload failed", err);
+        photoUploadFailed = true;
+        setPhotoError(PHOTO_UPLOAD_ERROR);
       }
     }
 
@@ -177,7 +192,12 @@ export function MenuItemEditorForm({ storeId, item }: { storeId: string; item: M
 
     if (!itemId) {
       setItemId(result.item.id);
-      router.replace(`/console/menu/${result.item.id}`);
+      // A failed photo needs its error read before the route change remounts
+      // this form (fresh server props) and discards photoError with it --
+      // stay put so the merchant can see it and retry from here.
+      if (!photoUploadFailed) {
+        router.replace(`/console/menu/${result.item.id}`);
+      }
     }
   }
 
@@ -242,6 +262,11 @@ export function MenuItemEditorForm({ storeId, item }: { storeId: string; item: M
                 <span className="note-plain">แตะเพื่อถ่ายหรือเลือกรูป</span>
                 <input type="file" accept="image/*" className="sr-only" onChange={handlePhotoChange} />
               </label>
+              {photoError ? (
+                <p role="alert" className="err">
+                  {photoError}
+                </p>
+              ) : null}
             </div>
 
             <Input
@@ -309,19 +334,23 @@ function OptionGroupsEditor({
           />
           {group.options.map((option) => (
             <div key={option.key} className="flex items-end gap-2">
-              <Input
-                label="ตัวเลือก"
-                placeholder="เช่น ร้อน"
-                value={option.name}
-                onChange={(e) => onOptionChange(group.key, option.key, { name: e.target.value })}
-              />
-              <Input
-                label="ราคาเพิ่ม/ลด (บาท)"
-                inputMode="decimal"
-                placeholder="0"
-                value={option.priceDeltaThb}
-                onChange={(e) => onOptionChange(group.key, option.key, { priceDeltaThb: e.target.value })}
-              />
+              <div className="min-w-0 flex-1">
+                <Input
+                  label="ตัวเลือก"
+                  placeholder="เช่น ร้อน"
+                  value={option.name}
+                  onChange={(e) => onOptionChange(group.key, option.key, { name: e.target.value })}
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <Input
+                  label="ราคาเพิ่ม/ลด (บาท)"
+                  inputMode="decimal"
+                  placeholder="0"
+                  value={option.priceDeltaThb}
+                  onChange={(e) => onOptionChange(group.key, option.key, { priceDeltaThb: e.target.value })}
+                />
+              </div>
               <Button type="button" variant="quiet" onClick={() => onRemoveOption(group.key, option.key)}>
                 ลบ
               </Button>

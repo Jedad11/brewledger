@@ -7,7 +7,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { compressImage } from "./compress";
 
-const MENU_IMAGES_BUCKET = "menu-images";
+export const MENU_IMAGES_BUCKET = "menu-images";
 
 // {store_id}/{menu_item_id}.webp — matches 0022_storage_policies.sql's
 // (storage.foldername(name))[1] check against auth_store_ids(). A menu item
@@ -16,6 +16,37 @@ const MENU_IMAGES_BUCKET = "menu-images";
 // save in apps/console/src/app/console/(app)/menu/[id]/actions.ts.
 export function menuImageObjectPath(storeId: string, menuItemId: string): string {
   return `${storeId}/${menuItemId}.webp`;
+}
+
+/**
+ * Uploads an already-compressed blob. Split out from `uploadMenuImage` below
+ * so a Server Action can call this directly with a blob a client component
+ * compressed and handed over via FormData — `client` there is the
+ * `@/lib/supabase/server` client, which actually carries the merchant's
+ * session (0022_storage_policies.sql's insert policy is `to authenticated`).
+ * The browser-side Supabase client can never carry it: WBS 4.1 sets the
+ * session cookie `httpOnly`, so `document.cookie` (what the browser client
+ * reads) never contains it and every browser-client storage call runs as
+ * `anon` — RLS then rejects it, `compressImage` here is DOM-only anyway
+ * (canvas), so it cannot run in a Server Action either. The split is what
+ * lets compression stay in the browser while the authenticated write
+ * happens server-side.
+ */
+export async function uploadCompressedMenuImage(
+  client: SupabaseClient,
+  blob: Blob,
+  storeId: string,
+  menuItemId: string,
+): Promise<string> {
+  const path = menuImageObjectPath(storeId, menuItemId);
+
+  const { error } = await client.storage.from(MENU_IMAGES_BUCKET).upload(path, blob, {
+    contentType: "image/webp",
+    upsert: true,
+  });
+  if (error) throw error;
+
+  return path;
 }
 
 /**
@@ -33,15 +64,7 @@ export async function uploadMenuImage(
   menuItemId: string,
 ): Promise<string> {
   const compressed = await compressImage(file, { mimeType: "image/webp" });
-  const path = menuImageObjectPath(storeId, menuItemId);
-
-  const { error } = await client.storage.from(MENU_IMAGES_BUCKET).upload(path, compressed, {
-    contentType: "image/webp",
-    upsert: true,
-  });
-  if (error) throw error;
-
-  return path;
+  return uploadCompressedMenuImage(client, compressed, storeId, menuItemId);
 }
 
 /**

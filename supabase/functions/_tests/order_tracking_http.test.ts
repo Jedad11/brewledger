@@ -7,11 +7,19 @@
 // re-implementation of the routing/rate-limit logic.
 //
 // Owns:
-//   - rate limiting (packages/db/migrations/0036_order_lookup_rate_limit.sql):
-//     the phone+code branch caps at 20/hour/IP and actually 429s past that;
-//     the code-only poll branch (what /o/[code] hits every 5s) is NOT
-//     rate-limited, confirmed deliberately since over-limiting polling would
-//     break the live status page for legitimate same-IP customers.
+//   - rate limiting (packages/db/migrations/0036_order_lookup_rate_limit.sql,
+//     reshaped by 0039_order_lookup_phone_bucket.sql — redline_reviewer
+//     finding, 2026-08-22): the phone+code branch is now TWO buckets,
+//     phone_hash checked first (20/hour, the real backstop — bounds an
+//     attacker who rotates IPs but targets one real phone number, the exact
+//     bypass reviewer proved live against the old ip_hash-only bucket) then
+//     ip_hash second (20/hour, defense-in-depth against unsophisticated
+//     scripts, known-spoofable via x-forwarded-for). See 0039's migration
+//     header and public-order-status/index.ts's own comment for the full
+//     reasoning. The code-only poll branch (what /o/[code] hits every 5s) is
+//     NOT rate-limited at all, confirmed deliberately since over-limiting
+//     polling would break the live status page for legitimate same-IP
+//     customers.
 //   - enumeration at the HTTP boundary: a request carrying `phone` with no
 //     `code` never reaches the database at all (400 before the rate-limit
 //     check, before the RPC) — the strongest form of "never enumerates".
@@ -54,6 +62,23 @@ function randomIp(): string {
   // collision this header sidesteps).
   const octet = () => Math.floor(Math.random() * 254) + 1;
   return `10.${octet()}.${octet()}.${octet()}`;
+}
+
+function randomPhone(): string {
+  // A fresh, syntactically valid +66 mobile number, unique per call — added
+  // alongside randomIp() once order_lookup_attempts gained a phone_hash
+  // bucket (packages/db/migrations/0039_order_lookup_phone_bucket.sql). Any
+  // rate-limit test that asserts on intermediate 200s across ~20 phone+code
+  // requests needs THIS, not a hardcoded literal: a hardcoded phone's
+  // phone_hash bucket persists for a full hour, so re-running this suite
+  // twice inside that window finds the bucket already exhausted from the
+  // previous run and 429s on request #1 instead of #21. (This bit a first
+  // draft of this file during the 0039 update: rerunning it while verifying
+  // the fix turned several "should still be 200" assertions into immediate
+  // 429s.) randomIp() alone no longer provides this isolation now that
+  // phone_hash, not ip_hash, is checked first.
+  const local = Array.from({ length: 9 }, () => Math.floor(Math.random() * 10)).join("");
+  return `+66${local}`;
 }
 
 let ready = false;
@@ -143,9 +168,10 @@ describe("enumeration is blocked before the database is ever reached", () => {
 
   it("these 400s never consumed the phone+code rate-limit bucket (proof: a fresh IP still gets a full run of real phone+code lookups afterward)", async () => {
     if (!ready) return;
+    const phone = randomPhone();
     const order = await insertOrder({
       status: "ACCEPTED",
-      phone: "+66822220001",
+      phone,
       itemName: "QA Enum-Adjacent Latte",
       codeSuffix: "enumadj",
     });
@@ -153,33 +179,38 @@ describe("enumeration is blocked before the database is ever reached", () => {
     // If the phone-only 400s above had consumed quota on a shared bucket,
     // this would 429 well before 5 requests on a brand-new IP.
     for (let i = 0; i < 5; i += 1) {
-      const { status } = await getRaw(`?code=${order.orderCode}&phone=%2B66822220001`, { "x-forwarded-for": ip });
+      const { status } = await getRaw(`?code=${order.orderCode}&phone=${encodeURIComponent(phone)}`, {
+        "x-forwarded-for": ip,
+      });
       expect(status).toBe(200);
     }
   });
 });
 
 // ---------------------------------------------------------------------------
-// Rate limiting (migration 0036) — phone+code branch only
+// Rate limiting (migrations 0036 + 0039) — phone+code branch, two buckets
 // ---------------------------------------------------------------------------
-describe("rate limiting: phone+code branch caps at 20/hour/IP; code-only poll branch is exempt", () => {
-  it("20 phone+code requests from one IP succeed; the 21st is 429", async () => {
+describe("rate limiting: phone+code branch caps at 20/hour on EITHER bucket; code-only poll branch is exempt", () => {
+  it("20 phone+code requests from one IP (same phone throughout) succeed; the 21st is 429", async () => {
     if (!ready) return;
+    const phone = randomPhone();
     const order = await insertOrder({
       status: "ACCEPTED",
-      phone: "+66822220002",
+      phone,
       itemName: "QA Rate Limit Latte",
       codeSuffix: "ratelimit",
     });
     const ip = randomIp();
 
     for (let i = 0; i < 20; i += 1) {
-      const { status } = await getRaw(`?code=${order.orderCode}&phone=%2B66822220002`, { "x-forwarded-for": ip });
+      const { status } = await getRaw(`?code=${order.orderCode}&phone=${encodeURIComponent(phone)}`, {
+        "x-forwarded-for": ip,
+      });
       expect(status).toBe(200);
     }
 
     const { status: status21, text: text21 } = await getRaw(
-      `?code=${order.orderCode}&phone=%2B66822220002`,
+      `?code=${order.orderCode}&phone=${encodeURIComponent(phone)}`,
       { "x-forwarded-for": ip },
     );
     expect(status21).toBe(429);
@@ -189,30 +220,124 @@ describe("rate limiting: phone+code branch caps at 20/hour/IP; code-only poll br
   it("the 429 fires even for WRONG phone/code guesses — quota is consumed by attempt count, not by finding a match", async () => {
     if (!ready) return;
     const ip = randomIp();
+    const phone = randomPhone();
     for (let i = 0; i < 20; i += 1) {
-      const { status } = await getRaw(`?code=QA-NOPE-${i}&phone=%2B66800000000`, { "x-forwarded-for": ip });
+      const { status } = await getRaw(`?code=QA-NOPE-${i}&phone=${encodeURIComponent(phone)}`, {
+        "x-forwarded-for": ip,
+      });
       expect(status).toBe(200); // still 200 with an empty array — no match, but not rate-limited yet
     }
-    const { status: status21 } = await getRaw(`?code=QA-NOPE-X&phone=%2B66800000000`, { "x-forwarded-for": ip });
+    const { status: status21 } = await getRaw(`?code=QA-NOPE-X&phone=${encodeURIComponent(phone)}`, {
+      "x-forwarded-for": ip,
+    });
     expect(status21).toBe(429);
   }, 30_000);
 
-  it("a DIFFERENT IP is unaffected by another IP's exhausted quota (per-IP, not global)", async () => {
+  // --- The regression this whole 0039 migration exists for. Reviewer proved
+  //     live (2026-08-22) that 25 requests against ONE order, rotating
+  //     x-forwarded-for by one octet each time, all returned 200 — the old
+  //     ip_hash-only bucket was a no-op against any scripted caller. This
+  //     test reproduces the exact same shape of attack (fixed phone, fresh
+  //     IP every single request) and asserts it is now blocked at request
+  //     21 by the phone_hash bucket, which cannot be rotated away from by
+  //     spoofing x-forwarded-for. ---
+  it("phone_hash alone rate-limits a targeted phone even when the IP rotates on EVERY request (closes the reviewer-proven ip_hash-only bypass)", async () => {
     if (!ready) return;
-    const exhaustedIp = randomIp();
+    const phone = randomPhone();
     for (let i = 0; i < 20; i += 1) {
-      await getRaw(`?code=QA-BURN-${i}&phone=%2B66800000001`, { "x-forwarded-for": exhaustedIp });
+      const { status } = await getRaw(`?code=QA-ROTATE-${i}&phone=${encodeURIComponent(phone)}`, {
+        "x-forwarded-for": randomIp(), // a fresh, never-reused IP every single request
+      });
+      expect(status).toBe(200);
     }
-    const { status: exhaustedStatus } = await getRaw(`?code=QA-BURN-X&phone=%2B66800000001`, {
-      "x-forwarded-for": exhaustedIp,
-    });
+    const { status: status21, text: text21 } = await getRaw(
+      `?code=QA-ROTATE-X&phone=${encodeURIComponent(phone)}`,
+      { "x-forwarded-for": randomIp() }, // yet another brand-new IP for the blocking request itself
+    );
+    expect(status21).toBe(429);
+    expect(text21).toBe(JSON.stringify({ error: "too many attempts, try again later" }));
+  }, 30_000);
+
+  // --- normalizePhoneForRateLimit (rateLimit.ts) must hash every human-typed
+  //     shape of the same number to the same bucket key, or an attacker
+  //     defeats the phone_hash bucket exactly like the old ip_hash bucket —
+  //     by retyping the SAME real number in a different format each time. ---
+  it("format-rotation resistance: real-world phone input shapes against one exhausted bucket all 429, not just the literal string first used to exhaust it", async () => {
+    if (!ready) return;
+    // 9 fresh random digits this run, then every human-typed shape of the
+    // SAME underlying number built from them — see randomPhone()'s comment
+    // for why these can't be hardcoded literals.
+    const digits = Array.from({ length: 9 }, () => Math.floor(Math.random() * 10)).join("");
+    const localFormat = `0${digits}`; // exhaust the bucket using local 0-prefixed format
+    for (let i = 0; i < 20; i += 1) {
+      const { status } = await getRaw(`?code=QA-FMT-${i}&phone=${encodeURIComponent(localFormat)}`, {
+        "x-forwarded-for": randomIp(),
+      });
+      expect(status).toBe(200);
+    }
+
+    const sameNumberDifferentShapes = [
+      localFormat, // the literal string used above — sanity, must also 429
+      `0${digits.slice(0, 2)}-${digits.slice(2, 5)}-${digits.slice(5, 9)}`, // dashed
+      `+66${digits}`, // E.164
+      `66${digits}`, // country code, no plus
+    ];
+    for (const variant of sameNumberDifferentShapes) {
+      const { status } = await getRaw(`?code=QA-FMT-VARIANT&phone=${encodeURIComponent(variant)}`, {
+        "x-forwarded-for": randomIp(),
+      });
+      expect(status).toBe(429);
+    }
+  }, 30_000);
+
+  it("a genuinely different phone number gets an independent, fresh bucket — no cross-target false-positive", async () => {
+    if (!ready) return;
+    // Every request below uses its OWN fresh random IP (never reused), same
+    // as the phone_hash-bypass test above — this isolates phone_hash as the
+    // only bucket that can possibly be responsible for a 429 here. (An
+    // earlier draft of this test held one IP constant across all 21+
+    // requests instead: that accumulates the SAME ip_hash bucket to its own
+    // 20-cap as a side effect of exhausting the phone, so the "fresh phone"
+    // check failed for the wrong reason — blocked by the exhausted IP's
+    // ip_hash bucket, not proof of any phone_hash cross-contamination. Fresh
+    // IPs throughout removes that confound.)
+    const exhaustedPhone = randomPhone();
+    for (let i = 0; i < 20; i += 1) {
+      await getRaw(`?code=QA-DIFF-${i}&phone=${encodeURIComponent(exhaustedPhone)}`, {
+        "x-forwarded-for": randomIp(),
+      });
+    }
+    const { status: exhaustedStatus } = await getRaw(
+      `?code=QA-DIFF-X&phone=${encodeURIComponent(exhaustedPhone)}`,
+      { "x-forwarded-for": randomIp() },
+    );
     expect(exhaustedStatus).toBe(429);
 
-    const freshIp = randomIp();
-    const { status: freshStatus } = await getRaw(`?code=QA-FRESH&phone=%2B66800000002`, {
-      "x-forwarded-for": freshIp,
+    const freshPhone = randomPhone();
+    const { status: freshStatus } = await getRaw(`?code=QA-DIFF-FRESH&phone=${encodeURIComponent(freshPhone)}`, {
+      "x-forwarded-for": randomIp(),
     });
     expect(freshStatus).toBe(200);
+  }, 30_000);
+
+  // --- ip_hash was NOT removed by 0039 — it's still checked second, as
+  //     coarse defense-in-depth against unsophisticated scripts. Proven here
+  //     by holding IP fixed while rotating a FRESH phone every request (so
+  //     the phone_hash bucket never fills), and confirming the ip_hash
+  //     bucket alone still blocks at request 21. ---
+  it("ip_hash still functions as a secondary defense-in-depth bucket: a fixed IP is capped at 20 even when the phone is fresh on every request", async () => {
+    if (!ready) return;
+    const ip = randomIp();
+    for (let i = 0; i < 20; i += 1) {
+      const { status } = await getRaw(`?code=QA-IPCAP-${i}&phone=${encodeURIComponent(randomPhone())}`, {
+        "x-forwarded-for": ip, // fresh phone_hash bucket every time, via randomPhone()
+      });
+      expect(status).toBe(200);
+    }
+    const { status: status21 } = await getRaw(`?code=QA-IPCAP-X&phone=${encodeURIComponent(randomPhone())}`, {
+      "x-forwarded-for": ip, // same IP, 21st distinct (fresh) phone — ip_hash bucket, not phone_hash, is what blocks this
+    });
+    expect(status21).toBe(429);
   }, 30_000);
 
   it("the code-ONLY poll branch (no phone param — what /o/[code] polls every 5s) is never rate-limited, even after 30 rapid requests from the same IP", async () => {
@@ -232,18 +357,19 @@ describe("rate limiting: phone+code branch caps at 20/hour/IP; code-only poll br
 
   it("an IP that has exhausted the phone+code branch's quota can still poll the code-only branch freely from the SAME IP (independent buckets)", async () => {
     if (!ready) return;
+    const phone = randomPhone();
     const order = await insertOrder({
       status: "ACCEPTED",
-      phone: "+66822220004",
+      phone,
       itemName: "QA Mixed Branch Latte",
       codeSuffix: "mixedbranch",
     });
     const ip = randomIp();
 
     for (let i = 0; i < 20; i += 1) {
-      await getRaw(`?code=${order.orderCode}&phone=%2B66822220004`, { "x-forwarded-for": ip });
+      await getRaw(`?code=${order.orderCode}&phone=${encodeURIComponent(phone)}`, { "x-forwarded-for": ip });
     }
-    const { status: exhausted } = await getRaw(`?code=${order.orderCode}&phone=%2B66822220004`, {
+    const { status: exhausted } = await getRaw(`?code=${order.orderCode}&phone=${encodeURIComponent(phone)}`, {
       "x-forwarded-for": ip,
     });
     expect(exhausted).toBe(429);

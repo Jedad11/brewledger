@@ -39,13 +39,23 @@ import jsQR from "jsqr";
 import { buildPublicStoreUrl, PUBLIC_STORE_HOST } from "../../../../../lib/slug";
 import { DOWNLOAD_PNG_LABEL, DOWNLOAD_PDF_LABEL } from "./copy";
 
-// "@/..." doesn't resolve here -- vitest has no tsconfig-paths alias plugin
-// in this repo (same gap PaymentsSettingsForm.test.tsx's own header comment
-// notes); StoreLinkQR.tsx imports "@/lib/slug" so it needs a mock to import
-// at all. Re-exports the real function (imported above by relative path) so
-// the render test below exercises the actual URL-building behavior, not a
-// stub.
-vi.mock("@/lib/slug", () => ({ buildPublicStoreUrl }));
+// apps/console/vitest.config.ts (added for StoreProfileForm.test.tsx's jsdom
+// environment, see that file's header comment) now aliases "@/*" to a real
+// "./src/*" resolution, which makes "@/lib/slug" and the relative import
+// above resolve to the literal same module -- so a factory that CLOSES OVER
+// the top-level `buildPublicStoreUrl` binding (the previous form here) is a
+// genuine hoisting hazard once that's true (Vitest's own restriction: "no
+// top level variables inside" a vi.mock factory, since the call is hoisted
+// above the import that initializes it), and fails with a real
+// ReferenceError. vi.importActual sidesteps this by not closing over
+// anything -- it re-imports the real module fresh from inside the factory
+// instead, matching the pattern actions.test.ts / StoreProfileForm.test.tsx
+// use for the same "@/lib/slug" specifier. Still exercises the real
+// URL-building behavior, not a stub.
+vi.mock("@/lib/slug", async () => {
+  const actual = await vi.importActual("../../../../../lib/slug");
+  return actual;
+});
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));

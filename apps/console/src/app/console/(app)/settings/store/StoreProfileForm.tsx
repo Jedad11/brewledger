@@ -45,6 +45,14 @@ export function StoreProfileForm({
   onboarding: { store: boolean; menu: boolean; payments: boolean };
 }) {
   const router = useRouter();
+  // `store` is only the prop from the server render that produced this
+  // component instance -- it never updates after a save. Without tracking
+  // the id separately, a second save in the same session would still read
+  // `store?.id` as null from this stale prop and re-run an INSERT instead of
+  // an UPDATE (actions.ts has no way to tell the difference -- it does
+  // whatever storeId says). Same pattern as MenuItemEditorForm's `itemId`.
+  const [storeId, setStoreId] = React.useState(store?.id ?? null);
+  const [storeDone, setStoreDone] = React.useState(!!store?.name && !!store?.pickup_address);
   const [name, setName] = React.useState(store?.name ?? "");
   const [pickupAddress, setPickupAddress] = React.useState(store?.pickup_address ?? "");
   const [opensAt, setOpensAt] = React.useState(toTimeInputValue(store?.opens_at ?? null));
@@ -87,7 +95,7 @@ export function StoreProfileForm({
     setSavedAt(null);
 
     const input: StoreProfileInput = {
-      storeId: store?.id ?? null,
+      storeId,
       name,
       pickupAddress,
       opensAt,
@@ -104,13 +112,15 @@ export function StoreProfileForm({
       return;
     }
 
+    setStoreId(result.store.id);
+    setStoreDone(true);
     setSlug(result.store.slug);
     setSlugTouched(true);
     setSavedAt(Date.now());
   }
 
   const steps: OnboardingStripProps["steps"] = [
-    { id: "store", done: onboarding.store },
+    { id: "store", done: storeDone },
     { id: "menu", done: onboarding.menu },
     { id: "payments", done: onboarding.payments },
   ];
@@ -208,7 +218,7 @@ export function StoreProfileForm({
             </p>
           ) : null}
 
-          <Button type="submit" wet loading={saving} disabled={!canSubmit}>
+          <Button type="submit" wet loading={saving} disabled={!canSubmit || saving}>
             บันทึก
           </Button>
         </form>

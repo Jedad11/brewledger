@@ -5,7 +5,7 @@
 // `item === null`.
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { resolveMerchantCtx } from "@/lib/merchant";
+import { resolveMerchantCtx, currentStoreId } from "@/lib/merchant";
 import { MenuItemEditorForm, type MenuItemEditorInitialData } from "./MenuItemEditorForm";
 import type { Database } from "@brewledger/db/types";
 
@@ -27,7 +27,13 @@ export default async function MenuItemEditorPage({ params }: PageProps<"/console
     redirect("/console/login");
   }
 
-  const storeId = merchant.storeIds[0] ?? null;
+  // storeId is resolved once, in lib/merchant.ts's currentStoreId(), so a
+  // new item saved here can't attach to a different stores row than the one
+  // every other console screen (settings/store, settings/payments,
+  // settings/link, menu) shows as current -- unlike the previous
+  // `merchant.storeIds[0]`, which came straight off auth_store_ids()'s
+  // set-returning RPC with no defined order at all.
+  const storeId = currentStoreId(merchant);
   if (!storeId) {
     // No store yet -- nothing owns a menu item. Send the merchant to build
     // one first rather than rendering a broken "new item with no store"

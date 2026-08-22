@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { resolveMerchantCtx } from "@/lib/merchant";
+import { resolveMerchantCtx, currentStoreId } from "@/lib/merchant";
 import { PaymentsSettingsForm } from "./PaymentsSettingsForm";
 import type { PromptPayType } from "@brewledger/shared/dist/promptpay/normalize";
 import type { Database } from "@brewledger/db/types";
@@ -22,12 +22,18 @@ export default async function PaymentsSettingsPage() {
 
   const supabase = await createClient();
 
-  const { data: storeRow } = await supabase
-    .from("stores")
-    .select("id, name, pickup_address, promptpay_id, promptpay_type, promptpay_verified_at")
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+  // storeId is resolved once, in lib/merchant.ts's currentStoreId(), so this
+  // screen can't disagree with settings/store (or any other console page)
+  // about which stores row is current when a merchant has more than one --
+  // see that helper's header comment.
+  const storeId = currentStoreId(merchant);
+  const { data: storeRow } = storeId
+    ? await supabase
+        .from("stores")
+        .select("id, name, pickup_address, promptpay_id, promptpay_type, promptpay_verified_at")
+        .eq("id", storeId)
+        .maybeSingle()
+    : { data: null };
 
   const store = storeRow as StoreRow | null;
 

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { resolveMerchantCtx } from "@/lib/merchant";
+import { resolveMerchantCtx, currentStoreId } from "@/lib/merchant";
 import { StoreLinkQR } from "./StoreLinkQR";
 import { PAGE_TITLE } from "./copy";
 import type { Database } from "@brewledger/db/types";
@@ -18,12 +18,14 @@ export default async function StoreLinkPage() {
 
   const supabase = await createClient();
 
-  const { data: storeRow } = await supabase
-    .from("stores")
-    .select("name, slug, is_published")
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+  // storeId is resolved once, in lib/merchant.ts's currentStoreId(), so this
+  // screen can't disagree with settings/store (or any other console page)
+  // about which stores row is current when a merchant has more than one --
+  // see that helper's header comment.
+  const storeId = currentStoreId(merchant);
+  const { data: storeRow } = storeId
+    ? await supabase.from("stores").select("name, slug, is_published").eq("id", storeId).maybeSingle()
+    : { data: null };
 
   const store = storeRow as StoreRow | null;
 

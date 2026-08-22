@@ -36,7 +36,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 import { createClient } from "@/lib/supabase/server";
-import { resolveMerchantCtx } from "./merchant";
+import { currentStoreId, resolveMerchantCtx } from "./merchant";
 
 const mockedCreateClient = vi.mocked(createClient);
 
@@ -59,7 +59,16 @@ interface SupabaseMockConfig {
   rpcErr?: unknown;
   merchant?: { id: string; subscription_tier?: string } | null;
   merchantErr?: unknown;
-  storeRows?: Array<{ id: string; slug: string; name: string; is_published: boolean }> | null;
+  storeRows?: Array<{
+    id: string;
+    slug: string;
+    name: string;
+    is_published: boolean;
+    // Optional so every pre-existing test in this file (none of which cares
+    // about ordering) can keep omitting it; the sort/currentStoreId tests
+    // below are the ones that populate it.
+    created_at?: string;
+  }> | null;
   storesErr?: unknown;
 }
 
@@ -258,5 +267,126 @@ describe("resolveMerchantCtx", () => {
     const ctx = await resolveMerchantCtx();
 
     expect(ctx).toBeNull();
+  });
+
+  // redline_reviewer finding on the store-duplicate-row fix: resolveMerchantCtx()
+  // sorts `stores` newest-first so `stores[0]` (via currentStoreId() below) is
+  // the canonical "current store" everywhere in the Console. This was fixed
+  // from a localeCompare-based sort (which could invert an exact-second vs
+  // microsecond-later PostgREST timestamptz pair) to direct ordinal string
+  // comparison, but shipped with zero coverage of the sort itself -- these
+  // cases close that gap.
+  describe("store sort order (newest-first)", () => {
+    it("returns the newer store first when created_at values are clearly different", async () => {
+      const { client } = buildSupabaseMock({
+        user: { id: AUTH_USER_ID },
+        rpcData: [STORE_ID_A, STORE_ID_B],
+        merchant: { id: MERCHANT_ID, subscription_tier: "free" },
+        storeRows: [
+          // Deliberately inserted in creation order (oldest first) -- the
+          // mock's `.in()` return order should NOT be trusted by
+          // resolveMerchantCtx(); only created_at should decide the order.
+          { id: STORE_ID_A, slug: "store-a", name: "Store A (older)", is_published: true, created_at: "2024-01-01T00:00:00+00:00" },
+          { id: STORE_ID_B, slug: "store-b", name: "Store B (newer)", is_published: true, created_at: "2024-06-01T00:00:00+00:00" },
+        ],
+      });
+      mockedCreateClient.mockResolvedValue(client as never);
+
+      const ctx = await resolveMerchantCtx();
+
+      expect(ctx).not.toBeNull();
+      expect(ctx!.stores.map((s) => s.id)).toEqual([STORE_ID_B, STORE_ID_A]);
+      expect(ctx!.stores[0].name).toBe("Store B (newer)");
+      expect(currentStoreId(ctx!)).toBe(STORE_ID_B);
+    });
+
+    it(
+      "the exact-second vs microsecond-later edge case that broke under localeCompare: " +
+        "a PostgREST-trimmed exact-second timestamp still loses to a row created a microsecond later",
+      async () => {
+        // This is precisely the pair the fix's own comment describes:
+        // PostgREST trims trailing-zero fractional seconds off timestamptz,
+        // so an exact-second row serializes without a fractional part at
+        // all, while a row created a microsecond later keeps explicit
+        // sub-second digits. Under default-locale localeCompare, ISO-8601
+        // punctuation ("+00:00" with no fraction vs ".000001+00:00") did not
+        // sort the way ordinal `<` does, and could rank the OLDER
+        // exact-second row as newer. This test would have failed against
+        // the pre-fix localeCompare-based sort.
+        const olderExactSecond = "2024-01-15T10:30:00+00:00";
+        const newerMicrosecondLater = "2024-01-15T10:30:00.000001+00:00";
+
+        const { client } = buildSupabaseMock({
+          user: { id: AUTH_USER_ID },
+          rpcData: [STORE_ID_A, STORE_ID_B],
+          merchant: { id: MERCHANT_ID, subscription_tier: "free" },
+          storeRows: [
+            { id: STORE_ID_A, slug: "store-a", name: "Store A", is_published: true, created_at: olderExactSecond },
+            { id: STORE_ID_B, slug: "store-b", name: "Store B", is_published: true, created_at: newerMicrosecondLater },
+          ],
+        });
+        mockedCreateClient.mockResolvedValue(client as never);
+
+        const ctx = await resolveMerchantCtx();
+
+        expect(ctx).not.toBeNull();
+        // STORE_ID_B (microseconds later, hence actually newer) must win,
+        // not STORE_ID_A.
+        expect(ctx!.stores.map((s) => s.id)).toEqual([STORE_ID_B, STORE_ID_A]);
+        expect(currentStoreId(ctx!)).toBe(STORE_ID_B);
+      },
+    );
+  });
+
+  describe("currentStoreId", () => {
+    it("returns the id of the single store for a single-store merchant (the common case)", async () => {
+      const { client } = buildSupabaseMock({
+        user: { id: AUTH_USER_ID },
+        rpcData: [STORE_ID_A],
+        merchant: { id: MERCHANT_ID, subscription_tier: "free" },
+        storeRows: [
+          { id: STORE_ID_A, slug: "store-a", name: "Store A", is_published: true, created_at: "2024-01-01T00:00:00+00:00" },
+        ],
+      });
+      mockedCreateClient.mockResolvedValue(client as never);
+
+      const ctx = await resolveMerchantCtx();
+
+      expect(ctx).not.toBeNull();
+      expect(currentStoreId(ctx!)).toBe(STORE_ID_A);
+    });
+
+    it("returns the newest store's id for a multi-store merchant", async () => {
+      const { client } = buildSupabaseMock({
+        user: { id: AUTH_USER_ID },
+        rpcData: [STORE_ID_A, STORE_ID_B],
+        merchant: { id: MERCHANT_ID, subscription_tier: "free" },
+        storeRows: [
+          { id: STORE_ID_A, slug: "store-a", name: "Store A", is_published: true, created_at: "2024-06-01T00:00:00+00:00" },
+          { id: STORE_ID_B, slug: "store-b", name: "Store B", is_published: true, created_at: "2024-01-01T00:00:00+00:00" },
+        ],
+      });
+      mockedCreateClient.mockResolvedValue(client as never);
+
+      const ctx = await resolveMerchantCtx();
+
+      expect(ctx).not.toBeNull();
+      expect(currentStoreId(ctx!)).toBe(STORE_ID_A);
+    });
+
+    it("returns null for a merchant with zero stores", async () => {
+      const { client } = buildSupabaseMock({
+        user: { id: AUTH_USER_ID },
+        rpcData: [],
+        merchant: { id: MERCHANT_ID, subscription_tier: "free" },
+      });
+      mockedCreateClient.mockResolvedValue(client as never);
+
+      const ctx = await resolveMerchantCtx();
+
+      expect(ctx).not.toBeNull();
+      expect(ctx!.stores).toEqual([]);
+      expect(currentStoreId(ctx!)).toBeNull();
+    });
   });
 });

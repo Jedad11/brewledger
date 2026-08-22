@@ -6,3 +6,5 @@ else
   echo "hook can catch a secret before it leaves your machine. CI still runs" >&2
   echo "the full-history scan on every push regardless." >&2
 fi
+
+node scripts/check-migration-numbers.mjs

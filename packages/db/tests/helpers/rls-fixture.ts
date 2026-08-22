@@ -57,14 +57,17 @@ export interface FullStoreFixtureIds {
   purchaseLineItemId: string;
   jobQueueId: string;
   dailyFinancialsId: string;
+  pushSubscriptionId: string;
   cleanup: () => Promise<void>;
 }
 
 /**
  * Inserts one merchant that owns one store with at least one row in every
  * one of the 18 real tables except `merchants` (the fixture itself is that
- * row) — i.e. all 16 merchant-owned tables (§7 test 5's loop target) plus
- * `job_queue` (§7 test 7). `isPublished` defaults to `true` so this same
+ * row) — i.e. all 17 merchant-owned tables (§7 test 5's loop target,
+ * including `push_subscriptions` added by WBS 5.8's
+ * 0038_push_subscriptions_and_inbox_state.sql) plus `job_queue` (§7 test 7).
+ * `isPublished` defaults to `true` so this same
  * fixture can double as an authenticated-owner fixture AND (when needed)
  * feed the anon-zero-rows test set (§7 test 2), which asserts anon sees
  * NONE of these tables regardless of publish state on the 13 tables that
@@ -233,6 +236,13 @@ export async function createFullStoreFixture(
     );
     const dailyFinancialsId = dailyFinancialsRows[0].id as string;
 
+    const { rows: pushSubscriptionRows } = await client.query(
+      `insert into push_subscriptions (store_id, endpoint, p256dh, auth_key, user_agent)
+       values ($1, $2, 'qa-fixture-p256dh', 'qa-fixture-auth-key', 'qa-rls-fixture') returning id`,
+      [storeId, `https://push.example/qa-rls-${suffix}`],
+    );
+    const pushSubscriptionId = pushSubscriptionRows[0].id as string;
+
     return {
       authUserId,
       merchantId,
@@ -256,6 +266,7 @@ export async function createFullStoreFixture(
       purchaseLineItemId,
       jobQueueId,
       dailyFinancialsId,
+      pushSubscriptionId,
       cleanup,
     };
   } catch (err) {

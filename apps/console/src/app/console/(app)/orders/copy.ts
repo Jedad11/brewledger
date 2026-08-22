@@ -27,3 +27,21 @@ export const PAGE_EMPTY_BODY = "ลูกค้าสั่งผ่านลิ
 export const PAGE_EMPTY_ACTION = "ดูลิงก์ร้าน";
 
 export const PAGE_TITLE = "ออเดอร์";
+
+// WBS 5.8 -- working-queue inbox. Verbatim from docs/design/state_matrix.md's
+// own "ออเดอร์ /console/orders" section (this change's own additions there),
+// sourced from design/owner-console.js's scOrders()/orderCard().
+export const NEW_ORDERS_BANNER = (n: number) => `มีออเดอร์ใหม่ ${n} รายการ`;
+export const NEW_ORDERS_ACK = "รับทราบ";
+export const NEAREST_SLOT_PILL = "ใกล้ที่สุด";
+export const CUPS_SUFFIX = "แก้ว";
+
+export const NOTIFY_DENIED_HINT =
+  "อุปกรณ์นี้ปิดการแจ้งเตือนไว้ ระบบจึงตรวจหาออเดอร์ใหม่ให้ทุก 10 วินาทีขณะเปิดหน้านี้อยู่";
+export const NOTIFY_IOS_HINT =
+  "บน iPhone ต้องเพิ่มเว็บนี้ลงหน้าจอโฮมก่อน การแจ้งเตือนจึงจะทำงานได้ — เปิดเมนูแชร์ แล้วเลือก “เพิ่มไปยังหน้าจอโฮม”";
+
+// WBS 5.8 -- authored (no prototype counterpart; see state_matrix.md's own
+// note on this toggle).
+export const MUTE_TOGGLE_LABEL = "เสียงแจ้งเตือนออเดอร์ใหม่";
+export const MUTE_TOGGLE_DESCRIPTION = "เสียงและการสั่นเมื่อมีออเดอร์ใหม่เข้ามา";

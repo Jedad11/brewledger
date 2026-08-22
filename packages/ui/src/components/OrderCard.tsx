@@ -12,12 +12,26 @@ import type { OrderStatus } from "../types";
  * given instance, so the type itself must not carry a field that would make
  * an accidental cost render possible. RL-3.
  */
+export interface OrderLineItem {
+  name: string;
+  /** Pre-formatted option summary, e.g. "เย็น · หวานน้อย". Omitted when the item has no options. */
+  optionsLabel?: string;
+  quantity: number;
+}
+
 export interface OrderSummary {
   id: string;
   code: string;
   status: OrderStatus;
-  /** Pre-formatted, e.g. "2 รายการ". */
+  /** Pre-formatted, e.g. "2 แก้ว". */
   itemsSummary: string;
+  /**
+   * Full line-item breakdown (name, options, qty) per WBS 5.8's inbox card
+   * ("item lines with options and quantity") and /design/Owner Console.html's
+   * own `orderCard()` `.oc-items` block. Optional — a caller that only has
+   * itemsSummary (no line-level data fetched) still renders a valid card.
+   */
+  items?: OrderLineItem[];
   pickupTime: string;
   totalSatang: number;
   cups: number;
@@ -30,9 +44,17 @@ export interface OrderCardProps {
   variant: "inbox" | "detail";
   showNextAction: boolean;
   unseen: boolean;
-  onAdvance: (orderId: string) => void;
-  onCancel: (orderId: string) => void;
-  onOpen: (orderId: string) => void;
+  /**
+   * All three optional: a caller renders only the affordances it has a real,
+   * working handler for. An omitted handler simply omits its button — WBS
+   * 5.8 (the inbox) deliberately does not wire onAdvance/onCancel/onOpen
+   * (those actions belong to WBS 5.9/5.11's own detail screen and cancel
+   * flow, not yet built) rather than render a button that does nothing when
+   * tapped with a wet hand.
+   */
+  onAdvance?: (orderId: string) => void;
+  onCancel?: (orderId: string) => void;
+  onOpen?: (orderId: string) => void;
 }
 
 export function OrderCard({
@@ -64,12 +86,31 @@ export function OrderCard({
         <OrderStatusBadge status={order.status} />
       </div>
 
+      {order.items && order.items.length > 0 ? (
+        <div className="oc-items">
+          {order.items.map((item, i) => (
+            <div className="oc-item" key={i}>
+              <span>
+                {item.name}
+                {item.optionsLabel ? (
+                  <>
+                    <br />
+                    <span className="note-plain">{item.optionsLabel}</span>
+                  </>
+                ) : null}
+              </span>
+              <b className="num">× {item.quantity}</b>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       <div className="oc-ordertot">
         <span className="note-plain">{order.itemsSummary}</span>
         <MoneyValue value={order.totalSatang} role="revenue" />
       </div>
 
-      {showNextAction ? (
+      {showNextAction && onAdvance ? (
         <button
           type="button"
           className="btn btn--primary btn--wet"
@@ -80,26 +121,30 @@ export function OrderCard({
         </button>
       ) : null}
 
-      <div className="oc-orderfoot">
-        {variant === "inbox" ? (
-          <button
-            type="button"
-            className="btn btn--quiet"
-            onClick={() => onOpen(order.id)}
-            data-testid="order-card-open"
-          >
-            ดูรายละเอียด
-          </button>
-        ) : null}
-        <button
-          type="button"
-          className="btn btn--quiet oc-cancel"
-          onClick={() => onCancel(order.id)}
-          data-testid="order-card-cancel"
-        >
-          ยกเลิกออเดอร์
-        </button>
-      </div>
+      {(variant === "inbox" && onOpen) || onCancel ? (
+        <div className="oc-orderfoot">
+          {variant === "inbox" && onOpen ? (
+            <button
+              type="button"
+              className="btn btn--quiet"
+              onClick={() => onOpen(order.id)}
+              data-testid="order-card-open"
+            >
+              ดูรายละเอียด
+            </button>
+          ) : null}
+          {onCancel ? (
+            <button
+              type="button"
+              className="btn btn--quiet oc-cancel"
+              onClick={() => onCancel(order.id)}
+              data-testid="order-card-cancel"
+            >
+              ยกเลิกออเดอร์
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

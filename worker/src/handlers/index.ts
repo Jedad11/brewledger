@@ -1,6 +1,7 @@
 import { log } from "../log";
 import { generateSlots } from "./slots";
 import { expireOrders } from "./expireOrders";
+import { pushNotify } from "./pushNotify";
 import type { Job, JobHandler } from "./types";
 
 // Stub — real logic lands with the OCR WBS entries (6.x). Reads a purchase
@@ -31,12 +32,6 @@ const costDriftCheck: JobHandler = async (job) => {
 // low-stock thresholds and enqueues push_notify jobs.
 const lowStockCheck: JobHandler = async (job) => {
   log.info("stub handler invoked: low_stock_check", { job_id: job.id, job_type: job.job_type });
-};
-
-// Stub — real logic lands with the notification WBS entries. Sends a Web
-// Push (VAPID) notification; polling fallback is handled client-side.
-const pushNotify: JobHandler = async (job) => {
-  log.info("stub handler invoked: push_notify", { job_id: job.id, job_type: job.job_type });
 };
 
 export const handlers: Record<string, JobHandler> = {

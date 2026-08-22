@@ -14,11 +14,13 @@
     "@brewledger/shared": "workspace:*",
     "@sentry/node": "^8.55.2",
     "@supabase/supabase-js": "^2",
-    "pg": "^8.23.0"
+    "pg": "^8.23.0",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@types/node": "^20",
     "@types/pg": "^8.23.1",
+    "@types/web-push": "^3.6.4",
     "tsx": "^4",
     "typescript": "^5",
     "vitest": "^4.1.10"

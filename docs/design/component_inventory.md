@@ -8,7 +8,7 @@ missing, add it here first, in the same change that needs it.
 |---|---|
 | `MoneyValue` | `value: number \| null` (satang), `role: 'revenue'\|'cost'\|'profit'\|'plain'`, `decimals?: 0\|2`, `size?`. **null → `—`, never 0.** |
 | `OrderStatusBadge` | `status: 'unpaid'\|'accepted'\|'making'\|'ready'\|'collected'\|'cancelled'\|'refunded'\|'expired'`. `ready` is the only filled badge. |
-| `OrderCard` | `order`, `variant: 'inbox'\|'detail'`, `showNextAction: boolean`, `unseen: boolean`, `onAdvance`, `onCancel`, `onOpen` |
+| `OrderCard` | `order: OrderSummary` (adds optional `items?: {name, optionsLabel?, quantity}[]` as of WBS 5.8, for the inbox's full line-item display — omit to fall back to `itemsSummary` only), `variant: 'inbox'\|'detail'`, `showNextAction: boolean`, `unseen: boolean`, `onAdvance?`, `onCancel?`, `onOpen?` — all three handlers optional as of WBS 5.8: an omitted handler omits its button rather than rendering a tap target with no working action (WBS 5.9/5.11 own the advance/cancel/detail flows and are expected to supply these once built) |
 | `SlotPicker` | `slots: {time, remaining}[]`, `value`, `onChange`, `showRemainingBelow: number = 2`, `fullMessage` |
 | `ConfidenceField` | `label`, `value`, `confidence: 'high'\|'low'`, `unit?`, `onChange`, `autoFocusIfLow: boolean` |
 | `EmptyState` | `title`, `body`, `action?` — action omitted wherever the empty state is legitimately optional (inventory, recipes) |

@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.15"
-  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -39,6 +34,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      auth_attempts: {
+        Row: {
+          attempted_at: string
+          id: string
+          ip_hash: string | null
+          phone_hash: string | null
+        }
+        Insert: {
+          attempted_at?: string
+          id?: string
+          ip_hash?: string | null
+          phone_hash?: string | null
+        }
+        Update: {
+          attempted_at?: string
+          id?: string
+          ip_hash?: string | null
+          phone_hash?: string | null
+        }
+        Relationships: []
+      }
       bom_lines: {
         Row: {
           id: string
@@ -506,6 +522,72 @@ export type Database = {
           },
         ]
       }
+      order_lookup_attempts: {
+        Row: {
+          attempted_at: string
+          id: string
+          ip_hash: string | null
+          phone_hash: string | null
+        }
+        Insert: {
+          attempted_at?: string
+          id?: string
+          ip_hash?: string | null
+          phone_hash?: string | null
+        }
+        Update: {
+          attempted_at?: string
+          id?: string
+          ip_hash?: string | null
+          phone_hash?: string | null
+        }
+        Relationships: []
+      }
+      order_status_history: {
+        Row: {
+          actor: string | null
+          actor_type: string
+          created_at: string
+          from_status: string
+          id: string
+          order_id: string
+          to_status: string
+        }
+        Insert: {
+          actor?: string | null
+          actor_type: string
+          created_at?: string
+          from_status: string
+          id?: string
+          order_id: string
+          to_status: string
+        }
+        Update: {
+          actor?: string | null
+          actor_type?: string
+          created_at?: string
+          from_status?: string
+          id?: string
+          order_id?: string
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_status_history_actor_fkey"
+            columns: ["actor"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_status_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           channel: string
@@ -764,6 +846,44 @@ export type Database = {
           },
         ]
       }
+      push_subscriptions: {
+        Row: {
+          auth_key: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          store_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          auth_key: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          store_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          auth_key?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          store_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_ledger: {
         Row: {
           created_at: string
@@ -835,7 +955,9 @@ export type Database = {
           is_published: boolean
           merchant_id: string
           name: string
+          notify_sound_muted: boolean
           opens_at: string | null
+          orders_last_seen_at: string | null
           pickup_address: string | null
           promptpay_id: string | null
           promptpay_type: string | null
@@ -851,7 +973,9 @@ export type Database = {
           is_published?: boolean
           merchant_id: string
           name: string
+          notify_sound_muted?: boolean
           opens_at?: string | null
+          orders_last_seen_at?: string | null
           pickup_address?: string | null
           promptpay_id?: string | null
           promptpay_type?: string | null
@@ -867,7 +991,9 @@ export type Database = {
           is_published?: boolean
           merchant_id?: string
           name?: string
+          notify_sound_muted?: boolean
           opens_at?: string | null
+          orders_last_seen_at?: string | null
           pickup_address?: string | null
           promptpay_id?: string | null
           promptpay_type?: string | null
@@ -890,7 +1016,122 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      auth_merchant_id: { Args: never; Returns: string[] }
+      auth_store_ids: { Args: never; Returns: string[] }
+      checkout_create_order: {
+        Args: {
+          p_cart_lines: Json
+          p_customer_name: string
+          p_customer_phone?: string
+          p_pickup_slot_id: string
+          p_store_slug: string
+        }
+        Returns: Json
+      }
+      console_confirm_payment: {
+        Args: { p_merchant_id: string; p_order_id: string }
+        Returns: Json
+      }
+      console_reject_payment: { Args: { p_order_id: string }; Returns: Json }
+      create_payment_charge: {
+        Args: { p_order_code: string; p_qr_payload: string }
+        Returns: {
+          amount_satang: number
+          expires_at: string
+          id: string
+          order_id: string
+          status: string
+        }[]
+      }
+      enqueue_generate_slots_job: {
+        Args: { p_store_id: string }
+        Returns: undefined
+      }
+      generate_pickup_slots_for_store: {
+        Args: {
+          p_days_ahead?: number
+          p_interval_minutes?: number
+          p_store_id: string
+        }
+        Returns: number
+      }
+      public_order_lookup: {
+        Args: { p_order_code: string; p_phone: string }
+        Returns: {
+          item_name: string
+          order_code: string
+          pickup_at: string
+          quantity: number
+          status: string
+        }[]
+      }
+      public_order_status: {
+        Args: { p_order_code: string }
+        Returns: {
+          item_name: string
+          order_code: string
+          pickup_at: string
+          quantity: number
+          status: string
+        }[]
+      }
+      record_auth_attempt_if_allowed: {
+        Args: { p_column: string; p_hash: string; p_max_per_hour: number }
+        Returns: boolean
+      }
+      record_order_lookup_attempt_if_allowed: {
+        Args: { p_column: string; p_hash: string; p_max_per_hour: number }
+        Returns: boolean
+      }
+      release_pickup_slot: {
+        Args: { p_slot_id: string }
+        Returns: {
+          booked_count: number
+          capacity: number
+          id: string
+        }[]
+      }
+      reserve_pickup_slot: {
+        Args: { p_slot_id: string }
+        Returns: {
+          booked_count: number
+          capacity: number
+          id: string
+        }[]
+      }
+      transition_order: {
+        Args: {
+          p_actor: string
+          p_actor_type: string
+          p_order_id: string
+          p_to: string
+        }
+        Returns: {
+          channel: string
+          created_at: string
+          customer_name: string
+          customer_phone: string | null
+          expires_at: string | null
+          id: string
+          order_code: string
+          paid_at: string | null
+          payment_confirmed_at: string | null
+          payment_confirmed_by: string | null
+          pickup_slot_id: string | null
+          refund_status: string | null
+          status: string
+          store_id: string
+          subtotal_satang: number
+          total_cost_snapshot_satang: number | null
+          total_satang: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       [_ in never]: never
@@ -1026,3 +1267,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+

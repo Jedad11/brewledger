@@ -7,6 +7,7 @@
 import * as React from "react";
 import { Card, Button, StatusButton, MoneyValue, EmptyState } from "@brewledger/ui";
 import { confirmPayment, rejectPayment } from "./actions";
+import { formatPickupTime } from "./format";
 import {
   PENDING_SECTION_TITLE,
   PENDING_EMPTY,
@@ -26,16 +27,6 @@ export interface PendingOrder {
   totalSatang: number;
   pickupSlotStart: string | null;
   expiresAt: string | null;
-}
-
-function formatPickupTime(iso: string | null): string | null {
-  if (!iso) return null;
-  return new Intl.DateTimeFormat("th-TH", {
-    timeZone: "Asia/Bangkok",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(new Date(iso));
 }
 
 function formatCountdown(expiresAt: string | null, nowMs: number): string {

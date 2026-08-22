@@ -84,15 +84,18 @@ describe("§7.1 — RLS introspection", () => {
     expect(rows).toEqual([]);
   });
 
-  it("the table count actually checked is pinned at 21 (not a false pass from an empty match)", async () => {
+  it("the table count actually checked is pinned at 22 (not a false pass from an empty match)", async () => {
     // Was 18 as of WBS 3.6; WBS 4.1's migration 0024_auth_attempts.sql added
     // a 19th table (auth_attempts, RLS enabled, zero policies — same shape
     // as job_queue). WBS 5.7's migration 0032_order_status_history.sql adds
     // a 20th (order_status_history, RLS enabled, one authenticated SELECT
-    // policy — see §7 below). WBS 5.10's migration
-    // 0036_order_lookup_rate_limit.sql adds a 21st (order_lookup_attempts,
-    // RLS enabled, zero policies — same shape as auth_attempts/job_queue,
-    // see §7 below). Updated here rather than left stale, per this
+    // policy — see §7 below). A 21st, order_lookup_attempts
+    // (0036_order_lookup_rate_limit.sql), landed without this pin being
+    // updated at the time — caught and fixed here, not by that migration's
+    // own change, while adding the 22nd: WBS 5.8's push_subscriptions
+    // (0038_push_subscriptions_and_inbox_state.sql, RLS enabled, one
+    // authenticated policy scoped by store_id — same shape as every other
+    // direct-store_id table). Updated here rather than left stale, per this
     // file's own stated purpose: proving the migration actually closes what
     // it claims, against the real as-built schema.
     if (!ready) return;
@@ -100,10 +103,10 @@ describe("§7.1 — RLS introspection", () => {
       select count(*)::int as n from information_schema.tables
        where table_schema = 'public' and table_type = 'BASE TABLE'
     `);
-    expect(rows[0].n).toBe(21);
+    expect(rows[0].n).toBe(22);
   });
 
-  it("all 21 real tables are present by name", async () => {
+  it("all 22 real tables are present by name", async () => {
     if (!ready) return;
     const { rows } = await pg.query(`
       select table_name from information_schema.tables
@@ -132,6 +135,7 @@ describe("§7.1 — RLS introspection", () => {
         "pickup_slots",
         "purchase_invoices",
         "purchase_line_items",
+        "push_subscriptions",
         "stock_ledger",
         "stores",
       ].sort(),
@@ -141,8 +145,8 @@ describe("§7.1 — RLS introspection", () => {
 
 // ---------------------------------------------------------------------------
 // Shared fixtures for §7 tests 2, 5, 6, 7, 8 — two merchants (A, B), each
-// with a full store's worth of data across all 16 merchant-owned tables
-// plus job_queue.
+// with a full store's worth of data across all 17 merchant-owned tables
+// (including push_subscriptions, WBS 5.8) plus job_queue.
 // ---------------------------------------------------------------------------
 describe("§7.2, §7.5, §7.6, §7.7, §7.8 — merchant-scoped suite", () => {
   let fixtureA: FullStoreFixtureIds;
@@ -195,7 +199,7 @@ describe("§7.2, §7.5, §7.6, §7.7, §7.8 — merchant-scoped suite", () => {
     }
   });
 
-  // --- §7 test 5: cross-tenant isolation, looped over the 16 applicable
+  // --- §7 test 5: cross-tenant isolation, looped over the 17 applicable
   //     merchant-owned tables. ---
   const MERCHANT_TABLES: Array<{ table: string; idKey: keyof FullStoreFixtureIds }> = [
     { table: "stores", idKey: "storeId" },
@@ -214,9 +218,10 @@ describe("§7.2, §7.5, §7.6, §7.7, §7.8 — merchant-scoped suite", () => {
     { table: "purchase_invoices", idKey: "purchaseInvoiceId" },
     { table: "purchase_line_items", idKey: "purchaseLineItemId" },
     { table: "daily_financials", idKey: "dailyFinancialsId" },
+    { table: "push_subscriptions", idKey: "pushSubscriptionId" },
   ];
 
-  describe("§7.5 — cross-tenant isolation, looped over 16 merchant-owned tables", () => {
+  describe("§7.5 — cross-tenant isolation, looped over 17 merchant-owned tables", () => {
     for (const { table, idKey } of MERCHANT_TABLES) {
       it(`merchant A sees only store A's row in ${table}, merchant B only store B's`, async () => {
         if (!ready) return;
@@ -350,15 +355,25 @@ describe("§7.2, §7.5, §7.6, §7.7, §7.8 — merchant-scoped suite", () => {
   //     service_role ... may touch this table"). This is the rate-limit
   //     bucket for /track's phone+code lookup — covered here for the same
   //     reason auth_attempts is, not left to the table-name/count checks
-  //     above alone. ---
-  describe("order_lookup_attempts (WBS 5.10) has no access via anon or authenticated, same zero-policy shape as auth_attempts", () => {
+  //     above alone.
+  //
+  //     Updated for 0039_order_lookup_phone_bucket.sql (redline_reviewer
+  //     finding, 2026-08-22: ip_hash alone was a no-op against a scripted
+  //     caller rotating x-forwarded-for). The table gained a `phone_hash`
+  //     column and `ip_hash` is no longer NOT NULL; 0039 does not touch RLS
+  //     (no table already RLS'd with zero policies needs new policies just
+  //     because a column was added), so the assertion here is that the
+  //     zero-policy posture holds for the WHOLE row shape, phone_hash
+  //     included — not just the columns that existed when this block was
+  //     first written. ---
+  describe("order_lookup_attempts (WBS 5.10, phone_hash bucket added by 0039) has no access via anon or authenticated, same zero-policy shape as auth_attempts", () => {
     let insertedId: string | undefined;
 
     beforeAll(async () => {
       if (!ready) return;
       const { rows } = await pg.query(
-        `insert into order_lookup_attempts (ip_hash) values ($1) returning id`,
-        [`qa-rls-order-lookup-ip-hash-${Date.now()}`],
+        `insert into order_lookup_attempts (phone_hash, ip_hash) values ($1, $2) returning id`,
+        [`qa-rls-order-lookup-phone-hash-${Date.now()}`, `qa-rls-order-lookup-ip-hash-${Date.now()}`],
       );
       insertedId = rows[0].id as string;
     });
@@ -368,7 +383,7 @@ describe("§7.2, §7.5, §7.6, §7.7, §7.8 — merchant-scoped suite", () => {
       await pg.query(`delete from order_lookup_attempts where id = $1`, [insertedId]);
     });
 
-    it("anon sees zero order_lookup_attempts rows, service_role proves the row exists", async () => {
+    it("anon sees zero order_lookup_attempts rows via select * (which now includes phone_hash); service_role proves the row — with BOTH phone_hash and ip_hash populated — exists", async () => {
       if (!ready) return;
       const anon = anonClient();
       const { data } = await anon.from("order_lookup_attempts").select("*");
@@ -377,25 +392,46 @@ describe("§7.2, §7.5, §7.6, §7.7, §7.8 — merchant-scoped suite", () => {
       const svc = serviceClient();
       const { data: adminData, error } = await svc
         .from("order_lookup_attempts")
-        .select("id")
+        .select("id, phone_hash, ip_hash")
         .eq("id", insertedId);
       expect(error).toBeNull();
       expect(adminData).toHaveLength(1);
+      expect(adminData![0].phone_hash).toMatch(/^qa-rls-order-lookup-phone-hash-/);
+      expect(adminData![0].ip_hash).toMatch(/^qa-rls-order-lookup-ip-hash-/);
     });
 
-    it("an authenticated merchant also sees zero order_lookup_attempts rows (no merchant-scoped policy exists, by design)", async () => {
+    it("anon selecting the phone_hash column by name (not just select *) also returns zero rows — the new column specifically has no anon-readable policy", async () => {
+      if (!ready) return;
+      const anon = anonClient();
+      const { data, error } = await anon.from("order_lookup_attempts").select("phone_hash").eq("id", insertedId);
+      expect(error).toBeNull();
+      expect((data ?? []).length).toBe(0);
+    });
+
+    it("an authenticated merchant also sees zero order_lookup_attempts rows, phone_hash included (no merchant-scoped policy exists, by design)", async () => {
       if (!ready) return;
       const clientA = authenticatedClient(fixtureA.authUserId);
       const { data } = await clientA.from("order_lookup_attempts").select("*");
       expect((data ?? []).length).toBe(0);
     });
 
-    it("anon cannot directly INSERT into order_lookup_attempts (writes only happen via the SECURITY DEFINER function)", async () => {
+    it("anon cannot directly INSERT into order_lookup_attempts via the ip_hash column (writes only happen via the SECURITY DEFINER function)", async () => {
       if (!ready) return;
       const anon = anonClient();
       const { data, error } = await anon
         .from("order_lookup_attempts")
-        .insert({ ip_hash: `qa-rls-anon-insert-${Date.now()}` })
+        .insert({ ip_hash: `qa-rls-anon-insert-ip-${Date.now()}` })
+        .select("id");
+      expect(data ?? []).toHaveLength(0);
+      expect(error).not.toBeNull();
+    });
+
+    it("anon cannot directly INSERT into order_lookup_attempts via the new phone_hash column either (ip_hash's own NOT NULL constraint dropping doesn't open a side door)", async () => {
+      if (!ready) return;
+      const anon = anonClient();
+      const { data, error } = await anon
+        .from("order_lookup_attempts")
+        .insert({ phone_hash: `qa-rls-anon-insert-phone-${Date.now()}` })
         .select("id");
       expect(data ?? []).toHaveLength(0);
       expect(error).not.toBeNull();

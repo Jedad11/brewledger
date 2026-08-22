@@ -115,10 +115,13 @@ export function assertLocalSupabaseInDev(
 // --- edge (supabase/functions/*, Deno) --------------------------------------
 // SUPABASE_SERVICE_ROLE_KEY bypasses RLS entirely (RL-3) — Edge Functions are
 // one of exactly two legitimate holders (the other is the Render worker).
-// VAPID_PRIVATE_KEY is documented at WBS 5.8 (Web Push) — that feature isn't
-// built yet, nothing reads this value today. Optional for now so requiring it
-// doesn't take down every OTHER already-shipped feature on this runtime; make
-// it required (nonEmpty) when WBS 5.8 lands and something actually consumes it.
+// VAPID_PRIVATE_KEY (WBS 5.8, Web Push) stays optional here: no Edge
+// Function sends a push (the merchant's browser writes push_subscriptions
+// directly, RLS-scoped; only the worker's push_notify handler calls
+// web-push), so requiring it on this schema would take down every
+// already-shipped Edge Function over a secret none of them read.
+// workerConfigSchema below stays optional too, for the same reason one
+// level down the stack — see its comment.
 export const edgeConfigSchema = z.object({
   SUPABASE_URL: nonEmpty("SUPABASE_URL"),
   SUPABASE_SERVICE_ROLE_KEY: nonEmpty("SUPABASE_SERVICE_ROLE_KEY"),
@@ -136,16 +139,26 @@ export function loadEdgeConfig(
 
 // --- worker (worker/, Node on Render) ---------------------------------------
 // The edge set plus DATABASE_URL (direct Postgres, for FOR UPDATE SKIP
-// LOCKED job claims that PostgREST cannot express — see worker/src/db.ts)
-// and FLOAT16_API_KEY (Typhoon OCR, documented at WBS 6.2). FLOAT16_API_KEY
-// is optional for the same reason VAPID_PRIVATE_KEY is above: the ocr_extract
-// handler is still a stub (WBS 6.2 not built), nothing reads this value yet,
-// and the poller/job-queue/handler-registry machinery this worker already
-// ships must not be blocked at startup by a secret an unbuilt feature needs.
-// Make it required once WBS 6.2's real handler lands and consumes it.
+// LOCKED job claims that PostgREST cannot express — see worker/src/db.ts),
+// FLOAT16_API_KEY (Typhoon OCR, documented at WBS 6.2), and VAPID_PRIVATE_KEY
+// (Web Push, WBS 5.8). Both FLOAT16_API_KEY and VAPID_PRIVATE_KEY stay
+// optional here, for the same reason: worker/src/db.ts calls
+// loadWorkerConfig() synchronously at MODULE LOAD, before src/index.ts's
+// poller (generateSlots, expireOrders WBS 5.7, lowStockCheck, ...) starts.
+// Promoting either to required would mean an unset/blank secret for ONE
+// best-effort, non-critical-path job (OCR extraction; a push notification
+// with a mandatory polling fallback per CLAUDE.md) throws the ENTIRE worker
+// process at boot and takes every job type down with it — this already
+// happened once in production (see PROGRESS.md, WBS 3.9) and is exactly the
+// incident this optional posture exists to prevent. The push_notify handler
+// (worker/src/handlers/pushNotify.ts's ensureVapidConfigured()) enforces
+// VAPID_PRIVATE_KEY's presence itself, lazily, per job — a missing key fails
+// only that push_notify job (retried/eventually dead-lettered by queue.ts),
+// never process startup.
 export const workerConfigSchema = edgeConfigSchema.extend({
   DATABASE_URL: nonEmpty("DATABASE_URL"),
   FLOAT16_API_KEY: z.string().min(1).optional(),
+  VAPID_PRIVATE_KEY: z.string().min(1).optional(),
 });
 export type WorkerConfig = z.infer<typeof workerConfigSchema>;
 

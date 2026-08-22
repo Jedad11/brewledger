@@ -43,7 +43,13 @@ export interface DishRow {
 }
 
 export interface DivergenceInsight {
-  /** Best seller AMONG TRACKED ITEMS ONLY -- see insight-selection note below. */
+  /**
+   * The true overall best seller by units -- when this field is populated,
+   * it's already been verified to equal the max-units item across BOTH
+   * tracked and untracked rows (see insight-selection note below). It is
+   * never "best among tracked only" while shown; that case is suppressed
+   * instead.
+   */
   bestSellerName: string;
   bestSellerUnits: number;
   topProfitName: string;
@@ -177,18 +183,27 @@ export async function fetchProfitPerDish(
   tracked.sort((a, b) => (b.totalProfitSatang! - a.totalProfitSatang!) || a.name.localeCompare(b.name, "th"));
   untracked.sort((a, b) => b.unitsSold - a.unitsSold || a.name.localeCompare(b.name, "th"));
 
-  // Best seller for the insight is drawn from `tracked` ONLY, never
-  // `[...tracked, ...untracked]`. The insight's sentence claims a specific
-  // item has "the most profit" relative to the best seller; that claim is
-  // only honest when both sides of the comparison have known cost data. If
-  // the item that truly sold the most units store-wide is untracked, its
-  // real profit is unknown -- it could exceed every tracked item's profit or
-  // be a loss leader -- so no valid comparison exists and the insight must
-  // be suppressed, not shown with a fabricated "best seller" that isn't
-  // actually the best seller by profit terms. This makes the sentence read
-  // as "top seller AMONG TRACKED ITEMS", a narrower and still-true claim,
-  // never "top seller overall" (RL-2 -- never fabricate a comparison when
-  // cost data is missing for either item, WBS 7.6 Claude Code Prompt step 4).
+  // bestSeller (for the insight sentence) is drawn from `tracked` ONLY.
+  // But before trusting it, we must check whether it's even true: the
+  // insight's sentence claims a specific item is "ขายดีที่สุด" (sold the
+  // most, unqualified -- see copy.ts, which is state_matrix.md's verbatim
+  // copy and stays as-is). That claim is a lie whenever some untracked item
+  // outsold every tracked item -- units sold is known for untracked rows too
+  // (it's not cost data), so this is a real, always-answerable comparison,
+  // not a fabrication. So the true overall max-units row is computed across
+  // BOTH tracked and untracked below; only when that row is itself tracked
+  // does the insight proceed with bestSeller/topProfit as computed from
+  // `tracked`. If the true max-units row is untracked, the insight is
+  // suppressed entirely -- no sentence can name a "best seller" without
+  // naming the actual best seller.
+  const allRows: DishRow[] = [...tracked, ...untracked];
+  const trueOverallBestSeller = allRows.reduce<DishRow | null>((best, row) => {
+    if (!best) return row;
+    if (row.unitsSold > best.unitsSold) return row;
+    if (row.unitsSold === best.unitsSold && row.name.localeCompare(best.name, "th") < 0) return row;
+    return best;
+  }, null);
+
   const bestSeller = tracked.reduce<DishRow | null>((best, row) => {
     if (!best) return row;
     if (row.unitsSold > best.unitsSold) return row;
@@ -198,7 +213,9 @@ export async function fetchProfitPerDish(
   const topProfit = tracked[0] ?? null;
 
   let insight: DivergenceInsight | null = null;
-  if (bestSeller && topProfit && bestSeller.key !== topProfit.key) {
+  const overallBestSellerIsTracked =
+    trueOverallBestSeller !== null && trueOverallBestSeller.key === bestSeller?.key;
+  if (overallBestSellerIsTracked && bestSeller && topProfit && bestSeller.key !== topProfit.key) {
     insight = {
       bestSellerName: bestSeller.name,
       bestSellerUnits: bestSeller.unitsSold,

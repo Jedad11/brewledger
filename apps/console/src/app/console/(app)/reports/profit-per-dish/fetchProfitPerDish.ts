@@ -43,6 +43,7 @@ export interface DishRow {
 }
 
 export interface DivergenceInsight {
+  /** Best seller AMONG TRACKED ITEMS ONLY -- see insight-selection note below. */
   bestSellerName: string;
   bestSellerUnits: number;
   topProfitName: string;
@@ -54,7 +55,14 @@ export interface ProfitPerDishReport {
   tracked: DishRow[];
   /** Never sorted as zero, never hidden -- units/revenue known, cost/margin/profit "—" (RL-2). */
   untracked: DishRow[];
-  /** null when the top seller and the top profit contributor are the same item, or there is no tracked item to compare against. */
+  /**
+   * null when the top seller (among tracked items) and the top profit
+   * contributor are the same item, when there is no tracked item to compare
+   * against, or when the item that actually sold the most units overall is
+   * untracked -- see the insight-selection note above `bestSeller` below for
+   * why an untracked true-best-seller suppresses the insight entirely rather
+   * than being shown next to a real profit figure for a different item.
+   */
   insight: DivergenceInsight | null;
 }
 
@@ -169,8 +177,19 @@ export async function fetchProfitPerDish(
   tracked.sort((a, b) => (b.totalProfitSatang! - a.totalProfitSatang!) || a.name.localeCompare(b.name, "th"));
   untracked.sort((a, b) => b.unitsSold - a.unitsSold || a.name.localeCompare(b.name, "th"));
 
-  const allRows = [...tracked, ...untracked];
-  const bestSeller = allRows.reduce<DishRow | null>((best, row) => {
+  // Best seller for the insight is drawn from `tracked` ONLY, never
+  // `[...tracked, ...untracked]`. The insight's sentence claims a specific
+  // item has "the most profit" relative to the best seller; that claim is
+  // only honest when both sides of the comparison have known cost data. If
+  // the item that truly sold the most units store-wide is untracked, its
+  // real profit is unknown -- it could exceed every tracked item's profit or
+  // be a loss leader -- so no valid comparison exists and the insight must
+  // be suppressed, not shown with a fabricated "best seller" that isn't
+  // actually the best seller by profit terms. This makes the sentence read
+  // as "top seller AMONG TRACKED ITEMS", a narrower and still-true claim,
+  // never "top seller overall" (RL-2 -- never fabricate a comparison when
+  // cost data is missing for either item, WBS 7.6 Claude Code Prompt step 4).
+  const bestSeller = tracked.reduce<DishRow | null>((best, row) => {
     if (!best) return row;
     if (row.unitsSold > best.unitsSold) return row;
     if (row.unitsSold === best.unitsSold && row.name.localeCompare(best.name, "th") < 0) return row;

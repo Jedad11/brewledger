@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { resolveMerchantCtx, currentStoreId } from "@/lib/merchant";
 import { StoreLinkQR } from "./StoreLinkQR";
 import { PAGE_TITLE } from "./copy";
+import { SettingsSubNav } from "@/components/SettingsSubNav";
 import type { Database } from "@brewledger/db/types";
 
 type StoreRow = Pick<Database["public"]["Tables"]["stores"]["Row"], "name" | "slug" | "is_published">;
@@ -31,6 +32,7 @@ export default async function StoreLinkPage() {
 
   return (
     <>
+      <SettingsSubNav />
       <h1>{PAGE_TITLE}</h1>
       <div className="oc-body">
         <StoreLinkQR

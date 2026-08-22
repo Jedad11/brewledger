@@ -61,6 +61,34 @@ silently wrong in the others.
    deliberately omitted rather than linked dead. Extend `TABS` in that file
    as each lands.
 
+5. **No sub-navigation within the Settings section**, same defect as Fix 4
+   but for `/console/settings/*` + `/console/menu`. Built
+   `apps/console/src/components/SettingsSubNav.tsx` (same `.oc-subnav`
+   pattern as `ReportsSubNav`, no new CSS needed — already ported in Fix 4),
+   rendered at the top of `/console/settings/store`, `/console/menu`,
+   `/console/settings/payments`, `/console/settings/link`,
+   `/console/settings/subscription`. Tab order/labels/hrefs sourced from
+   `/design/console-setup.js`'s `SETUP` array (line 23) and cross-checked
+   against `docs/design/screen_inventory.md`. `เมนู` intentionally points at
+   `/console/menu`, not a `/console/settings/menu` route — confirmed by
+   `screen_inventory.md`'s own separate top-level entry for it; the
+   `pathname === tab.href` exact-match logic (same as `ReportsSubNav`) means
+   it can't spuriously highlight or get highlighted by any `/console/settings/*`
+   page. **`/console/settings/notifications` (การแจ้งเตือน) has no page.tsx yet**
+   — only `docs/design/screen_inventory.md` documents the route, no file
+   exists under `apps/console/src/app/console/(app)/settings/notifications/`.
+   Left in `TABS` (matching state_matrix/screen_inventory as the source of
+   truth for the tab set) but not rendered anywhere yet since the page
+   doesn't exist; will 404 until that page lands — flagged, not silently
+   dropped. `/console/settings/capacity` deliberately excluded as a 7th tab —
+   not in the prototype's `SETUP` array or `screen_inventory.md`, same
+   omit-rather-than-invent rule Fix 4 used.
+
+**Verification (Fix 5):** `npx tsc --noEmit` and `npx eslint` clean on all
+touched files; `apps/console` vitest suite 191/191, no regression; dev
+server confirmed via curl — all 5 routes return 307 (login redirect), as
+expected for an unauthenticated request.
+
 **Incidental fix required to keep WBS 2.2's fidelity gate green:**
 `packages/ui/scripts/verify-fidelity.mjs`'s browser bundle broke entirely
 (0/21 rows resolving — "process is not defined") once `NavShell` started

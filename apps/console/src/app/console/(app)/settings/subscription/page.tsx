@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { resolveMerchantCtx } from "@/lib/merchant";
 import { SubscriptionPlanView } from "./SubscriptionPlanView";
 import { PAGE_TITLE } from "./copy";
+import { SettingsSubNav } from "@/components/SettingsSubNav";
 
 // WBS 4.7 — /console/settings/subscription. Unlike the other settings
 // screens (store/payments/link), this page needs no Supabase query of its
@@ -19,6 +20,7 @@ export default async function SubscriptionSettingsPage() {
 
   return (
     <>
+      <SettingsSubNav />
       <h1>{PAGE_TITLE}</h1>
       <div className="oc-body">
         <SubscriptionPlanView />

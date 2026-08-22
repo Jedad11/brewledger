@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { resolveMerchantCtx, currentStoreId } from "@/lib/merchant";
 import { PaymentsSettingsForm } from "./PaymentsSettingsForm";
+import { SettingsSubNav } from "@/components/SettingsSubNav";
 import type { PromptPayType } from "@brewledger/shared/dist/promptpay/normalize";
 import type { Database } from "@brewledger/db/types";
 
@@ -48,6 +49,7 @@ export default async function PaymentsSettingsPage() {
 
   return (
     <>
+      <SettingsSubNav />
       <h1>การรับเงิน</h1>
       <div className="oc-body">
         <PaymentsSettingsForm

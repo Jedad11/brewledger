@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { resolveMerchantCtx, currentStoreId } from "@/lib/merchant";
 import { StoreProfileForm } from "./StoreProfileForm";
+import { SettingsSubNav } from "@/components/SettingsSubNav";
 import type { Database } from "@brewledger/db/types";
 
 type StoreProfileRow = Pick<
@@ -64,6 +65,7 @@ export default async function StoreSettingsPage() {
 
   return (
     <>
+      <SettingsSubNav />
       <h1>ข้อมูลร้าน</h1>
       <div className="oc-body">
         <StoreProfileForm

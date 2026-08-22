@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { resolveMerchantCtx, currentStoreId } from "@/lib/merchant";
 import { MenuListClient, type MenuListItem } from "./MenuListClient";
+import { SettingsSubNav } from "@/components/SettingsSubNav";
 import type { Database } from "@brewledger/db/types";
 
 type StoreRow = Pick<
@@ -64,6 +65,7 @@ export default async function MenuListPage() {
 
   return (
     <>
+      <SettingsSubNav />
       <h1>เมนู</h1>
       <div className="oc-body">
         <MenuListClient

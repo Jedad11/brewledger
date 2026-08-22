@@ -38,7 +38,7 @@ export default async function DashboardPage() {
   // is no state_matrix.md entry for a dashboard-specific empty-store screen
   // (its own "Empty" bullet only covers zero orders), so this renders the
   // same all-zero/null summary that state renders — the merchant sees
-  // ฿0.00 revenue and "—" profit rather than a broken page, and the quick
+  // ฿0 revenue and "—" profit rather than a broken page, and the quick
   // actions still route them to setup.
   let store: StoreRow | null = null;
   if (storeId) {

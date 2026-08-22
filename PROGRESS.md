@@ -209,7 +209,7 @@ already running) returns the expected `307` redirect to `/console/login` for
 live render in this session (no browser/Playwright tooling used here); left
 for `redline_reviewer`.
 
-Implemented by: engineer.
+Implemented by: engineer. **Reviewed by: redline_reviewer, together with the follow-up sweep below — see the combined sign-off at the end of this section.**
 
 ### Follow-up sweep (2026-08-23) — the remaining 11 files closing out the full 14-file repo-wide fix
 
@@ -229,7 +229,34 @@ grep -rln 'className="mx-auto w-full max-w' "apps/console/src/app/console/(app)/
 ```
 returns zero matches, confirmed by direct re-run after all 11 edits. `grep -rn 'max-w-2xl|max-w-3xl|max-w-xl|mb-6 font-serif text-3xl'` across all of `apps/console` (code and tests) also returns zero — no stale test assertions referencing the removed classes anywhere, so nothing needed updating in the test suite for this round. `npx tsc --noEmit` (apps/console) clean. `npx eslint` on all 11 touched files clean. Full `apps/console` vitest suite: **191/191 passing**, same count as before this round (no regression, no test needed touching). `pnpm dev` was already running against local Supabase on port 3000 (not 3001 as initially assumed — confirmed via `Get-NetTCPConnection`); `curl` against `/console`, `/console/orders`, `/console/menu`, `/console/settings/capacity` all return the expected `307` redirect to `/console/login?next=...` (unauthenticated) — not a full authenticated browser render, but confirms none of the 11 edits broke server-side rendering or introduced a runtime error on any of the touched routes.
 
-Implemented by: engineer.
+Implemented by: engineer. **Reviewed by: redline_reviewer — clean, no CRITICAL/HIGH/MEDIUM findings, one cosmetic LOW (fixed).**
+Independently re-ran `grep -rln 'className="mx-auto w-full max-w' "apps/console/src/app/console/(app)/"`
+— zero matches, confirmed directly, not trusted from the commit message. Also
+swept for the same mistake under a different shape (`grep -rn '<main'` across
+the whole route group finds exactly one `<main>` — `layout.tsx`'s own — plus
+confirmed `login/`'s standalone `<main>` is legitimately unwrapped, not an
+instance of the bug, since that route has no `(app)/layout.tsx` above it).
+Traced all 14 fixed files individually and confirmed each still ends up with
+exactly one `.oc-body` root (either kept explicitly or already owned by the
+child component) — no bare unstyled fragment anywhere. Confirmed zero callers
+project-wide ever pass `decimals={2}` explicitly, so the `MoneyValue` default
+change is safe; confirmed `PublicMoneyValue.tsx` (`apps/shop`) was correctly
+left untouched and flagged as a separate follow-up, not silently assumed
+fine. Re-ran the full `apps/console` vitest suite directly (**191/191**,
+matching). Ran `pnpm typecheck` (all 8 workspaces, clean), `pnpm lint:boundary`
+(clean), and the RL-2 forbidden-phrase grep (clean) independently. **Got a
+real authenticated live render this time** — logged in via the repo's own
+Playwright e2e login pattern (`0811111111`/`123456`) and screenshotted both
+`/console` and `/console/settings/store` at 1440×900: dashboard cards lay out
+in a row across the full available width via `.oc-main{flex:1}`, net profit
+renders `—` not `0`, revenue/expenses render with no decimal suffix,
+`/console/settings/store` renders full-width using `.oc-body`'s real
+max-width, not the removed 672px Tailwind cap — closing the exact
+static-only-verification gap that let this bug escape review twice before.
+One LOW, fixed directly by the orchestrating session: a stale code comment in
+`(app)/page.tsx` still said "the merchant sees ฿0.00 revenue" after the
+decimals default changed to 0 — corrected to "฿0". **Marking this
+cross-cutting fix (all three rounds) reviewed and closed.**
 
 | WBS | Title | Phase | Status | Pattern | Implemented by | Reviewed by | Commit/PR ref | Notes |
 |---|---|---|---|---|---|---|---|---|

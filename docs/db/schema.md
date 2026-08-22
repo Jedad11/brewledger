@@ -50,6 +50,24 @@ imply a 100% margin, which flatters the merchant and misinforms their
 pricing. `MoneyValue` (the shared rendering component, `packages/ui`, not
 yet built) renders `NULL` cost as `—`.
 
+## Costing method: latest purchase price, not weighted average
+
+`ingredients.current_unit_cost_satang` moves to the exact price of the most
+recently *confirmed* purchase for that ingredient (WBS 6.4's confirm
+transaction, `console_confirm_purchase_invoice`,
+`packages/db/migrations/0043_console_confirm_purchase_invoice.sql`) — not a
+weighted average across purchase history, not FIFO. This is a deliberate
+choice, not an omission: the merchant's real question is "what does this
+ingredient cost me *today*," which drives today's pricing decision, not "what
+did my inventory cost *on average*," which is the accountant's question.
+
+Trade-off, stated honestly: a single unusually expensive emergency purchase
+(buying milk from a convenience store at 3x the supplier price because a
+delivery failed) moves this value until the next normal purchase corrects
+it. This system does not smooth that away — WBS 7.4's drift alert is the
+intended way it gets surfaced to the merchant, so they can see the spike and
+judge it themselves rather than have it silently averaged into invisibility.
+
 ## RL-1 — no platform balance, ever
 
 `packages/db/migrations/0020_rl1_structural_proof.sql` is a dedicated,

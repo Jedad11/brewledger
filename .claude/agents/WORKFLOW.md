@@ -97,8 +97,41 @@ qa ไม่ครอบคลุม (Thai copy, RLS, arithmetic) แทนก�
 เป้าหมายคือเพิ่มความเร็ว ไม่ใช่ลดความละเอียด
 
 **เมื่อ entry นั้นแตะระบบสำคัญ** (ตาราง `Red Line Touch` ในดิกชันนารีระบุ RL ใดๆ, หรือแตะ
-schema/payment/Customer Web) ให้ตรวจแบบเต็มตามเดิม ไม่ใช้ fast path นี้ — WBS 4.4 เป็นตัวอย่าง
-ที่ **ห้าม** ใช้ fast path เพราะเป็น RL-2 primary enforcement point
+schema/payment/Customer Web) ค่าเริ่มต้นคือตรวจแบบเต็ม ไม่ใช้ fast path — WBS 4.4 เป็นตัวอย่าง
+ที่ full audit จำเป็นจริงเพราะเป็น RL-2 primary enforcement point
+
+**แต่ไม่ใช่กฎตายตัว** — orchestrating session (ผู้ dispatch) มีดุลยพินิจข้าม
+`redline_reviewer` ไปเลย หรือใช้ fast path ได้ แม้ entry จะมี `Red Line Touch`
+ระบุ RL ไว้ ถ้าประเมินแล้วว่าจุดที่แตะจริงๆ ไม่ใช่ primary enforcement point
+ของ RL นั้น (เช่น แค่อ่านค่าที่ผ่านการกรองไว้แล้วชั้นอื่น ไม่ได้เป็นจุดสร้าง/แก้
+allow-list หรือ policy เอง) — ไม่ต้องรอถามหรือขอ sign-off ก่อน ใช้วิจารณญาณ
+แล้ว dispatch ตามที่เห็นสมควรได้เลย เป้าหมายคือความไว ไม่ใช่ตรวจทุกจุดที่มีคำว่า
+RL ปรากฏในตาราง
+
+---
+
+## ขอบเขตการตรวจเมื่อมี session อื่นทำงานพร้อมกัน
+
+โปรเจกต์นี้เปิดหลาย session พร้อมกันบน working directory เดียวกันได้ (เช่น
+คนละ WBS entry คนละหน้าต่าง) — `git status`/`git diff` ที่ไม่ระบุ path หรือ
+commit จะปนงานของ session อื่นที่ยังไม่ commit เข้ามาด้วย ทำให้ dispatch
+ช้าและเสี่ยงตรวจ/แก้ไฟล์ที่ไม่ใช่ของตัวเอง
+
+**กฎ**: ทุก dispatch (`qa_engineer`, `redline_reviewer`, หรือ `engineer` ที่ทำ
+follow-up) ต้องระบุขอบเขตด้วย **commit hash ที่เจาะจง** เสมอเมื่อ entry นั้น
+ถูก commit แล้ว (`git show <hash>`, `git diff <base>..<head>`) ไม่ใช่สั่งให้
+"ดู git status" หรือ "ดู diff ทั้งหมด" เฉยๆ ถ้ายังไม่ commit ให้ระบุรายการไฟล์
+ที่เจาะจงแทน และบอก agent ชัดเจนว่าไฟล์อื่นที่เห็นใน working tree ไม่ใช่ของ
+dispatch นี้ ไม่ต้องตรวจ/แก้/อ้างอิง
+
+**เมื่อไฟล์ที่ใช้ร่วมกัน (เช่น `docs/design/state_matrix.md`,
+`component_inventory.md`) มีทั้งงานของเราและของ session อื่นปนอยู่ในไฟล์
+เดียวกัน**: ใช้ `git apply --cached` กับ patch ที่ตัดมาเฉพาะ hunk ของตัวเอง
+แทนการ `git add` ทั้งไฟล์ — วิธีนี้ commit เฉพาะส่วนของตัวเองได้โดยไม่แตะ
+หรือ overwrite งานที่ session อื่นยังไม่ commit ใน working tree
+
+เป้าหมายคือเพิ่มความเร็วด้วยขอบเขตที่ชัดเจน ไม่ใช่ลดความละเอียดของการตรวจ
+เนื้อหาที่อยู่ในขอบเขตยังตรวจแบบเต็มตามกฎ fast path ด้านบนเหมือนเดิม
 
 ---
 

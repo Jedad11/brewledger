@@ -193,3 +193,15 @@ export function computeSlotAvailability(
     nextSlotLabel: dayLabel ? `${dayLabel} ${earliest.hhmm}` : earliest.hhmm,
   };
 }
+
+// WBS 5.10 — `/o/{code}`'s pickup-time line. `public_order_status`/
+// `public_order_lookup` return `pickup_at` with no accompanying store
+// timezone (that screen deliberately reads nothing but the RPC — see its
+// own header comment), unlike every other caller in this file, which has a
+// real `stores.timezone` in hand. Every store's `timezone` defaults to, and
+// today can only ever be, 'Asia/Bangkok' (packages/db/migrations/
+// 0003_stores.sql; no settings screen exists to change it) — hardcoded here
+// for that reason, not as a guess.
+export function formatPickupTimeLabel(pickupAtIso: string): string {
+  return `${partsInTimeZone(new Date(pickupAtIso), "Asia/Bangkok").hhmm} น.`;
+}

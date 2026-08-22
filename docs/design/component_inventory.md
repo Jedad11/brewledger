@@ -26,6 +26,14 @@ elsewhere in Console Reports for period selection), a summary bar of
 `MoneyValue`-shaped figures, and a table of rows — none of which required a
 new named component per the inventory above.
 
+No new component was needed for WBS 5.10 (customer order tracking) either.
+`/o/{code}`'s 4-step progress indicator and order-code display reuse the
+prototype's own `.cw-code`/`.cw-steps`/`.cw-stepitem`/`.cw-dot` classes,
+ported into `packages/ui/src/components.css` in this same change (they
+weren't ported earlier — WBS 5.5's pay-screen block only pulled the classes
+`/pay` itself needed). `/track`'s two-field form reuses `Input` and `Button`
+unchanged.
+
 No new component was needed for WBS 5.1 (public store page and menu browse)
 either. It composes `MoneyValue` and `EmptyState` from this inventory, plus
 the prototype's own `.cw-*` page-shell/store-header/menu-list classes

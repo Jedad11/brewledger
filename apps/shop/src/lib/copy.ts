@@ -159,3 +159,52 @@ export const PAY_CHECKING_BODY = "ถ้าโอนแล้ว ไม่ต้
 export const PAY_EXPIRED_TITLE = "QR หมดเวลาแล้ว";
 export const PAY_EXPIRED_BODY = "ยังไม่มีการตัดเงิน ขอรหัสใหม่แล้วชำระได้ตามปกติ";
 export const PAY_REISSUE_LABEL = "ขอ QR ใหม่";
+
+// WBS 5.10 — "ติดตามออเดอร์ /o/{code}" and "ค้นหาออเดอร์ /track"
+// (docs/design/state_matrix.md, both sections extended/added for this WBS
+// entry — see that file's own comments, and gaps.md's GAP-8/GAP-9, for
+// exactly which lines are new and why).
+export const TRACK_ORDER_TITLE = "ติดตามออเดอร์";
+
+// Reused verbatim: this is the exact same word PAY_ORDER_CODE_LABEL already
+// exports for /pay's own "รหัสออเดอร์" line — one constant, two call sites,
+// rather than a duplicate string that could drift.
+export const ORDER_CODE_LABEL = PAY_ORDER_CODE_LABEL;
+
+export function pickupTimeLabel(hhmmWithSuffix: string): string {
+  return `รับเวลา ${hhmmWithSuffix}`;
+}
+
+export const ORDER_PROGRESS_STEPS = ["รับออเดอร์", "กำลังทำ", "พร้อมรับ", "รับแล้ว"] as const;
+
+export const ORDER_ITEMS_TITLE = "รายการที่สั่ง";
+
+export const ORDER_COLLECTED_TITLE = "ขอบคุณที่อุดหนุน";
+export const ORDER_COLLECTED_BODY = "แล้วพบกันใหม่";
+
+export const ORDER_PENDING_PAYMENT_TITLE = "ยังไม่ได้ชำระเงิน";
+export const ORDER_PENDING_PAYMENT_BODY = "เปิดลิงก์หรือ QR ที่ได้รับตอนสั่งซื้ออีกครั้งเพื่อชำระเงิน";
+
+// Cancelled is title-only for now — see state_matrix.md's own "Cancelled"
+// entry and gaps.md's GAP-9 for why the reason/refund-timeframe lines from
+// the prototype are deferred, not silently dropped.
+export const ORDER_CANCELLED_TITLE = "ร้านยกเลิกออเดอร์นี้";
+export const ORDER_REFUNDED_BODY = "เงินคืนเข้าบัญชีเดิมเรียบร้อยแล้ว";
+
+export const ORDER_EXPIRED_TITLE = "หมดเวลาชำระเงิน";
+export const ORDER_EXPIRED_BODY = "ออเดอร์นี้ถูกยกเลิกเพราะไม่ได้ชำระเงินภายในเวลาที่กำหนด ยังไม่มีการตัดเงิน";
+
+export const ORDER_NOT_FOUND_TITLE = "ไม่พบออเดอร์นี้";
+export const ORDER_NOT_FOUND_BODY = "ตรวจสอบรหัสอีกครั้ง หรือค้นหาด้วยเบอร์โทรที่ใช้สั่ง";
+
+// Also this screen's own header title AND the /o/{code} not-found CTA
+// label — both read `ค้นหาออเดอร์` verbatim in the prototype (scOrder's
+// notfound button, scFind's own header) — one constant, not a coincidence.
+export const FIND_ORDER_LABEL = "ค้นหาออเดอร์";
+
+export const TRACK_INTRO = "ใส่เบอร์โทรที่ใช้ตอนสั่ง และรหัสออเดอร์ที่ได้รับ";
+export const TRACK_CODE_LABEL = ORDER_CODE_LABEL;
+export const TRACK_CODE_PLACEHOLDER = "SJ-0000";
+export const TRACK_SUBMIT_LABEL = "ค้นหา";
+export const TRACK_NOT_FOUND_ERROR = "ไม่พบออเดอร์ที่ตรงกับข้อมูลนี้ ลองตรวจสอบอีกครั้ง";
+export const TRACK_RATE_LIMITED_ERROR = "ค้นหาบ่อยเกินไป ลองใหม่อีกครั้งในอีกสักครู่";

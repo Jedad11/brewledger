@@ -241,6 +241,73 @@ correctness or a red line.
 
 ---
 
+## GAP-8 — Customer order tracking (`/o/{code}`, `/track`) — undocumented in the state matrix, not missing
+
+**Status:** Exists and is complete in the delivered package. `screen_inventory.md`
+already listed both routes and named five/two states respectively (active,
+collected, cancelled, expired, not-found / default, not-found), but only
+three of the seven had ever been extracted into `state_matrix.md` — the same
+category of gap as GAP-1 and GAP-5, just spanning two screens instead of one.
+
+- **Implementation:** `design/customer-web.js`, `scOrder()` (lines 114-121)
+  and `scFind()` (lines 123-128).
+- **Newly extracted:** the in-progress 4-step progress default state, the
+  collected thank-you card, and the entire `/track` lookup screen (intro
+  line, two required fields, inline not-found error, submit label).
+- **Two states added with no prototype equivalent at all** (the demo's
+  `S.dev.track` switcher only ever models an order already past payment):
+  pending-payment and refunded. See `state_matrix.md`'s own entries for the
+  reasoning on each.
+
+**Decision:** Documented, not rebuilt. Added to `docs/design/state_matrix.md`
+by reading `design/customer-web.js` directly, in the same change (WBS 5.10)
+that needed it.
+
+**Owner:** M2.
+
+**Blocks:** Nothing. Closed by this same change.
+
+---
+
+## GAP-9 — Customer-facing cancellation reason and refund timing unavailable until WBS 5.11
+
+**Status:** Real, scheduled gap. `state_matrix.md`'s original "Cancelled"
+entry for `/o/{code}` (transcribed from the prototype) names a specific
+cancellation reason (`เหตุผลจากร้าน: วัตถุดิบหมด`) and a refund-timeframe
+line (`เงินจะคืนเข้าบัญชีเดิมภายใน 3–5 วันทำการ`). Neither is buildable today:
+`orders` carries no cancellation-reason column at all, and while
+`orders.refund_status` exists (`packages/db/migrations/0011_orders.sql`,
+written by `transition_order` — WBS 5.7), `public_order_status`/
+`public_order_lookup` (`packages/db/migrations/0021_rls.sql`) do not return
+it. Both are WBS 5.11's job (Order Cancellation and Merchant-Initiated
+Refund), not started this session.
+
+**Decision:** WBS 5.10 (customer order tracking) ships the `/o/{code}`
+Cancelled state title-only (`ร้านยกเลิกออเดอร์นี้`), deliberately never
+guessing at a reason or a refund claim that isn't backed by real data — the
+same posture `CLAUDE.md` takes on cost (`null`, never a guessed `0`). This is
+a genuine, if narrow, product regression versus the prototype's fuller copy
+until WBS 5.11 lands, and is flagged here rather than silently shipped as
+"working as designed."
+
+**Follow-up required, owned by `architect` (not to be done unprompted by the
+`engineer` leg of a future entry):** WBS 5.11 needs to (a) add the
+cancellation-reason column its own Claude Code Prompt already describes, and
+(b) decide whether/how `public_order_status`/`public_order_lookup` should
+widen to expose it plus `refund_status` — a change to an existing
+security-definer RPC's public contract, which is schema design, not screen
+work. Once that lands, `state_matrix.md`'s Cancelled entry needs its own
+follow-up edit restoring the reason/refund-timeframe lines, gated correctly
+on `refund_status` (never claiming a refund is coming for an order that
+never took payment).
+
+**Owner:** M1 (architect — RPC contract), M2 (state_matrix copy + screen once
+the data exists).
+
+**Blocks:** Nothing currently scheduled beyond WBS 5.11 itself.
+
+---
+
 ## Adherence lint follow-up (not a screen gap, recorded here for visibility)
 
 `_ds/.../_adherence.oxlintrc.json` cannot be executed by the installed

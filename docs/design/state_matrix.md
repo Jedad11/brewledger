@@ -113,9 +113,95 @@ WBS 5.2, from `customer-web.js`'s `scCart()`, lines 69-75.
 - **Expired** — `QR หมดเวลาแล้ว` / `ยังไม่มีการตัดเงิน ขอรหัสใหม่แล้วชำระได้ตามปกติ` + `ขอ QR ใหม่`
 
 ### ติดตามออเดอร์ `/o/{code}`
-- **Cancelled** — `ร้านยกเลิกออเดอร์นี้` / `เหตุผลจากร้าน: วัตถุดิบหมด` / `เงินจะคืนเข้าบัญชีเดิมภายใน 3–5 วันทำการ`
+
+`screen_inventory.md`'s own route table already named five states here
+(active, collected, cancelled, expired, not-found), but only three had ever
+been extracted into this file (WBS 5.10, GAP-8 — see `gaps.md`). The other
+two — the in-progress default and the collected thank-you — exist verbatim
+in `design/customer-web.js`'s `scOrder()` (lines 114-121) and are extracted
+below, not invented. A sixth and seventh state (pending-payment, refunded)
+have no prototype equivalent at all — the demo's `S.dev.track` switcher only
+ever models an order already past payment — and are authored for the real
+implementation, same posture as WBS 5.2's stale-cart state.
+
+- **Default / active** — a card reading `รหัสออเดอร์` with the code, then
+  `รับเวลา {HH:mm} น. ที่ {store name}` (the prototype's own line;
+  `public_order_status`/`public_order_lookup` return no store name field, so
+  the real implementation renders `รับเวลา {HH:mm} น.` only — see WBS 5.10's
+  own engineering note). A 4-step horizontal progress list, steps in order
+  `รับออเดอร์` / `กำลังทำ` / `พร้อมรับ` / `รับแล้ว` (verbatim, `customer-web.js`
+  line 114 — the exact same four strings the WBS 5.10 Claude Code Prompt
+  itself quotes), each step showing a checkmark once passed and a highlighted
+  ring on the current step. Maps from `orders.status`: `ACCEPTED` → step 0
+  current, `PREPARING` → step 1 current, `READY` → step 2 current. Then a
+  `รายการที่สั่ง` card listing each item's name and `× {quantity}` — no price,
+  matching the RPC's own allow-listed columns.
+- **Collected** (`status = COLLECTED`) — same header/progress card as
+  Default/active, with all 4 steps shown done, plus a closing card:
+  `ขอบคุณที่อุดหนุน` / `แล้วพบกันใหม่` (verbatim, `customer-web.js` line 121).
+  The prototype's own closing card also carries a `กลับไปที่เมนูร้าน` button
+  (and the WBS 5.10 Claude Code Prompt's own §4 independently asks for "a
+  link back to the store menu") — **not built**: that link needs a store
+  slug neither `public_order_status` nor `public_order_lookup` returns, and
+  `apps/shop`'s own `/` route is a pre-existing unrelated "coming soon"
+  placeholder (`apps/shop/src/app/page.tsx`, WBS 3.1/3.4), not a page a
+  customer could use — linking there would be worse than no link. Flagged as
+  a real, narrow gap the RPC could close later by adding the store slug to
+  its column list, same category as GAP-9 below.
+- **Pending payment** (`status = PENDING_PAYMENT`, authored — no prototype
+  equivalent; reachable when a customer bookmarks or re-visits `/o/{code}`
+  before ever completing `/pay`) — `ยังไม่ได้ชำระเงิน` /
+  `เปิดลิงก์หรือ QR ที่ได้รับตอนสั่งซื้ออีกครั้งเพื่อชำระเงิน`. No retry link
+  is offered — same reasoning as Collected above, this screen doesn't know
+  the store slug needed to rebuild a `/pay` URL.
+- **Cancelled** — `ร้านยกเลิกออเดอร์นี้`. The prototype's own copy continues
+  with a specific reason (`เหตุผลจากร้าน: วัตถุดิบหมด`, one value from
+  `interaction_spec.md`'s own cancel-reason picker) and a refund-timeframe
+  line (`เงินจะคืนเข้าบัญชีเดิมภายใน 3–5 วันทำการ`) — **deferred, not
+  rebuilt**, because neither the cancellation reason nor `refund_status` is
+  a column `orders` carries yet (both are WBS 5.11's job, not started this
+  session — see GAP-9 below). Rendering either line today would mean
+  guessing at data that does not exist, which this codebase treats as more
+  dangerous than an incomplete screen (`CLAUDE.md`: unknown cost is `null`,
+  never guessed). Title-only until WBS 5.11 ships the columns and this file
+  gets its own follow-up edit.
+- **Refunded** (`status = REFUNDED`, authored — no prototype equivalent,
+  since the prototype never modelled a completed refund) —
+  `ร้านยกเลิกออเดอร์นี้` / `เงินคืนเข้าบัญชีเดิมเรียบร้อยแล้ว`. Safe to state
+  as fact (not a timeframe estimate) because `REFUNDED` is a real,
+  already-transitioned `orders.status` value (`transition_order`,
+  `packages/db/migrations/0032_order_status_history.sql`) — reaching this
+  state means a merchant already completed the transfer, not a projection.
 - **Expired** — `หมดเวลาชำระเงิน` / `ออเดอร์นี้ถูกยกเลิกเพราะไม่ได้ชำระเงินภายในเวลาที่กำหนด ยังไม่มีการตัดเงิน`
 - **Not found** — `ไม่พบออเดอร์นี้` / `ตรวจสอบรหัสอีกครั้ง หรือค้นหาด้วยเบอร์โทรที่ใช้สั่ง` (never reveals whether the code format was valid)
+
+### ค้นหาออเดอร์ `/track`
+
+Undocumented in this file until now (WBS 5.10, GAP-8) — `screen_inventory.md`
+already listed the route and its two states (default, not-found);
+`design/customer-web.js`'s `scFind()` (lines 123-128) is the source, ported
+verbatim below.
+
+- **Default** — one-line intro `ใส่เบอร์โทรที่ใช้ตอนสั่ง และรหัสออเดอร์ที่ได้รับ`;
+  two required fields, `เบอร์โทร` (placeholder `08X-XXX-XXXX`) and
+  `รหัสออเดอร์` (placeholder `SJ-0000`); submit button `ค้นหา`. Both fields
+  are required to submit — there is no client-side path that calls the
+  lookup RPC with only one of the two filled in, the same non-enumeration
+  posture `public_order_lookup` itself enforces server-side.
+- **Not found** — inline `.err` text beneath the fields, not a full-page
+  state: `ไม่พบออเดอร์ที่ตรงกับข้อมูลนี้ ลองตรวจสอบอีกครั้ง`. Deliberately the
+  same message whether the phone exists with a different code, the code
+  exists with a different phone, or neither exists at all —
+  `interaction_spec.md`'s own identical-error rule ("Order lookup returns
+  the same not-found message regardless of whether the phone number
+  exists") applied here.
+- **Success** — navigates to `/o/{code}`; no separate rendered state of its
+  own.
+- **Rate limited** (authored — no prototype equivalent; the prototype has no
+  concept of a request budget) — the lookup RPC is capped at 20 attempts per
+  hour per caller IP (`packages/db/migrations/0036_order_lookup_rate_limit.sql`,
+  blunting scripted phone+code guessing) — inline `.err` text, same position
+  as Not found: `ค้นหาบ่อยเกินไป ลองใหม่อีกครั้งในอีกสักครู่`.
 
 ### หน้าหลัก `/console` — **the state most pilot shops are in**
 - **No cost data** — revenue + order count render normally; กำไรสุทธิวันนี้ renders `—` with plain grey text beneath: `ยังไม่ได้บันทึกต้นทุน จึงยังคำนวณกำไรไม่ได้`. Not amber, no icon, no button.

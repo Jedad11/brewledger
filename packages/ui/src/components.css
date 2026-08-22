@@ -141,6 +141,21 @@ button{font-family:inherit;letter-spacing:var(--tracking-normal)}
 .cw-checking,.cw-expired{display:grid;gap:1.2rem;justify-items:center;padding:var(--space-6) 0}
 .spinner{width:32px;height:32px;border-radius:50%;border:3px solid var(--green-mist);border-top-color:var(--green-brew);animation:bl-spin .8s linear infinite}
 
+/* ---- Track order (WBS 5.10) ----
+ * Ported from `design/Customer Web.html`'s inline <style> block, same file
+ * and same posture as the Pay screen block above — literal port, not
+ * previously needed until `/o/{code}` (this entry) consumed it. */
+.cw-code{font-size:var(--text-6);font-weight:800;letter-spacing:.06em;color:var(--green-ledger)}
+.cw-steps{display:grid;gap:0}
+.cw-stepitem{display:flex;align-items:center;gap:1.2rem;padding:.9rem 0;color:var(--c-unknown);position:relative}
+.cw-stepitem+.cw-stepitem::before{content:"";position:absolute;left:13px;top:-14px;height:14px;width:2px;background:var(--hairline)}
+.cw-stepitem.is-done+.cw-stepitem::before,.cw-stepitem.is-now::before{background:var(--green-brew)}
+.cw-dot{width:28px;height:28px;border-radius:50%;border:2px solid var(--hairline);display:grid;place-items:center;font-size:var(--text-2);flex:none}
+.cw-stepitem.is-done{color:var(--text-black)}
+.cw-stepitem.is-done .cw-dot{background:var(--green-brew);border-color:var(--green-brew);color:#fff}
+.cw-stepitem.is-now{color:var(--green-ledger);font-weight:700}
+.cw-stepitem.is-now .cw-dot{border-color:var(--green-brew);box-shadow:0 0 0 4px var(--green-mist-tint)}
+
 /* ---- Console shell ---- */
 .oc-nav{display:grid;grid-template-columns:repeat(5,1fr);align-items:end;background:var(--white);box-shadow:var(--shadow-nav);padding:.6rem 0 1rem}
 .oc-nav button{position:relative;display:flex;flex-direction:column;align-items:center;gap:.4rem;min-height:var(--tap-min);border:0;background:none;cursor:pointer;font-size:var(--text-1);font-weight:600;color:var(--text-black-soft);padding:.6rem 0}

@@ -289,3 +289,35 @@ export interface PublicOrderStatusRow {
 export function fetchOrderStatus(code: string): Promise<PublicFetchResult<PublicOrderStatusRow[]>> {
   return callPublicFunction<PublicOrderStatusRow[]>("public-order-status", { code });
 }
+
+// WBS 5.10 — public-order-status's phone+code branch (`/track`). Distinct
+// function, not an optional third param bolted onto fetchOrderStatus above:
+// this call is rate-limited server-side (packages/db/migrations/
+// 0036_order_lookup_rate_limit.sql) and can 429, a response shape
+// fetchOrderStatus's callers (the /o/{code} poll loop) never need to handle.
+export type OrderLookupResult =
+  | { kind: "ok"; data: PublicOrderStatusRow[] }
+  | { kind: "rate_limited" }
+  | { kind: "error" };
+
+export async function fetchOrderLookup(phone: string, code: string): Promise<OrderLookupResult> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !anonKey) return { kind: "error" };
+
+  const url = new URL(`${supabaseUrl}/functions/v1/public-order-status`);
+  url.searchParams.set("code", code);
+  url.searchParams.set("phone", phone);
+
+  try {
+    const res = await fetch(url, {
+      headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` },
+      cache: "no-store",
+    });
+    if (res.status === 429) return { kind: "rate_limited" };
+    if (!res.ok) return { kind: "error" };
+    return { kind: "ok", data: (await res.json()) as PublicOrderStatusRow[] };
+  } catch {
+    return { kind: "error" };
+  }
+}

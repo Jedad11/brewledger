@@ -50,6 +50,18 @@ export function businessDateBoundsUtc(timeZone: string, now: Date = new Date()):
     day: "2-digit",
   }).format(now);
 
+  return businessDateBoundsForDateUtc(timeZone, businessDate);
+}
+
+// WBS 7.5 — same offset math as businessDateBoundsUtc above, factored out so
+// the P&L date-nav path (fetchPnlDay.ts) can ask for an EXPLICIT past
+// business_date's bounds (e.g. to live-scan order_items for that day's
+// untracked-item disclosure counts) without going through "now". Recomputes
+// the zone offset for the target date itself rather than reusing today's
+// offset, so this stays correct even for a timezone with DST (Thailand has
+// none, but stores.timezone is free-text, not hardcoded — see the header
+// note above).
+export function businessDateBoundsForDateUtc(timeZone: string, businessDate: string): BusinessDateBounds {
   const midnightGuessUtc = new Date(`${businessDate}T00:00:00Z`);
   const offsetMs = timeZoneOffsetMs(midnightGuessUtc, timeZone);
   const startUtc = new Date(midnightGuessUtc.getTime() - offsetMs);

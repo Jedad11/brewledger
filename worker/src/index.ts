@@ -3,6 +3,7 @@ import { pool } from "./db";
 import { log } from "./log";
 import { getQueueDepth, startPolling, stopPolling } from "./queue";
 import { flushSentry, initSentry } from "./sentry";
+import { msUntilNextRun } from "./handlers/dailyAggregate";
 
 initSentry();
 
@@ -54,15 +55,38 @@ async function ensureExpireOrdersScheduled(): Promise<void> {
   );
 }
 
+// WBS 7.5 — same guard as ensureExpireOrdersScheduled above: seed the
+// self-perpetuating 'daily_aggregate' sweep (handlers/dailyAggregate.ts)
+// exactly once per process start, so a Render redeploy resumes the existing
+// nightly chain instead of adding a second one. Unlike expire_orders, the
+// FIRST run is deferred to the next 01:00 Asia/Bangkok instant, not fired
+// immediately — a redeploy at 14:00 must not re-aggregate today mid-day.
+async function ensureDailyAggregateScheduled(): Promise<void> {
+  const delayMs = msUntilNextRun(new Date());
+  await pool.query(
+    `insert into job_queue (job_type, payload, run_after)
+     select 'daily_aggregate', '{}'::jsonb, now() + ($1 || ' milliseconds')::interval
+     where not exists (
+       select 1 from job_queue where job_type = 'daily_aggregate' and status in ('pending', 'processing')
+     )`,
+    [String(delayMs)],
+  );
+}
+
 server.listen(PORT, () => {
   log.info("worker http server listening", { port: PORT });
-  ensureExpireOrdersScheduled()
-    .catch((err) =>
+  Promise.all([
+    ensureExpireOrdersScheduled().catch((err) =>
       log.error("failed to seed expire_orders sweep", {
         error: err instanceof Error ? err.message : String(err),
       }),
-    )
-    .finally(() => startPolling());
+    ),
+    ensureDailyAggregateScheduled().catch((err) =>
+      log.error("failed to seed daily_aggregate sweep", {
+        error: err instanceof Error ? err.message : String(err),
+      }),
+    ),
+  ]).finally(() => startPolling());
 });
 
 let shuttingDown = false;

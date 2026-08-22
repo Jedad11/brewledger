@@ -13,13 +13,15 @@
     "typecheck": "tsc --noEmit && tsc -p tsconfig.tests.json",
     "lint": "echo \"(no lint configured for @brewledger/db)\"",
     "build": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "perf-seed": "tsx perf-seed.ts"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2",
     "@types/node": "^22",
     "@types/pg": "^8.23.1",
     "pg": "^8.23.0",
+    "tsx": "^4",
     "typescript": "^5",
     "vitest": "^4.1.10"
   }

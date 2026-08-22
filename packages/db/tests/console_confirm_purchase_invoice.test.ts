@@ -1,6 +1,6 @@
 // WBS 6.4 -- Purchase Confirmation Screen (Manual), engineer leg's own test
 // coverage of console_confirm_purchase_invoice (packages/db/migrations/
-// 0043_console_confirm_purchase_invoice.sql, mirrored to supabase/migrations/).
+// 0044_console_confirm_purchase_invoice.sql, mirrored to supabase/migrations/).
 // Same real-Postgres posture as console_advance_order.test.ts (RLS, security
 // definer grants, and atomicity only exist in the database -- a mock proves
 // nothing about them) and the identical asMerchant/resetRole/withRollback
@@ -30,10 +30,10 @@
 // UPDATE, post redline_reviewer CRITICAL finding (WBS 6.4 fix pass): that
 // "follows the exact same shape" reasoning was exactly the bug -- 0040's
 // concurrency safety comes from transition_order's own `select ... for
-// update` (0032), and 0043 had no equivalent lock of its own, so two
+// update` (0032), and 0044 had no equivalent lock of its own, so two
 // concurrent confirms on the SAME invoice both passed the (unlocked)
 // idempotency check and both ran the full write pass, duplicating
-// purchase_line_items and stock_ledger rows. Migration 0043 now takes
+// purchase_line_items and stock_ledger rows. Migration 0044 now takes
 // `select ... for update` on purchase_invoices (mirroring 0040/0032's
 // pattern directly, not by delegation) plus `for update` on each mapped
 // ingredient row (covering the adjacent cross-invoice-same-ingredient race).
@@ -99,7 +99,7 @@ beforeAll(async () => {
     // eslint-disable-next-line no-console
     console.warn(
       "\n[console_confirm_purchase_invoice.test.ts] SKIPPING — no local Postgres reachable at " +
-        `${LOCAL_DB_URL}. Run \`supabase start\` (and apply migration 0043) first. This is a SKIP, not a pass.\n`,
+        `${LOCAL_DB_URL}. Run \`supabase start\` (and apply migration 0044) first. This is a SKIP, not a pass.\n`,
     );
     return;
   }
@@ -451,7 +451,7 @@ describe("WBS 6.4 — console_confirm_purchase_invoice: 10 genuinely concurrent 
   // 2 purchase_line_items rows, stock_ledger showing 10,000 ml received for
   // a 5,000 ml delivery. This is the direct mirror of console_advance_
   // order.test.ts's own "ten parallel calls yield exactly one real
-  // transition" proof, now that 0043 takes its own `for update` lock on
+  // transition" proof, now that 0044 takes its own `for update` lock on
   // purchase_invoices rather than relying on a delegate that doesn't exist.
   it("REQUIRED: ten parallel confirms of the SAME invoice (10 real connections, Promise.all) yield exactly one real write, not one per caller", async () => {
     if (!dbAvailable) return;

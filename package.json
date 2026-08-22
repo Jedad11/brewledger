@@ -30,6 +30,7 @@
     "db:push": "supabase db push",
     "db:diff": "supabase db diff",
     "db:types": "supabase gen types typescript --linked > packages/db/src/types.ts",
+    "db:perf-seed": "pnpm --filter @brewledger/db perf-seed",
     "prepare": "husky"
   },
   "devDependencies": {

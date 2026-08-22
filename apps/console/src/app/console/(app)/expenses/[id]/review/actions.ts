@@ -9,7 +9,7 @@
 // the cost of every menu item using that ingredient, and the merchant would
 // only discover it as a profit figure they cannot explain. confirmPurchaseInvoice
 // below is the ONLY function in this file (and, per packages/db/migrations/
-// 0043's own header, the only write path in the whole codebase) that can
+// 0044's own header, the only write path in the whole codebase) that can
 // move that column, and it only ever runs from the confirm button's onClick
 // -- never on page load, never on an intermediate field edit.
 //
@@ -26,7 +26,7 @@
 // sibling saveIngredient/archiveIngredient (both plain `.from()` writes, no
 // Edge Function). console_confirm_purchase_invoice needs `security definer`
 // ONLY because job_queue carries zero RLS policies for `authenticated`
-// (0043's own header) -- that is orthogonal to whether the caller is an Edge
+// (0044's own header) -- that is orthogonal to whether the caller is an Edge
 // Function or a Server Action; both present the identical merchant JWT to
 // PostgREST. Going through a new Edge Function here would add a network hop
 // with no corresponding benefit, so this calls the RPC directly.

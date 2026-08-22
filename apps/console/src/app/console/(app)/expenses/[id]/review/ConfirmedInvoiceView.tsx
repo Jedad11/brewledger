@@ -1,6 +1,6 @@
 // WBS 6.4 -- read-only view for an invoice already confirmed (e.g. a
 // merchant reopening this URL via back/forward/bookmark after confirming).
-// The confirm RPC (packages/db/migrations/0043) is itself idempotent, but
+// The confirm RPC (packages/db/migrations/0044) is itself idempotent, but
 // this page never re-renders the editable form for an already-confirmed
 // invoice at all -- there is nothing left to edit, and no cost write can
 // happen from here a second time.

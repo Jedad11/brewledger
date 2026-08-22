@@ -303,7 +303,7 @@ verbatim below.
 ### กำไรขาดทุน `/console/reports/pnl`
 - **Partial** — `หมายเหตุ: 12 จาก 47 รายการยังไม่มีข้อมูลต้นทุน (คิดเป็นยอดขาย 540 บาท) กำไรที่แสดงจึงคำนวณจากรายการที่มีข้อมูลเท่านั้น` — plain text, always visible, never a tooltip, never red.
 - **All untracked** — revenue and expenses normal; กำไรสุทธิ `—`; note reads `ยอดขายและค่าใช้จ่ายแสดงตามจริง ส่วนกำไรสุทธิจึงยังคำนวณไม่ได้`.
-- **Absorbed fee** — `ค่าธรรมเนียม (BrewLedger ออกให้): 45 บาท`, displayed but not subtracted from merchant profit.
+- **No fee line (WBS 7.5 — corrected here).** The delivered prototype (`design/console-reports.js` `scPnl()`) renders an absorbed-fee row (`ค่าธรรมเนียม (BrewLedger ออกให้): 45 บาท`, struck-through, excluded from merchant profit) — this bullet previously described it. WBS 4.8 ("Fee Model Documentation," superseding the earlier gateway-fee-absorption design) removed `merchants.absorb_gateway_fee`, `orders.gateway_fee_satang`, and `orders.fee_borne_by` from the schema and its own Claude Code Prompt explicitly lists "the absorbed-fee line in the WBS 7.5 P&L" among the lines to delete: the MVP uses direct merchant-owned PromptPay, so no per-transaction fee is ever attributable to BrewLedger. The line items on this screen are ยอดขาย / ต้นทุนวัตถุดิบ / ค่าใช้จ่ายอื่น / กำไรสุทธิ — no fee row, on any day, any variant.
 
 ### กำไรต่อเมนู `/console/reports/profit-per-dish`
 - **Insight (only when best-seller ≠ top profit contributor)** — `ขายดีที่สุดคือ อเมริกาโน่ (210 แก้ว) แต่กำไรรวมสูงสุดคือ ลาเต้เย็น (3,240 บาท)`

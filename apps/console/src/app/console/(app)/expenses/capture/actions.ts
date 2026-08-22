@@ -53,13 +53,13 @@ function lineTotalSatang(item: PurchaseLineItemInput): number {
  * merchant's typed rows are parked in raw_ocr_output for WBS 6.4's confirm
  * step to read back after it resolves each line to an ingredient (and
  * therefore a base_unit). image_path is left unset here (stays NULL,
- * migration 0042); uploadPurchaseInvoicePhoto below fills it in as a
+ * migration 0043); uploadPurchaseInvoicePhoto below fills it in as a
  * separate step once this row's id exists, mirroring
  * apps/console/.../menu/[id]/actions.ts's saveMenuItem + uploadMenuItemPhoto
  * split for the same session-cookie reason (see that file's own comment).
  *
  * ocr_status is set to 'manual' explicitly for readability, even though the
- * column now defaults to it (migration 0042 recommends this explicitly).
+ * column now defaults to it (migration 0043 recommends this explicitly).
  */
 export async function createPurchaseInvoice(
   input: CreatePurchaseInvoiceInput,

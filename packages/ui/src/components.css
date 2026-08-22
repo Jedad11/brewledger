@@ -182,6 +182,30 @@ button{font-family:inherit;letter-spacing:var(--tracking-normal)}
 .oc-big{font-size:var(--text-8);font-weight:800;line-height:1.15}
 .oc-big .money{font-weight:800}
 .oc-metnote{font-size:var(--text-2);margin-top:.4rem}
+/* WBS 7.1 — ported verbatim from /design/Owner Console.html lines 37-42
+ * (.oc-split/.oc-slots/.oc-slotrow/.oc-quickrow), not previously extracted
+ * into this file since no screen used them before the dashboard. */
+.oc-split{display:flex;gap:var(--space-3);margin-top:.6rem}
+.oc-split span{display:grid;font-size:var(--text-2);color:var(--text-black-soft)}
+.oc-split b{font-size:var(--text-6);color:var(--green-ledger)}
+.oc-slots{display:grid;gap:0;margin-top:1.2rem}
+.oc-slotrow{display:flex;justify-content:space-between;padding:1.1rem 0;border-top:1px solid var(--hairline)}
+.oc-quickrow{display:grid;gap:1.2rem;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+/* WBS 7.5 — ported verbatim from /design/Console Reports.html <style>
+ * (.oc-datesel/.oc-arrow/.oc-pnl/.oc-pnlrow/.oc-spark), not previously
+ * extracted into this file since no screen used them before the P&L report.
+ * .oc-absorbed (the prototype's struck-through gateway-fee row) is
+ * deliberately NOT ported — WBS 4.8 removed the fee line it styled. */
+.oc-datesel{display:flex;align-items:center;justify-content:space-between;gap:1.2rem;background:var(--white);border-radius:var(--radius-pill);box-shadow:var(--shadow-card);padding:.6rem 1.2rem}
+.oc-arrow{width:var(--tap-min);height:var(--tap-min);border:0;border-radius:50%;background:var(--ceramic);color:var(--green-ledger);font-size:var(--text-5);cursor:pointer}
+.oc-arrow:disabled{color:var(--c-unknown);cursor:default}
+.oc-pnl{display:grid}
+.oc-pnlrow{display:flex;justify-content:space-between;align-items:baseline;gap:1.2rem;padding:1.2rem 0;border-top:1px solid var(--hairline)}
+.oc-pnl .oc-pnlrow:first-child{border-top:0}
+.oc-pnlrow.is-net{border-top:2px solid var(--green-ledger);padding-top:1.6rem}
+.oc-disclose p{color:var(--text-black);line-height:var(--lh-thai-body)}
+.oc-spark{margin-top:1.2rem}
+.oc-spark svg{width:100%;height:64px}
 .oc-top{padding:var(--space-4) var(--gutter-md) var(--space-2);display:grid;gap:.6rem;justify-items:start}
 .oc-top .btn--quiet{white-space:nowrap;width:max-content;justify-self:start;padding-left:0}
 .oc-top h1{font-size:var(--text-6)}

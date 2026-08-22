@@ -55,7 +55,7 @@ yet built) renders `NULL` cost as `—`.
 `ingredients.current_unit_cost_satang` moves to the exact price of the most
 recently *confirmed* purchase for that ingredient (WBS 6.4's confirm
 transaction, `console_confirm_purchase_invoice`,
-`packages/db/migrations/0043_console_confirm_purchase_invoice.sql`) — not a
+`packages/db/migrations/0044_console_confirm_purchase_invoice.sql`) — not a
 weighted average across purchase history, not FIFO. This is a deliberate
 choice, not an omission: the merchant's real question is "what does this
 ingredient cost me *today*," which drives today's pricing decision, not "what

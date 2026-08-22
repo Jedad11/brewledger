@@ -535,8 +535,8 @@ R1b Manual payment confirmation is missed or delayed, so a customer who has paid
     released. Planned upgrade: slip-verification API at roughly 0.14-0.20 THB per slip.
     Owner M1.
 R2  Typhoon OCR extraction accuracy on crumpled, faded, or handwritten Thai market
-    receipts is below usable. Mitigation is the mandatory human confirm-or-edit step and
-    an always-available manual entry path. Owner M1.
+    receipts is below usable. DORMANT as of 2026-08-22: OCR (WBS 6.2/6.3) is deferred, so
+    this risk is not currently active. Reopen if OCR is un-deferred. Owner M1.
 R3  iOS Safari Web Push is unreliable for merchant order notifications. Mitigation is the
     mandatory in-tab polling fallback. Owner M2.
 R4  Gateway webhook duplication or retry double-counts revenue and stock. Mitigation is
@@ -555,9 +555,9 @@ R9  Supabase free tier has no automatic backups; a data loss event is unrecovera
 R10 Render free-tier cold start (30-60s) leaks onto a customer-blocking path. Mitigation
     is the architectural rule that only async work runs on Render, enforced by review.
     Owner M1.
-R11 Typhoon OCR daily free credit (~150 pages) exhausted as the pilot grows. Mitigation
-    is queue-and-retry-tomorrow plus the manual entry path, and a costed upgrade estimate.
-    Owner M1.
+R11 Typhoon OCR daily free credit (~150 pages) exhausted as the pilot grows. DORMANT as of
+    2026-08-22: OCR (WBS 6.2/6.3) is deferred, so this risk is not currently active. Reopen
+    if OCR is un-deferred. Owner M1.
 
 Below the table add a "Review cadence" section stating: reviewed at every standup where
 status changed, in full at every phase gate, and that a risk may only be closed when its
@@ -4391,85 +4391,80 @@ other number the product produces. This is not a convenience feature.
 ```
 
 ---
-## Phase 6.0 — OCR, Inventory and Unit Costing
+## Phase 6.0 — Inventory and Unit Costing (Manual Entry; OCR Deferred)
 
-> **Everything in this phase except bill capture runs on the Render worker.** Nobody is waiting on an OCR extraction, so a 30–60 second cold start is acceptable here and only here. The UI must say so honestly rather than pretending the work is instant.
+> **Scope change (2026-08-22): OCR is deferred, not removed.** 6.2 (Typhoon integration) and 6.3 (OCR parsing) are cut from the active build. The architecture already treats manual entry as first-class — 6.1 and 6.4 were designed from the start as "one component, two entry points," with OCR as an optional accelerator layered on top of a manual form that writes the same rows. Cutting 6.2/6.3 removes the Float16 dependency, the daily quota risk (R11), and the accuracy risk (R2) without touching the costing model, the schema, or 6.5/6.6/6.8/6.9, none of which know or care whether a purchase price was typed or extracted. 6.1 and 6.4 below are rescoped to manual-only; their OCR-handling paragraphs are struck through and kept for reference if this is un-deferred later. Nothing in this phase has been implemented yet, so this is a pure planning-doc change.
+>
+> **Everything in this phase runs on the Render worker except purchase entry itself.** The worker still owns cost recalculation (6.9) and cost drift checks (7.4), neither of which has a human waiting, so the 30–60 second cold start remains acceptable there and only there.
 
 ---
 
-### 6.1 Bill Capture in the Browser
+### 6.1 Purchase / Bill Entry (Manual)
 
 | Field | Detail |
 |---|---|
 | **WBS Code** | 6.1 |
 | **Type** | Work Package |
-| **Requirement** | F22 |
+| **Requirement** | F22 (rescoped — see phase banner) |
 | **Owner** | M2 |
 | **Surface** | Owner Console |
 | **Red Line Touch** | RL-3 (bill images are merchant-private) |
 | **Automation** | ▶️ Claude Code |
 
 **Scope / Statement of Work**
-Let a merchant photograph a supplier bill from the browser, compress it, and queue it for extraction. Two practical realities drive the design: phone photos of receipts are routinely rotated and 3–5 MB raw, which would exhaust the 1 GB free storage in about 250 bills; and the merchant is photographing a crumpled slip on a metal counter under fluorescent light, so capture guidance materially changes downstream accuracy.
+Let a merchant record a supplier purchase directly — vendor, date, line items, quantities, prices — typed in, with an optional photo of the bill attached purely as a private reference image. No extraction pipeline runs against it. This *is* the manual-entry path that 6.4 always kept available; with 6.2/6.3 deferred, it is now the only path, so it is built as the primary flow rather than a fallback link.
 
 **Deliverables**
-- `/console/expenses/capture` using `<input capture="environment">` with a `getUserMedia` path where supported
-- Client-side compression and EXIF rotation via the 3.8 utility
-- Upload to the private `bills` bucket and enqueue an `ocr_extract` job
-- Honest processing state that accounts for worker cold start
-- A manual entry path always visible
+- `/console/expenses/capture` — a purchase entry form: vendor, date, line items (name, qty, unit, unit cost), optional photo attachment via `<input capture="environment">`
+- Client-side compression and EXIF rotation via the 3.8 utility, applied to the optional attachment only
+- If a photo is attached, upload to the private `bills` bucket and link it to the `purchase_invoices` row for reference — **no job is enqueued, no extraction runs**
+- Submission goes straight to the 6.4 confirmation/write step; there is no waiting state, because nothing runs in the background
 
 **Acceptance**
-- A photo taken on a mid-range Android uploads in under 10 seconds on 4G
-- Images are ≤ 200 KB and correctly oriented after upload
+- A merchant can complete a purchase entry with or without attaching a photo
+- If attached, images are ≤ 200 KB and correctly oriented after upload
 - **The uploaded image is not retrievable without a merchant-scoped signed URL (RL-3)**
-- The processing state explains a possible wait rather than showing a spinner that appears stuck
-- **A merchant can always enter a bill manually without using OCR at all**
+- No `ocr_extract` job, or any other background job, is enqueued by this entry
 
 **Associated Activities**
-- Build capture with guidance overlay
-- Wire compression and upload
-- Enqueue the job and design the waiting state
-- Test on a real crumpled receipt in poor light
+- Build the manual entry form
+- Wire optional photo compression and upload as a reference attachment
+- Test on a real crumpled receipt photo purely as an attachment (no extraction to verify)
+
+<details>
+<summary>Deferred: original OCR-queue design (restore only if 6.2/6.3 are un-deferred)</summary>
+
+~~Two practical realities drove the original design: phone photos of receipts are routinely rotated and 3–5 MB raw, which would exhaust the 1 GB free storage in about 250 bills; and the merchant is photographing a crumpled slip on a metal counter under fluorescent light, so capture guidance materially changes downstream accuracy. The form was to insert a `purchase_invoices` row with `ocr_status 'pending'`, enqueue an `ocr_extract` job (WBS 3.3 queue), and show an honest processing state accounting for the worker's 30–60s cold start ("กำลังอ่านบิล... ใบแรกของวันอาจใช้เวลาถึง 1 นาที") before landing on 6.4. That whole path is dormant, not deleted — restoring it means re-enabling 6.2/6.3 and adding the enqueue call back into this entry's submit handler.~~
+
+</details>
 
 **▶️ Claude Code Prompt**
 ```
-Build supplier bill capture for Brew Ledger at
+Build supplier purchase entry for Brew Ledger at
 apps/console/app/console/expenses/capture/page.tsx.
 
-Physical reality to design for: the merchant is photographing a crumpled thermal receipt on
-a metal counter under fluorescent light, one-handed, between customers.
+This is a manual data-entry form, not a capture-then-extract flow. OCR is deferred (see WBS
+Phase 6.0 banner) -- do not add any job enqueue or extraction call here.
 
-1. Capture: <input type="file" accept="image/*" capture="environment"> as the baseline, with
-   a getUserMedia() live-preview path where supported. Always allow choosing an existing
-   photo from the gallery.
+1. Form fields: vendor name, invoice date, line items (repeatable row: name, qty, unit,
+   unit cost in THB, computed line total), and an optional photo attachment.
 
-2. Capture guidance overlay in the live path: a rectangle guide, a Thai hint
-   ("วางบิลให้เต็มกรอบ หลีกเลี่ยงเงาและแสงสะท้อน"), and a simple blur/brightness check that
-   warns before upload rather than after extraction fails. Guidance materially changes
-   downstream OCR accuracy; a warning here is far cheaper than a failed extraction.
+2. Photo attachment is OPTIONAL and PURELY REFERENCE: <input type="file" accept="image/*"
+   capture="environment">, gallery selection allowed. If provided, compress via
+   packages/shared/src/storage/compress.ts from WBS 3.8 (max edge 1600px, target <= 200KB,
+   EXIF orientation corrected) and upload to the PRIVATE bills bucket at
+   bills/{store_id}/{invoice_id}.jpg. Do NOT enqueue any job and do NOT set an ocr_status
+   field -- there is no extraction pipeline to track.
 
-3. Compression: use packages/shared/src/storage/compress.ts from WBS 3.8 -- max edge 1600px,
-   target <= 200KB, EXIF orientation corrected. A sideways bill wrecks extraction. Show the
-   before/after size so the merchant sees nothing was lost.
+3. Submit hands the typed line items straight to the 6.4 confirmation/write step (same
+   transaction: purchase_invoices, purchase_line_items, ingredient cost update, stock
+   ledger, cost_recalc job). There is no intermediate "processing" state.
 
-4. Upload to the PRIVATE bills bucket at bills/{store_id}/{invoice_id}.jpg, insert a
-   purchase_invoices row with ocr_status 'pending' and review_status 'needs_review', then
-   enqueue an 'ocr_extract' job (WBS 3.3 queue).
+4. Money: parse to integer satang. Never float.
 
-5. HONEST PROCESSING STATE -- this matters. The Render worker spins down after 15 minutes
-   idle and cold-starts in 30-60 seconds, so the first bill of the morning genuinely takes
-   about a minute. Do not show an indeterminate spinner that reads as broken. Show:
-   "กำลังอ่านบิล... ใบแรกของวันอาจใช้เวลาถึง 1 นาที" with an elapsed counter, and let the
-   merchant navigate away and come back. Notify when it completes.
-
-6. ALWAYS-AVAILABLE MANUAL PATH: a visible "กรอกเอง" link next to the camera button, not
-   hidden behind a failure. OCR is a convenience; it must never be the only way to record an
-   expense. If OCR fails, the merchant lands in the same manual form with the image attached.
-
-7. Tests: a 4MB fixture compresses under 200KB; an EXIF-rotated fixture uploads upright; the
-   job row is enqueued exactly once per upload; the manual path reaches a working form
-   without any OCR call.
+5. Tests: a 4MB photo fixture compresses under 200KB when attached; an EXIF-rotated fixture
+   uploads upright; submitting without a photo works and creates no bills-bucket object;
+   submitting never enqueues an ocr_extract job or any job at all.
 ```
 
 ---
@@ -4484,7 +4479,9 @@ a metal counter under fluorescent light, one-handed, between customers.
 | **Owner** | M1 |
 | **Surface** | Shared / Backend |
 | **Red Line Touch** | None |
-| **Automation** | 🔴 Manual (Float16 account + API key) + ▶️ Claude Code (client + fallbacks) |
+| **Automation** | ⏸️ **DEFERRED** — not in the active build. Do not create the Float16 account or start this entry until it is un-deferred. |
+
+> **DEFERRED (2026-08-22).** See the Phase 6.0 banner. 6.1/6.4 no longer depend on this entry — they are manual-only. Content below is kept intact for when OCR is restored.
 
 **Scope / Statement of Work**
 Integrate Thai-language OCR through Typhoon OCR served by Float16, replacing the self-hosted PaddleOCR of the original plan. Typhoon is an open vision-language model built specifically for Thai document extraction and benchmarked ahead of GPT-4o and Gemini 2.5 Flash on Thai document understanding, with a v1.5 that improved handwriting and irregular-form handling — which is what a market receipt is. Using the hosted API removes the GPU requirement entirely. The free allowance is roughly 150 pages per day, and the quota path must degrade gracefully rather than failing the merchant's evening.
@@ -4597,7 +4594,9 @@ this project has no budget for. Free allowance is roughly 150 pages/day; usage e
 | **Owner** | M1 |
 | **Surface** | Shared / Backend |
 | **Red Line Touch** | None |
-| **Automation** | ▶️ Claude Code |
+| **Automation** | ⏸️ **DEFERRED** — depends on 6.2, also deferred. |
+
+> **DEFERRED (2026-08-22).** See the Phase 6.0 banner. Content below is kept intact for when OCR is restored.
 
 **Scope / Statement of Work**
 Turn the model's text output into structured line items with quantities, units, and prices, and attach a confidence to each field so the review screen can direct the merchant's attention. Thai receipts have no standard layout, mix Thai and Arabic numerals, and abbreviate units inconsistently — `กก.`, `กิโล`, `kg`, and `ก.ก.` all appear. The parser must be conservative: a field it is unsure about should be marked low-confidence rather than guessed, because a wrong price silently propagates into every cost figure the product shows.
@@ -4673,77 +4672,75 @@ BE year conversion; arithmetic mismatch flagging; fuzzy match threshold behaviou
 
 ---
 
-### 6.4 OCR Review and Confirmation Screen
+### 6.4 Purchase Confirmation Screen (Manual)
 
 | Field | Detail |
 |---|---|
 | **WBS Code** | 6.4 |
 | **Type** | Work Package |
-| **Requirement** | F23 |
+| **Requirement** | F23 (rescoped — see phase banner) |
 | **Owner** | M2 |
 | **Surface** | Owner Console |
 | **Red Line Touch** | None |
 | **Automation** | ▶️ Claude Code |
 
 **Scope / Statement of Work**
-Put a human between the model and the ledger. This screen is non-negotiable in the architecture: OCR writes nothing to `ingredients.current_unit_cost_satang` until a merchant confirms it. A single misread digit — 250 read as 2500 — would silently corrupt the cost of every menu item using that ingredient, and the merchant would discover it as a profit figure they cannot explain, which ends their trust in the entire product.
+Put a human between the typed number and the ledger. This screen is still non-negotiable in the architecture even with OCR deferred: nothing writes to `ingredients.current_unit_cost_satang` until a merchant explicitly confirms it, because a fat-fingered price would silently corrupt the cost of every menu item using that ingredient, and the merchant would discover it as a profit figure they cannot explain. With OCR deferred, this screen has one job it always had and one it no longer needs: it still shows a plain-language "what's about to change" summary before committing, but it no longer needs confidence-driven highlighting, since every field the merchant sees is one they typed themselves in 6.1.
 
 **Deliverables**
-- `/console/expenses/[id]/review` — image beside editable extracted fields
-- Low-confidence fields visually flagged and focused first
+- Confirmation step reached from 6.1's submit — image (if attached) beside the typed fields, editable up to the point of confirm
 - Ingredient mapping with suggestions and create-new inline
 - Confirm action writing costs and stock in one transaction
-- Manual entry form sharing the same component
+- A plain Thai "what's about to change" summary shown before commit
 
 **Acceptance**
-- **No confirmation, no cost write** — asserted by a test that runs extraction and verifies `ingredients` is untouched until confirm
-- Low-confidence fields are visually distinct and receive focus order priority
-- The source image is viewable zoomed beside the fields being corrected
+- **No confirmation, no cost write** — asserted by a test that submits a purchase and verifies `ingredients` is untouched until confirm
+- The reference image (if any) is viewable zoomed beside the fields
 - Confirming a 5-line bill takes under 60 seconds
-- The same form serves manual entry with no OCR involved
+- Unmapped lines record as a general expense and never force an ingredient match
 
 **Associated Activities**
-- Build the split-view review screen
-- Implement confidence-driven highlighting and focus order
+- Build the confirmation screen
 - Implement inline ingredient creation
 - Time a 5-line confirmation
 
+<details>
+<summary>Deferred: original OCR confidence-driven UI (restore only if 6.2/6.3 are un-deferred)</summary>
+
+~~With OCR live, extracted fields carried a per-field confidence score (WBS 6.3). Fields below 0.7 confidence got a warning treatment (amber border, icon) and came first in tab/focus order; fields at or above 0.9 rendered plainly so the merchant wasn't asked to re-verify what the model already got right; an invoice-level arithmetic-mismatch banner named which lines disagreed. Ingredient matches auto-selected above 0.85 confidence and fell back to a suggestion dropdown below it. Restoring this means re-enabling 6.2/6.3 and reintroducing the confidence-driven layout and focus order on top of the form below.~~
+
+</details>
+
 **▶️ Claude Code Prompt**
 ```
-Build the OCR review and confirmation screen for Brew Ledger at
+Build the purchase confirmation screen for Brew Ledger at
 apps/console/app/console/expenses/[id]/review/page.tsx.
 
-ARCHITECTURAL RULE THIS SCREEN ENFORCES: OCR output NEVER writes to
-ingredients.current_unit_cost_satang without human confirmation. A single misread digit
-(250 read as 2500) silently corrupts the cost of every menu item using that ingredient, and
-the merchant discovers it as a profit number they cannot explain. That is unrecoverable
-trust damage. Write this rule as a comment at the top of the file.
+ARCHITECTURAL RULE THIS SCREEN ENFORCES: nothing writes to
+ingredients.current_unit_cost_satang without an explicit human confirm tap, even though the
+values were typed by the merchant themselves in WBS 6.1 -- a fat-fingered price silently
+corrupts the cost of every menu item using that ingredient, and the merchant discovers it as
+a profit number they cannot explain. Write this rule as a comment at the top of the file.
+OCR is deferred (see WBS Phase 6.0 banner) -- do not add confidence scoring, confidence-driven
+highlighting, or arithmetic-mismatch flags here; every field on this screen was typed by the
+merchant, not extracted.
 
-1. Layout, mobile-first: the bill image on top (pinch-zoom, tap to expand full screen),
-   extracted fields below. On tablet/desktop, side by side. The merchant must be able to
-   read the actual receipt while correcting a field -- never make them remember it.
+1. Layout, mobile-first: the reference image (if one was attached in 6.1) on top, pinch-zoom,
+   tap to expand full screen; the typed fields below, still editable. On tablet/desktop, side
+   by side. If no image was attached, skip straight to the fields.
 
-2. Fields: vendor, invoice date, then a line item list. Each line: name, quantity, unit,
-   unit cost, line total. All editable.
+2. Fields: vendor, invoice date, line item list (name, quantity, unit, unit cost, line
+   total), carried over from 6.1, still editable here.
 
-3. CONFIDENCE-DRIVEN UI:
-   - fields with confidence < 0.7 get a warning treatment (amber border, a small icon) and
-     come FIRST in tab/focus order, so the merchant's attention goes where it is needed
-   - fields with confidence >= 0.9 render plainly -- do not make the merchant re-verify what
-     the model got right, or they will stop using the feature
-   - the invoice-level arithmetic mismatch flag from WBS 6.3 renders as a single clear Thai
-     banner naming which lines disagree
-
-4. Ingredient mapping per line:
-   - auto-selected when match confidence >= 0.85
-   - a suggestion dropdown below that threshold, showing the score
+3. Ingredient mapping per line:
+   - match the typed name against existing ingredients.name for the store (exact/near-exact
+     match is enough here; there is no OCR confidence score to threshold against)
    - "สร้างวัตถุดิบใหม่" inline, capturing name and base unit without leaving the screen
    - unmapped lines are allowed: they record as a general expense and do not update any
-     ingredient cost. Do not force a mapping -- forcing one produces wrong data faster than
-     no data.
+     ingredient cost. Do not force a mapping.
 
-5. Confirm action, one transaction:
-   - update purchase_invoices review_status = 'confirmed'
+4. Confirm action, one transaction:
+   - insert/update purchase_invoices
    - write purchase_line_items
    - update ingredients.current_unit_cost_satang for every mapped line (WBS 6.6)
    - write stock_ledger rows with reason 'purchase' (WBS 6.8)
@@ -4752,13 +4749,9 @@ trust damage. Write this rule as a comment at the top of the file.
    "นมสด: ต้นทุนเปลี่ยนจาก 42 เป็น 45 บาท/ลิตร กระทบ 6 เมนู" -- so a wrong number is caught
    here rather than in a report next week.
 
-6. The same component serves MANUAL entry (no OCR): same form, empty fields, no confidence
-   treatment, reachable directly from WBS 6.1. One component, two entry points.
-
-7. Tests:
-   - extraction completes and ingredients.current_unit_cost_satang is UNCHANGED until
-     confirm is pressed
-   - low-confidence fields receive focus priority
+5. Tests:
+   - submitting from 6.1 leaves ingredients.current_unit_cost_satang UNCHANGED until confirm
+     is pressed
    - unmapped lines record as expense without touching any ingredient
    - confirm writes cost, ledger, and the recalc job atomically -- a forced failure rolls
      back all three
@@ -6718,8 +6711,8 @@ Every MVP feature maps to at least one implementing entry with exactly one accou
 | F19 | Order status update propagation | 5.7, 5.9 | M1 / M2 |
 | F20 | Cancel with automatic refund | 5.11 | M1 |
 | F21 | Manual cash sale entry | 5.12 | M2 |
-| F22 | Bill photo capture | 3.8, 6.1 | M2 |
-| F23 | OCR extraction with confirm-or-edit | 6.2, 6.3, 6.4 | M1 / M2 |
+| F22 | Purchase entry with optional bill photo attachment | 3.8, 6.1 | M2 |
+| F23 | ~~OCR extraction with confirm-or-edit~~ — **DEFERRED (2026-08-22).** 6.2/6.3 cut from the active build; 6.4 still provides the confirm-or-edit step, now on manually-typed fields. | 6.2, 6.3, 6.4 | M1 / M2 |
 | F24 | Unit cost update and profit recompute | 6.6, 6.9 | M1 |
 | F25 | Stock deduction with unit conversion | 6.5, 6.8 | M1 / M2 |
 | F26 | Suggested BOM | 6.7 | M2 |
@@ -6815,8 +6808,8 @@ Which surface owns each screen, and which entry implements it. Use during bug tr
 | `/console/sales/quick` | Cash sale entry | 5.12 | M2 |
 | `/console/menu` | Menu list | 4.4 | M2 |
 | `/console/menu/{id}` | Item editor + optional recipe block | 4.4, 6.7 | M2 |
-| `/console/expenses/capture` | Bill capture | 6.1 | M2 |
-| `/console/expenses/{id}/review` | OCR review and confirm | 6.4 | M2 |
+| `/console/expenses/capture` | Purchase entry (manual, optional photo) | 6.1 | M2 |
+| `/console/expenses/{id}/review` | Purchase confirm (manual entry) | 6.4 | M2 |
 | `/console/inventory` | Ingredients, stock, ledger | 6.5, 6.8 | M2 |
 | `/console/reports/pnl` | Daily P&L | 7.5 | M2 |
 | `/console/reports/profit-per-dish` | Profit per Dish | 7.6 | M2 |
@@ -6842,13 +6835,13 @@ Every task in this dictionary that a human must perform, in dependency order. No
 | 3 | 3.3 | Render account and worker service | 6.x, 7.x jobs |
 | 4 | 3.4 | Vercel account and two projects | all UI deployment |
 | 5 | 3.8 | Storage bucket creation (`bills` private, `menu-images` public) | 6.1 |
-| 6 | 3.9 | Entering secrets in Supabase and Render dashboards | 5.5, 6.2 |
+| 6 | 3.9 | Entering secrets in Supabase and Render dashboards | 5.5 |
 | 7 | 3.10 | GitHub Actions secrets, alert destination, **backup restore drill** | pilot start |
 | 8 | 3.11 | Sentry account and three projects | production readiness |
 | 9 | 4.1 | SMS provider account and Supabase Auth phone configuration | 4.2 onward |
 | ~~10~~ | ~~4.5~~ | ~~Payment gateway sandbox + KYC submission~~ — **REMOVED.** The MVP uses merchant-owned PromptPay; there is no gateway account and no KYC. This was the project's longest external dependency and it is now gone. | — |
 | 11 | 5.8 | VAPID key generation and real-device push testing | F17 acceptance |
-| 12 | 6.2 | Float16 account, API key, and OCR accuracy spike on real receipts | all of Phase 6 |
+| ~~12~~ | ~~6.2~~ | ~~Float16 account, API key, and OCR accuracy spike on real receipts~~ — **DEFERRED (2026-08-22).** 6.2/6.3 are cut from the active build; nothing in Phase 6 depends on Float16 any more. Re-add this item only if OCR is un-deferred. | — |
 | ~~13~~ | ~~2.3, 2.4~~ | ~~Figma wireframes and hi-fi design~~ — **COMPLETE.** Delivered as an interactive prototype from Claude Design; see 2.1 | — |
 | 13 | 2.3 | Usability testing sessions with real cafe owners (3 merchants, 5 customers) | Phase 4-7 UI entries |
 | 14 | 8.6 | Real-device testing matrix | 8.5 audit |

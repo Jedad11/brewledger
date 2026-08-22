@@ -28,8 +28,8 @@ describe("PnlView", () => {
       html = renderToStaticMarkup(<PnlView day={BASE} />);
     }).not.toThrow();
 
-    expect(html).toContain("324.00"); // revenue rendered normally
-    expect(html).toContain("8.00"); // other-expense rendered normally
+    expect(html).toContain("324"); // revenue rendered normally
+    expect(html).toContain("8"); // other-expense rendered normally
     // Net profit renders the unknown glyph, never a literal 0.
     expect(html).not.toMatch(/money--profit[^>]*>[^<]*0/);
     expect(html).toContain("—");
@@ -47,7 +47,7 @@ describe("PnlView", () => {
     };
     const html = renderToStaticMarkup(<PnlView day={partial} />);
 
-    expect(html).toContain("42.00"); // net profit rendered, not "—"
+    expect(html).toContain("42"); // net profit rendered, not "—"
     expect(html).toContain('data-testid="untracked-disclosure-pnl-partial"');
     expect(html).toContain("4 จาก 12 รายการยังไม่มีข้อมูลต้นทุน"); // 12 - 8 = 4 untracked
     expect(html).toContain("540 บาท");
@@ -65,7 +65,7 @@ describe("PnlView", () => {
     };
     const html = renderToStaticMarkup(<PnlView day={fullyTracked} />);
 
-    expect(html).toContain("196.00");
+    expect(html).toContain("196");
     expect(html).not.toContain("bl-untracked-disclosure");
     expect(html).not.toContain('data-testid="untracked-disclosure-pnl-partial"');
     expect(html).not.toContain('data-testid="untracked-disclosure-pnl-all"');

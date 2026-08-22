@@ -112,6 +112,105 @@ targets `apps/shop` importing `apps/console`/`packages/costing`, not `next`
 itself) — flagged only so it's visibly checked, not silently assumed safe.
 **Marking this cross-cutting fix reviewed and closed.**
 
+### Follow-up (2026-08-23) — three report/inventory pages had their own independent width bug, plus MoneyValue's stale 2-decimal default
+
+Found by the user doing a live screenshot comparison of `/console/reports/pnl`
+against `/design/Console Reports.html`, after the cross-cutting fix above had
+already landed and been signed off. This is a **separate, pre-existing bug**
+in the individual pages' own wrapper markup — the cross-cutting fix repaired
+the shared shell (`.oc`/`.oc-main`/`NavShell`) but never touched these three
+pages' own JSX.
+
+1. **Ad-hoc Tailwind `<main>` wrapper capped width at 672-768px**,
+   completely bypassing `.oc-body{max-width:1180px}`, in:
+   - `apps/console/src/app/console/(app)/reports/pnl/page.tsx` (2 occurrences
+     — empty-store branch and normal branch)
+   - `apps/console/src/app/console/(app)/reports/profit-per-dish/page.tsx`
+     (2 occurrences)
+   - `apps/console/src/app/console/(app)/inventory/page.tsx` (1 occurrence)
+
+   Also invalid HTML: `(app)/layout.tsx` already renders
+   `<main className="oc-main">{children}</main>`, so all 5 occurrences were a
+   second, nested `<main>` inside that outer one. Fixed by deleting the
+   Tailwind `<main>` wrapper in all 5 spots. `PnlClient`/`ProfitPerDishClient`
+   already render their own root `<div className="oc-body">`, so their
+   normal-branch page.tsx now just returns `<ReportsSubNav/>` + heading +
+   the client component as siblings, no extra wrapper needed; their
+   empty-store branches keep the `<div className="oc-body">` they already
+   had, just unwrapped from `<main>`. `IngredientListClient` (inventory) does
+   **not** render its own `.oc-body` (its root is a bare Tailwind
+   `flex flex-col gap-4`) so `inventory/page.tsx` now wraps it in
+   `<div className="oc-body">` itself.
+
+   Also dropped the ad-hoc Tailwind heading classes
+   (`font-serif text-3xl font-bold leading-[1.35] text-ink`) on the pnl and
+   profit-per-dish `<h1>`s — `packages/ui/src/components.css` already styles
+   bare `h1` (font-thai, weight 800, `--text-6`, `--lh-thai-head`) and
+   `IngredientListClient`'s own `<h1>` already relies on that base style with
+   no Tailwind override, so the two report pages were the odd ones out. Now
+   all three pages defer to the same base rule.
+
+   **Flagged, not fixed (out of this task's scope):** the identical
+   ad-hoc-`<main>`-wrapper bug is also present, unchanged, in
+   `apps/console/src/app/console/(app)/page.tsx` (the dashboard —
+   ironically the file this task's own instructions cited as the "correct
+   reference pattern," which turned out to be inaccurate — the dashboard's
+   `page.tsx` still wraps `{heading}` + `<DashboardClient>`/`<DashboardView>`
+   in the same `mx-auto w-full max-w-2xl px-4 py-8` `<main>`, despite the
+   prior cross-cutting fix's commit message listing WBS 7.1 as one of the
+   screens it fixed), and in at least 8 more pages found by grepping for
+   `max-w-2xl|max-w-3xl|mx-auto w-full` across `apps/console`:
+   `inventory/[id]/page.tsx`, `orders/[id]/OrderDetailClient.tsx`,
+   `settings/subscription/page.tsx`, `settings/store/page.tsx`,
+   `settings/payments/page.tsx`, `settings/link/page.tsx`,
+   `settings/capacity/page.tsx`, `orders/page.tsx`, `menu/page.tsx`,
+   `menu/[id]/page.tsx`. This looks like a repo-wide pattern from before the
+   `.oc-body` scaffold existed, not isolated to the three files in scope
+   here — recommend a dedicated cross-cutting follow-up pass rather than
+   fixing piecemeal per screen.
+
+2. **`MoneyValue` rendered ฿0.00 instead of ฿0 / ฿8,420** on the P&L page
+   (confirmed live via the same screenshot) — `PnlClient.tsx` and
+   `ProfitPerDishClient.tsx` call `MoneyValue` (4 sites each) with no
+   `decimals` prop, defaulting to `MoneyValue`'s own `decimals={2}`. Grepped
+   every `MoneyValue`/`PublicMoneyValue` caller in the repo: **zero** ever
+   pass `decimals={2}` explicitly — every caller relied on the default, and
+   neither prototype helper (`console-reports.js`'s nor `customer-web.js`'s
+   own `B()`) ever shows decimals. This confirms the open question the prior
+   fix flagged (PROGRESS.md above, Fix 3) was the component's default being
+   wrong from WBS 2.2, not a per-caller oversight.
+
+   Fixed by changing `MoneyValue`'s own default from `decimals = 2` to
+   `decimals = 0` in `packages/ui/src/components/MoneyValue.tsx`, safe
+   project-wide since no caller overrides it. `MetricCard.tsx`'s
+   `decimals={0}` kept (now redundant, but left explicit as documentation,
+   comment updated). Updated 3 stale `.00`-literal assertions in
+   `PnlClient.test.tsx` (`"324.00"→"324"`, `"42.00"→"42"`,
+   `"8.00"`/`"196.00"` likewise) — grepped both `packages/ui` and
+   `apps/console` for any other `.00`-literal money assertions, found none
+   else.
+
+   **Flagged, not fixed (explicitly out of scope):** `PublicMoneyValue.tsx`
+   (`apps/shop`'s equivalent component) still defaults to `decimals = 2` and
+   was deliberately left untouched. Its own prototype helper
+   (`customer-web.js`'s `B()`) also never shows decimals, so the same bug
+   likely exists live in Customer Web too — worth a redline_reviewer check
+   against a live `apps/shop` render before deciding whether to fix it the
+   same way.
+
+**Verification:** `npx tsc --noEmit` and `npx eslint` clean on every touched
+file (both `apps/console` and `packages/ui`). RL-2 forbidden-phrase grep
+clean. `apps/console`'s full vitest suite: 191/191 passing (was 191 before
+this change too — the 3 fixed assertions were failing until updated, not new
+tests). Grepped for any other `max-w-2xl`/`max-w-3xl`/`mx-auto w-full` test
+assertions that might have gone stale — none found. Dev server (`pnpm dev`,
+already running) returns the expected `307` redirect to `/console/login` for
+`/console/reports/pnl` — not independently confirmed via an authenticated
+live render in this session (no browser/Playwright tooling used here); left
+for `redline_reviewer`.
+
+Implemented by: engineer.
+
 | WBS | Title | Phase | Status | Pattern | Implemented by | Reviewed by | Commit/PR ref | Notes |
 |---|---|---|---|---|---|---|---|---|
 | 3.1 | Repository, Monorepo Layout and CI | 3 | pre-existing (adapt, do not scaffold) | — | — | — | `b051af7`, `2617638` | `apps/shop` + `apps/console` already scaffolded and live on Vercel (competition QR code entry), predates this WBS. The dictionary's Claude Code prompt assumes greenfield scaffolding — do not run it verbatim. Read `docs/ops/migration_notes.md` before dispatching any agent against this entry. |

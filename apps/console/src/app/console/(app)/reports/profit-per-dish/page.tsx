@@ -33,9 +33,7 @@ export default async function ProfitPerDishPage() {
     store = storeRow as StoreRow | null;
   }
 
-  const heading = (
-    <h1 className="mb-6 font-serif text-3xl font-bold leading-[1.35] text-ink">{PAGE_TITLE}</h1>
-  );
+  const heading = <h1>{PAGE_TITLE}</h1>;
 
   // Mirrors WBS 7.1/7.5's own "no stores row yet" fallback -- a merchant who
   // hasn't finished WBS 4.3 can still reach any console route.
@@ -43,12 +41,10 @@ export default async function ProfitPerDishPage() {
     return (
       <>
         <ReportsSubNav />
-        <main className="mx-auto w-full max-w-3xl px-4 py-8">
-          {heading}
-          <div className="oc-body">
-            <ProfitPerDishView report={{ tracked: [], untracked: [], insight: null }} />
-          </div>
-        </main>
+        {heading}
+        <div className="oc-body">
+          <ProfitPerDishView report={{ tracked: [], untracked: [], insight: null }} />
+        </div>
       </>
     );
   }
@@ -59,10 +55,8 @@ export default async function ProfitPerDishPage() {
   return (
     <>
       <ReportsSubNav />
-      <main className="mx-auto w-full max-w-3xl px-4 py-8">
-        {heading}
-        <ProfitPerDishClient storeId={store.id} timezone={store.timezone} initialReport={initialReport} />
-      </main>
+      {heading}
+      <ProfitPerDishClient storeId={store.id} timezone={store.timezone} initialReport={initialReport} />
     </>
   );
 }

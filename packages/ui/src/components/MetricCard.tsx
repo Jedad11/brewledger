@@ -18,12 +18,9 @@ export function MetricCard({ label, value, role, note }: MetricCardProps) {
     <div className="card bl-metric-card" data-testid="metric-card">
       <p className="note-plain">{label}</p>
       <div className="oc-big">
-        {/* Cross-cutting fix (2026-08): prototype's own B() helper
-         * (console-reports.js) formats headline money with
-         * maximumFractionDigits defaulting to 0 -- "฿3,240", never
-         * "฿3,240.00". decimals={0} here, not a change to MoneyValue's own
-         * default (still 2), which stays a separate open question flagged
-         * for redline_reviewer. */}
+        {/* decimals={0} is MoneyValue's own default as of 2026-08 (see its
+         * own doc comment) -- kept explicit here as documentation, not
+         * because this call site needs to override anything. */}
         <MoneyValue value={value} role={role} decimals={0} />
       </div>
       {note ? <p className="note-plain">{note}</p> : null}

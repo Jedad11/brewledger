@@ -200,4 +200,50 @@ describe("comparisonRanges — like-for-like day counts", () => {
     expect(ranges.previous).toEqual({ fromBusinessDate: "2025-01-01", toBusinessDate: "2025-08-16" });
     expect(ranges.incomplete).toBe(true);
   });
+
+  function dayCount(from: string, to: string): number {
+    const [fy, fm, fd] = from.split("-").map(Number);
+    const [ty, tm, td] = to.split("-").map(Number);
+    const fromUtc = Date.UTC(fy, fm - 1, fd);
+    const toUtc = Date.UTC(ty, tm - 1, td);
+    return Math.round((toUtc - fromUtc) / 86400000) + 1;
+  }
+
+  it("REGRESSION: Mar 29 against a 28-day Feb truncates the CURRENT range to match, not just the previous one (previously left current at 29 days vs previous's clamped 28)", () => {
+    const ranges = monthComparisonRanges("Asia/Bangkok", new Date("2026-03-29T10:00:00+07:00"));
+    expect(ranges.incomplete).toBe(true);
+    expect(ranges.current).toEqual({ fromBusinessDate: "2026-03-01", toBusinessDate: "2026-03-28" });
+    expect(ranges.previous).toEqual({ fromBusinessDate: "2026-02-01", toBusinessDate: "2026-02-28" });
+    expect(dayCount(ranges.current.fromBusinessDate, ranges.current.toBusinessDate)).toBe(
+      dayCount(ranges.previous.fromBusinessDate, ranges.previous.toBusinessDate),
+    );
+  });
+
+  it("REGRESSION: Mar 29 in a leap year against a 29-day Feb needs no clamp at all -- both ranges land on day 29 untouched", () => {
+    const ranges = monthComparisonRanges("Asia/Bangkok", new Date("2024-03-29T10:00:00+07:00"));
+    expect(ranges.incomplete).toBe(true);
+    expect(ranges.current).toEqual({ fromBusinessDate: "2024-03-01", toBusinessDate: "2024-03-29" });
+    expect(ranges.previous).toEqual({ fromBusinessDate: "2024-02-01", toBusinessDate: "2024-02-29" });
+    expect(dayCount(ranges.current.fromBusinessDate, ranges.current.toBusinessDate)).toBe(
+      dayCount(ranges.previous.fromBusinessDate, ranges.previous.toBusinessDate),
+    );
+  });
+
+  it("REGRESSION: every recurring 31-vs-shorter-month skew date (Mar/May/Jul/Oct/Dec 30-31) produces equal current/previous day counts whenever incomplete", () => {
+    const skewDates = [
+      "2026-03-30", "2026-03-31",
+      "2026-05-30", "2026-05-31",
+      "2026-07-30", "2026-07-31",
+      "2026-10-30", "2026-10-31",
+      "2026-12-30", "2026-12-31",
+    ];
+    for (const d of skewDates) {
+      const ranges = monthComparisonRanges("Asia/Bangkok", new Date(`${d}T10:00:00+07:00`));
+      if (ranges.incomplete) {
+        expect(dayCount(ranges.current.fromBusinessDate, ranges.current.toBusinessDate)).toBe(
+          dayCount(ranges.previous.fromBusinessDate, ranges.previous.toBusinessDate),
+        );
+      }
+    }
+  });
 });

@@ -55,10 +55,11 @@ export function monthComparisonRanges(timeZone: string, now: Date = new Date()):
   const clampedDay = Math.min(day, daysInPrevMonth);
   const previousFrom = `${prevYear}-${pad2(prevMonth)}-01`;
   const previousTo = `${prevYear}-${pad2(prevMonth)}-${pad2(clampedDay)}`;
+  const currentTo = clampedDay < day ? `${year}-${pad2(month)}-${pad2(clampedDay)}` : today;
 
   return {
     mode: "month",
-    current: { fromBusinessDate: currentFrom, toBusinessDate: today },
+    current: { fromBusinessDate: currentFrom, toBusinessDate: currentTo },
     previous: { fromBusinessDate: previousFrom, toBusinessDate: previousTo },
     incomplete,
   };

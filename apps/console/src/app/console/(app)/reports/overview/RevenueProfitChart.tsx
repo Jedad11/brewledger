@@ -29,6 +29,10 @@ function bahtPlain(satang: number): string {
   return "฿" + (satang / 100).toLocaleString("th-TH", { maximumFractionDigits: 0 });
 }
 
+export function tooltipMoneyText(entry: { value: number | undefined } | undefined): string {
+  return entry && entry.value != null ? bahtPlain(entry.value) : "—";
+}
+
 interface ChartRow {
   month: string;
   label: string;
@@ -36,14 +40,14 @@ interface ChartRow {
   netProfitSatang: number | undefined;
 }
 
-function TooltipContent({ active, payload }: { active?: boolean; payload?: Array<{ dataKey: string; value: number }> }) {
+function TooltipContent({ active, payload }: { active?: boolean; payload?: Array<{ dataKey: string; value: number | undefined }> }) {
   if (!active || !payload || payload.length === 0) return null;
   const revenue = payload.find((p) => p.dataKey === "grossRevenueSatang");
   const profit = payload.find((p) => p.dataKey === "netProfitSatang");
   return (
     <div className="card" style={{ padding: "0.8rem 1.2rem", fontSize: "var(--text-2)" }}>
-      {revenue ? <div>{LEGEND_REVENUE}: {bahtPlain(revenue.value)}</div> : null}
-      <div>{LEGEND_PROFIT}: {profit ? bahtPlain(profit.value) : "—"}</div>
+      {revenue && revenue.value != null ? <div>{LEGEND_REVENUE}: {tooltipMoneyText(revenue)}</div> : null}
+      <div>{LEGEND_PROFIT}: {tooltipMoneyText(profit)}</div>
     </div>
   );
 }

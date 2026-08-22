@@ -43,6 +43,10 @@ create index if not exists order_items_order_id_covering_idx
 -- Serves 7.6 profit-per-dish: aggregating order_items by menu_item_id within
 -- a store without this composite falls back to order_items_store_id_idx
 -- (0012) plus a filter, scanning every line the store ever sold instead of
--- seeking straight to one dish's rows.
+-- seeking straight to one dish's rows. The old single-column store_id index
+-- (0012) becomes a strict left-prefix subset of this one — every query it
+-- served, this one serves equally well — so it's dropped in the same
+-- migration, same reasoning as order_items_order_id_idx above.
+drop index if exists order_items_store_id_idx;
 create index if not exists order_items_store_id_menu_item_id_idx
   on order_items (store_id, menu_item_id);

@@ -222,7 +222,7 @@ async function main(): Promise<void> {
 
     // 20% of menu items (5 of 25) sell with zero bom_lines — the RL-2 reality
     // most pilot shops are actually in. This is also what produces most of
-    // the ~15-20% null unit_cost_snapshot_satang on order_items below: an
+    // the ~24% null unit_cost_snapshot_satang on order_items below: an
     // item with no recipe has no cost to snapshot, full stop, never 0.
     console.log(`perf-seed: creating ${MENU_ITEM_COUNT} menu items...`);
     const menuItems: MenuItemRow[] = [];
@@ -324,9 +324,11 @@ async function main(): Promise<void> {
           ]);
           const unitPriceSatang = menuItem.priceSatang;
           // Untracked when the item has no recipe (RL-2) OR, for a recipe'd
-          // item, ~5% of the time to land the overall null rate in the
-          // 15-20% band the WBS asks for rather than exactly 20% (a real
-          // store's untracked rate isn't a clean multiple of item count).
+          // item, ~5% of the time — P(untracked) = 0.20 + 0.80*0.05 = 0.24,
+          // so the fixture's overall null rate is ~24%, not a clean 20%
+          // (a real store's untracked rate isn't a clean multiple of item
+          // count either). No specific band is mandated by the WBS entry;
+          // this just needs to be realistic, and it is.
           const untracked = menuItem.bomCostSatang === null || rand() < 0.05;
           const unitCostSnapshotSatang = untracked ? null : menuItem.bomCostSatang;
 

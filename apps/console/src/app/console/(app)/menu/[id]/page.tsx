@@ -44,9 +44,9 @@ export default async function MenuItemEditorPage({ params }: PageProps<"/console
 
   if (id === "new") {
     return (
-      <main className="mx-auto w-full max-w-xl px-4 py-8">
+      <div className="oc-body">
         <MenuItemEditorForm storeId={storeId} item={null} />
-      </main>
+      </div>
     );
   }
 
@@ -105,8 +105,8 @@ export default async function MenuItemEditorPage({ params }: PageProps<"/console
   };
 
   return (
-    <main className="mx-auto w-full max-w-xl px-4 py-8">
+    <div className="oc-body">
       <MenuItemEditorForm storeId={storeId} item={initialData} />
-    </main>
+    </div>
   );
 }

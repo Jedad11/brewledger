@@ -82,25 +82,29 @@ export default async function OrdersPage() {
   // working queue are both empty", per WBS 5.6's own forward-looking note.
   if (pendingOrders.length === 0 && workingOrders.length === 0) {
     return (
-      <main className="mx-auto w-full max-w-xl px-4 py-8">
-        <h1 className="mb-6 font-serif text-3xl font-bold leading-[1.35] text-ink">{PAGE_TITLE}</h1>
-        <PageEmptyState />
-      </main>
+      <>
+        <h1>{PAGE_TITLE}</h1>
+        <div className="oc-body">
+          <PageEmptyState />
+        </div>
+      </>
     );
   }
 
   return (
-    <main className="mx-auto w-full max-w-xl px-4 py-8">
-      <h1 className="mb-6 font-serif text-3xl font-bold leading-[1.35] text-ink">{PAGE_TITLE}</h1>
-      {pendingOrders.length > 0 ? <PendingPaymentSection orders={pendingOrders} /> : null}
-      {storeId ? (
-        <InboxClient
-          storeId={storeId}
-          initialOrders={workingOrders}
-          initialLastSeenAt={lastSeenAt}
-          initialMuted={notifySoundMuted}
-        />
-      ) : null}
-    </main>
+    <>
+      <h1>{PAGE_TITLE}</h1>
+      <div className="oc-body">
+        {pendingOrders.length > 0 ? <PendingPaymentSection orders={pendingOrders} /> : null}
+        {storeId ? (
+          <InboxClient
+            storeId={storeId}
+            initialOrders={workingOrders}
+            initialLastSeenAt={lastSeenAt}
+            initialMuted={notifySoundMuted}
+          />
+        ) : null}
+      </div>
+    </>
   );
 }

@@ -211,6 +211,26 @@ for `redline_reviewer`.
 
 Implemented by: engineer.
 
+### Follow-up sweep (2026-08-23) — the remaining 11 files closing out the full 14-file repo-wide fix
+
+Same defect as the 2026-08-23 follow-up above (ad-hoc Tailwind `<main className="mx-auto w-full max-w-{2xl|3xl|xl} px-4 py-8">` wrapper, nested inside `(app)/layout.tsx`'s own `<main className="oc-main">`, bypassing `.oc-body{max-width:1180px}`), fixed in the remaining 11 files that follow-up explicitly flagged but left out of scope:
+
+`(app)/page.tsx` (dashboard), `orders/page.tsx` (2 occurrences — empty-queue and normal branch), `orders/[id]/OrderDetailClient.tsx`, `menu/page.tsx`, `menu/[id]/page.tsx` (2 occurrences — new-item and edit-item branches), `inventory/[id]/page.tsx` (2 occurrences — new-ingredient and edit-ingredient branches), `settings/store/page.tsx`, `settings/payments/page.tsx`, `settings/link/page.tsx`, `settings/subscription/page.tsx`, `settings/capacity/page.tsx`. 15 occurrences total across the 11 files.
+
+`DashboardView` (`(app)/DashboardClient.tsx`) already renders its own root `<div className="oc-body">`, so `(app)/page.tsx` now returns the heading and `DashboardClient`/`DashboardView` as siblings with no extra wrapper — matching the `PnlClient`/`ProfitPerDishClient` pattern from the prior round. Every other child component in this round (`PageEmptyState`, `InboxClient`, `PendingPaymentSection`, `MenuListClient`, `MenuItemEditorForm`, `IngredientEditorForm`, `StoreProfileForm`, `PaymentsSettingsForm`, `StoreLinkQR`, `SubscriptionPlanView`, `CapacitySettingsForm`) does **not** render its own `.oc-body` root (confirmed by reading each one, not assumed), so those 10 files now wrap the child directly in `<div className="oc-body">`, matching `inventory/page.tsx`'s pattern from the prior round. `OrderDetailClient.tsx` (`use client`) got the same treatment at the JSX level — its existing `<header className="oc-top">` already carries the page's own back-button + order-code heading, so the outer `<main>` became a plain `<div className="oc-body">` around the unchanged header + card stack, and the ad-hoc Tailwind classes on its inner `<h1>{order.code}</h1>` (`font-serif text-3xl font-bold leading-[1.35] text-ink`) were dropped in favor of the base `h1` CSS rule, same as the prior round did for the report pages.
+
+Also dropped the same ad-hoc Tailwind heading classes wherever present on a bare page-level `<h1>` (`(app)/page.tsx`, `menu/page.tsx`, `settings/store/page.tsx`, `settings/payments/page.tsx`, `settings/link/page.tsx`, `settings/subscription/page.tsx`, `settings/capacity/page.tsx`, `orders/page.tsx`) — `menu/[id]/page.tsx` and `inventory/[id]/page.tsx` had no page-level `<h1>` of their own (the child form owns its own heading), so nothing to drop there.
+
+This closes the full sweep: 3 files fixed in the original cross-cutting round + 3 in the 2026-08-23 follow-up + these 11 = **14 total files**, all under `apps/console/src/app/console/(app)/`.
+
+**Verification:**
+```
+grep -rln 'className="mx-auto w-full max-w' "apps/console/src/app/console/(app)/"
+```
+returns zero matches, confirmed by direct re-run after all 11 edits. `grep -rn 'max-w-2xl|max-w-3xl|max-w-xl|mb-6 font-serif text-3xl'` across all of `apps/console` (code and tests) also returns zero — no stale test assertions referencing the removed classes anywhere, so nothing needed updating in the test suite for this round. `npx tsc --noEmit` (apps/console) clean. `npx eslint` on all 11 touched files clean. Full `apps/console` vitest suite: **191/191 passing**, same count as before this round (no regression, no test needed touching). `pnpm dev` was already running against local Supabase on port 3000 (not 3001 as initially assumed — confirmed via `Get-NetTCPConnection`); `curl` against `/console`, `/console/orders`, `/console/menu`, `/console/settings/capacity` all return the expected `307` redirect to `/console/login?next=...` (unauthenticated) — not a full authenticated browser render, but confirms none of the 11 edits broke server-side rendering or introduced a runtime error on any of the touched routes.
+
+Implemented by: engineer.
+
 | WBS | Title | Phase | Status | Pattern | Implemented by | Reviewed by | Commit/PR ref | Notes |
 |---|---|---|---|---|---|---|---|---|
 | 3.1 | Repository, Monorepo Layout and CI | 3 | pre-existing (adapt, do not scaffold) | — | — | — | `b051af7`, `2617638` | `apps/shop` + `apps/console` already scaffolded and live on Vercel (competition QR code entry), predates this WBS. The dictionary's Claude Code prompt assumes greenfield scaffolding — do not run it verbatim. Read `docs/ops/migration_notes.md` before dispatching any agent against this entry. |

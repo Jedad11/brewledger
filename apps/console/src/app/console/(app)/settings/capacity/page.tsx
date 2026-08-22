@@ -45,14 +45,16 @@ export default async function CapacitySettingsPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-xl px-4 py-8">
-      <h1 className="mb-6 font-serif text-3xl font-bold leading-[1.35] text-ink">{PAGE_TITLE}</h1>
-      <CapacitySettingsForm
-        storeId={storeId}
-        defaultCapacity={defaultCapacity}
-        timezone={timezone}
-        slots={slots}
-      />
-    </main>
+    <>
+      <h1>{PAGE_TITLE}</h1>
+      <div className="oc-body">
+        <CapacitySettingsForm
+          storeId={storeId}
+          defaultCapacity={defaultCapacity}
+          timezone={timezone}
+          slots={slots}
+        />
+      </div>
+    </>
   );
 }

@@ -63,18 +63,18 @@ export default async function StoreSettingsPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-xl px-4 py-8">
-      <h1 className="mb-6 font-serif text-3xl font-bold leading-[1.35] text-ink">
-        ข้อมูลร้าน
-      </h1>
-      <StoreProfileForm
-        store={store}
-        onboarding={{
-          store: !!store?.name && !!store?.pickup_address,
-          menu: menuItemDone,
-          payments: !!store?.promptpay_verified_at,
-        }}
-      />
-    </main>
+    <>
+      <h1>ข้อมูลร้าน</h1>
+      <div className="oc-body">
+        <StoreProfileForm
+          store={store}
+          onboarding={{
+            store: !!store?.name && !!store?.pickup_address,
+            menu: menuItemDone,
+            payments: !!store?.promptpay_verified_at,
+          }}
+        />
+      </div>
+    </>
   );
 }

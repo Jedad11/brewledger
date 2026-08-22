@@ -47,22 +47,22 @@ export default async function PaymentsSettingsPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-xl px-4 py-8">
-      <h1 className="mb-6 font-serif text-3xl font-bold leading-[1.35] text-ink">
-        การรับเงิน
-      </h1>
-      <PaymentsSettingsForm
-        storeId={store?.id ?? null}
-        initial={{
-          promptpayId: store?.promptpay_id ?? null,
-          promptpayType: (store?.promptpay_type as PromptPayType | null) ?? null,
-          promptpayVerifiedAt: store?.promptpay_verified_at ?? null,
-        }}
-        onboarding={{
-          store: !!store?.name && !!store?.pickup_address,
-          menu: menuItemDone,
-        }}
-      />
-    </main>
+    <>
+      <h1>การรับเงิน</h1>
+      <div className="oc-body">
+        <PaymentsSettingsForm
+          storeId={store?.id ?? null}
+          initial={{
+            promptpayId: store?.promptpay_id ?? null,
+            promptpayType: (store?.promptpay_type as PromptPayType | null) ?? null,
+            promptpayVerifiedAt: store?.promptpay_verified_at ?? null,
+          }}
+          onboarding={{
+            store: !!store?.name && !!store?.pickup_address,
+            menu: menuItemDone,
+          }}
+        />
+      </div>
+    </>
   );
 }

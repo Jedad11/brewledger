@@ -53,13 +53,13 @@ export default async function DashboardPage() {
   const summary = store ? await fetchDashboardSummary(supabase, store.id, store.timezone) : EMPTY_SUMMARY;
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
-      <h1 className="mb-6 font-serif text-3xl font-bold leading-[1.35] text-ink">{PAGE_TITLE}</h1>
+    <>
+      <h1>{PAGE_TITLE}</h1>
       {store ? (
         <DashboardClient storeId={store.id} timezone={store.timezone} initialSummary={summary} />
       ) : (
         <DashboardView summary={summary} />
       )}
-    </main>
+    </>
   );
 }

@@ -77,13 +77,13 @@ export function OrderDetailClient({ order }: { order: OrderDetail }) {
   }
 
   return (
-    <main className="mx-auto w-full max-w-xl px-4 py-8">
+    <div className="oc-body">
       <header className="oc-top">
         <button type="button" className="btn btn--quiet" onClick={() => router.push("/console/orders")}>
           {DETAIL_BACK}
         </button>
         <div>
-          <h1 className="num font-serif text-3xl font-bold leading-[1.35] text-ink">{order.code}</h1>
+          <h1 className="num">{order.code}</h1>
           <p className="note-plain">
             {order.customerName} · รับ {order.pickupTime} น.
           </p>
@@ -155,6 +155,6 @@ export function OrderDetailClient({ order }: { order: OrderDetail }) {
           </div>
         </Card>
       </div>
-    </main>
+    </div>
   );
 }

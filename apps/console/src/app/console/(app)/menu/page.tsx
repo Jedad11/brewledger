@@ -63,17 +63,19 @@ export default async function MenuListPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
-      <h1 className="mb-6 font-serif text-3xl font-bold leading-[1.35] text-ink">เมนู</h1>
-      <MenuListClient
-        storeId={store?.id ?? null}
-        items={items}
-        onboarding={{
-          store: !!store?.name && !!store?.pickup_address,
-          menu: items.length > 0,
-          payments: !!store?.promptpay_verified_at,
-        }}
-      />
-    </main>
+    <>
+      <h1>เมนู</h1>
+      <div className="oc-body">
+        <MenuListClient
+          storeId={store?.id ?? null}
+          items={items}
+          onboarding={{
+            store: !!store?.name && !!store?.pickup_address,
+            menu: items.length > 0,
+            payments: !!store?.promptpay_verified_at,
+          }}
+        />
+      </div>
+    </>
   );
 }

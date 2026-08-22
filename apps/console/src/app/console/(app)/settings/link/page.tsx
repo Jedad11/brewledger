@@ -30,11 +30,13 @@ export default async function StoreLinkPage() {
   const store = storeRow as StoreRow | null;
 
   return (
-    <main className="mx-auto w-full max-w-xl px-4 py-8">
-      <h1 className="mb-6 font-serif text-3xl font-bold leading-[1.35] text-ink">{PAGE_TITLE}</h1>
-      <StoreLinkQR
-        store={store ? { name: store.name, slug: store.slug, isPublished: store.is_published } : null}
-      />
-    </main>
+    <>
+      <h1>{PAGE_TITLE}</h1>
+      <div className="oc-body">
+        <StoreLinkQR
+          store={store ? { name: store.name, slug: store.slug, isPublished: store.is_published } : null}
+        />
+      </div>
+    </>
   );
 }

@@ -17,6 +17,35 @@ export function billObjectPath(storeId: string, invoiceId: string): string {
 }
 
 /**
+ * Uploads an already-compressed blob. Split out from `uploadBill` below —
+ * mirrors `uploadCompressedMenuImage` in `./menuImages.ts` — so a Server
+ * Action can call this directly with a blob a client component compressed
+ * and handed over via FormData. `client` must be a real `authenticated`
+ * Supabase client (the merchant's own session) so 0022_storage_policies.sql's
+ * `merchant_insert_bills` policy actually applies — passing the
+ * service_role admin client here would silently bypass the RLS check this
+ * function exists to go through. This is also why `uploadBill` below can
+ * never be called as written from a Server Action: `compressImage` is
+ * Canvas/DOM-only and cannot run in Node.
+ */
+export async function uploadCompressedBill(
+  client: SupabaseClient,
+  blob: Blob,
+  storeId: string,
+  invoiceId: string,
+): Promise<string> {
+  const path = billObjectPath(storeId, invoiceId);
+
+  const { error } = await client.storage.from(BILLS_BUCKET).upload(path, blob, {
+    contentType: "image/jpeg",
+    upsert: true,
+  });
+  if (error) throw error;
+
+  return path;
+}
+
+/**
  * Compresses `file` client-side, uploads it to the merchant's own store
  * folder in the private `bills` bucket, and returns the object path (never
  * a URL — see getBillSignedUrl for that). `client` must be a real
@@ -24,6 +53,15 @@ export function billObjectPath(storeId: string, invoiceId: string): string {
  * 0022_storage_policies.sql's `merchant_insert_bills` policy actually
  * applies — passing the service_role admin client here would silently
  * bypass the RLS check this function exists to go through.
+ *
+ * Only usable in a context where BOTH the DOM (for `compressImage`) and a
+ * session-carrying Supabase client are available in the same place — that
+ * is never true in this app (WBS 4.1's session cookie is httpOnly, so a
+ * browser-side client always runs as `anon`). Kept for API symmetry with
+ * `uploadCompressedMenuImage`'s own `uploadMenuImage`; real call sites
+ * (WBS 6.1's expenses/capture) compress in the browser and call
+ * `uploadCompressedBill` from a Server Action instead — see that entry's
+ * `actions.ts`.
  */
 export async function uploadBill(
   client: SupabaseClient,
@@ -32,15 +70,7 @@ export async function uploadBill(
   invoiceId: string,
 ): Promise<string> {
   const compressed = await compressImage(file);
-  const path = billObjectPath(storeId, invoiceId);
-
-  const { error } = await client.storage.from(BILLS_BUCKET).upload(path, compressed, {
-    contentType: "image/jpeg",
-    upsert: true,
-  });
-  if (error) throw error;
-
-  return path;
+  return uploadCompressedBill(client, compressed, storeId, invoiceId);
 }
 
 /**

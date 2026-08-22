@@ -145,6 +145,58 @@ export type Database = {
           },
         ]
       }
+      ingredient_cost_history: {
+        Row: {
+          changed_at: string
+          id: string
+          ingredient_id: string
+          new_cost_satang: number
+          old_cost_satang: number | null
+          source_invoice_id: string | null
+          store_id: string
+        }
+        Insert: {
+          changed_at?: string
+          id?: string
+          ingredient_id: string
+          new_cost_satang: number
+          old_cost_satang?: number | null
+          source_invoice_id?: string | null
+          store_id: string
+        }
+        Update: {
+          changed_at?: string
+          id?: string
+          ingredient_id?: string
+          new_cost_satang?: number
+          old_cost_satang?: number | null
+          source_invoice_id?: string | null
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredient_cost_history_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_cost_history_source_invoice_id_fkey"
+            columns: ["source_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ingredient_cost_history_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ingredients: {
         Row: {
           archived_at: string | null
@@ -758,7 +810,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          image_path: string
+          image_path: string | null
           invoice_date: string | null
           ocr_status: string
           raw_ocr_output: Json | null
@@ -770,7 +822,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
-          image_path: string
+          image_path?: string | null
           invoice_date?: string | null
           ocr_status?: string
           raw_ocr_output?: Json | null
@@ -782,7 +834,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
-          image_path?: string
+          image_path?: string | null
           invoice_date?: string | null
           ocr_status?: string
           raw_ocr_output?: Json | null

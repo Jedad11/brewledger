@@ -6,3 +6,4 @@
 // `exports`), not a bare barrel that would pull every costing module into
 // one bundle regardless of what's actually used.
 export type { BaseUnit, PurchaseUnit } from "./units";
+export type { IngredientCostHistoryRow } from "./cost";

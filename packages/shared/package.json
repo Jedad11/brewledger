@@ -16,6 +16,7 @@
     "./dist/orderStatus": "./dist/orderStatus.js",
     "./dist/promptpay/generate": "./dist/promptpay/generate.js",
     "./dist/promptpay/normalize": "./dist/promptpay/normalize.js",
+    "./dist/purchases/rawOcrOutput": "./dist/purchases/rawOcrOutput.js",
     "./dist/serializers/public": "./dist/serializers/public.js",
     "./dist/serializers/public.schema": "./dist/serializers/public.schema.js",
     "./dist/storage/bills": "./dist/storage/bills.js",

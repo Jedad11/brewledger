@@ -50,6 +50,34 @@ imply a 100% margin, which flatters the merchant and misinforms their
 pricing. `MoneyValue` (the shared rendering component, `packages/ui`, not
 yet built) renders `NULL` cost as `—`.
 
+## Costing method: latest purchase price, not weighted average
+
+`ingredients.current_unit_cost_satang` moves to the exact price of the most
+recently *confirmed* purchase for that ingredient (WBS 6.4's confirm
+transaction, `console_confirm_purchase_invoice`,
+`packages/db/migrations/0044_console_confirm_purchase_invoice.sql`) — not a
+weighted average across purchase history, not FIFO. This is a deliberate
+choice, not an omission: the merchant's real question is "what does this
+ingredient cost me *today*," which drives today's pricing decision, not "what
+did my inventory cost *on average*," which is the accountant's question.
+
+Trade-off, stated honestly: a single unusually expensive emergency purchase
+(buying milk from a convenience store at 3x the supplier price because a
+delivery failed) moves this value until the next normal purchase corrects
+it. This system does not smooth that away — WBS 7.4's drift alert is the
+intended way it gets surfaced to the merchant, so they can see the spike and
+judge it themselves rather than have it silently averaged into invisibility.
+
+`ingredient_cost_history` (WBS 6.6, `packages/db/migrations/
+0045_ingredient_cost_history.sql`) is the append-only audit trail this
+method produces: one row per confirmed purchase that actually moved
+`current_unit_cost_satang`, carrying the old cost, the new cost, and the
+source invoice. It is the only way to answer "why did this ingredient's
+cost change" after the fact, and it is what WBS 7.4's drift baseline reads.
+Only `console_confirm_purchase_invoice` writes to it; no policy grants
+`authenticated` or `anon` write access, the same posture as
+`order_status_history` (0032).
+
 ## RL-1 — no platform balance, ever
 
 `packages/db/migrations/0020_rl1_structural_proof.sql` is a dedicated,

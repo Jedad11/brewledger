@@ -229,7 +229,7 @@ describe("comparisonRanges — like-for-like day counts", () => {
     );
   });
 
-  it("REGRESSION: every recurring 31-vs-shorter-month skew date (Mar/May/Jul/Oct/Dec 30-31) produces equal current/previous day counts whenever incomplete", () => {
+  it("REGRESSION: every recurring 31-vs-shorter-month skew date (Mar/May/Jul/Oct/Dec 30-31) produces equal current/previous day counts whenever incomplete, and leaves the current range untouched at the exact business_date when the month is complete (asserted explicitly on both branches -- neither is skipped)", () => {
     const skewDates = [
       "2026-03-30", "2026-03-31",
       "2026-05-30", "2026-05-31",
@@ -243,7 +243,35 @@ describe("comparisonRanges — like-for-like day counts", () => {
         expect(dayCount(ranges.current.fromBusinessDate, ranges.current.toBusinessDate)).toBe(
           dayCount(ranges.previous.fromBusinessDate, ranges.previous.toBusinessDate),
         );
+      } else {
+        // Complete current month: `today` must stay untouched even though
+        // clampedDay < day (the previous, shorter month was clamped) --
+        // truncating here silently drops trailing days of a complete month
+        // from the query bound with no "same day range" disclosure to
+        // justify it (that copy only ever applies to the incomplete case).
+        expect(ranges.current.toBusinessDate).toBe(d);
       }
+    }
+  });
+
+  it("REGRESSION: 2026-03-31 (complete March, 31 days) against a complete 28-day Feb keeps the FULL current month -- must not truncate to Feb's clamped day count", () => {
+    const ranges = monthComparisonRanges("Asia/Bangkok", new Date("2026-03-31T10:00:00+07:00"));
+    expect(ranges.incomplete).toBe(false);
+    expect(ranges.current).toEqual({ fromBusinessDate: "2026-03-01", toBusinessDate: "2026-03-31" });
+    expect(ranges.previous).toEqual({ fromBusinessDate: "2026-02-01", toBusinessDate: "2026-02-28" });
+  });
+
+  it("REGRESSION: the same complete-month-not-truncated rule holds for every recurring 31-vs-shorter-month pair (May, Jul, Oct, Dec)", () => {
+    const cases: Array<[string, string]> = [
+      ["2026-05-31", "2026-05-31"],
+      ["2026-07-31", "2026-07-31"],
+      ["2026-10-31", "2026-10-31"],
+      ["2026-12-31", "2026-12-31"],
+    ];
+    for (const [d, expectedCurrentTo] of cases) {
+      const ranges = monthComparisonRanges("Asia/Bangkok", new Date(`${d}T10:00:00+07:00`));
+      expect(ranges.incomplete).toBe(false);
+      expect(ranges.current.toBusinessDate).toBe(expectedCurrentTo);
     }
   });
 });

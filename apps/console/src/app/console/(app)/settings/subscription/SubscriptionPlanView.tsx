@@ -33,14 +33,13 @@ export function SubscriptionPlanView() {
   const current = PLAN_DISPLAY[subscriptionTier];
 
   return (
-    <div className="flex flex-col gap-6">
+    <>
       <Card>
         <p className="note-plain">{CURRENT_PLAN_LABEL}</p>
         <h3>
           {current.name} · {current.price}
         </h3>
-        <p className="note-plain">{ALWAYS_AVAILABLE_NOTE}</p>
-        <p className="note-plain">{FEE_STATEMENT_TH}</p>
+        <div className="oc-feeline">{ALWAYS_AVAILABLE_NOTE}</div>
       </Card>
 
       <div className="oc-plans">
@@ -64,6 +63,14 @@ export function SubscriptionPlanView() {
         })}
       </div>
 
+      {/* RL-1: kept as its own note, not crammed into the current-plan card
+          alongside the RL-2 reassurance above -- both must stay always-
+          visible and unconditional on tier, but two full sentences sharing
+          one small card read as cluttered next to the price header. */}
+      <Card>
+        <p className="note-plain">{FEE_STATEMENT_TH}</p>
+      </Card>
+
       <Card>
         <h3>{UPGRADE_CARD_HEADING}</h3>
         <div className="oc-rows">
@@ -75,6 +82,6 @@ export function SubscriptionPlanView() {
           ))}
         </div>
       </Card>
-    </div>
+    </>
   );
 }

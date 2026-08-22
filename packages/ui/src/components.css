@@ -385,3 +385,17 @@ button{font-family:inherit;letter-spacing:var(--tracking-normal)}
 .bl-confidence-field__hint{display:flex;align-items:center;gap:.6rem;color:var(--st-unpaid-fg);font-size:var(--text-1);font-weight:400}
 .bl-confidence-field__hint::before{content:"!";width:16px;height:16px;border-radius:50%;background:var(--c-warning);color:#5c4207;display:grid;place-items:center;font-weight:800;font-size:10px;flex-shrink:0}
 .bl-untracked-disclosure{color:var(--text-black-soft);font-size:var(--text-2);font-weight:400}
+
+/* Ported verbatim from /design/Console Setup.html's <style> block (read-only
+   source, not edited) -- WBS 4.7's subscription plan grid + upgrade
+   checklist. Missing from the initial port; the page rendered as an
+   unstyled single-column stack until this landed. */
+.oc-plans{display:grid;gap:var(--space-3);grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.oc-plan{display:grid;gap:.8rem;align-content:start}
+.oc-plan.is-cur{outline:2px solid var(--green-brew)}
+.oc-planprice{font-size:var(--text-5);font-weight:800;color:var(--green-ledger)}
+.oc-feeline{margin-top:1.6rem;background:var(--green-mist);border-radius:var(--radius-pill);padding:.9rem 1.8rem;font-size:var(--text-2);font-weight:600;color:var(--green-ledger);display:inline-block}
+.oc-rows{display:grid;padding:0}
+.oc-row{display:grid;grid-template-columns:auto 48px 1fr auto;gap:1.4rem;align-items:center;padding:1.2rem var(--space-3);border-top:1px solid var(--hairline)}
+.oc-rows .oc-row:first-child{border-top:0}
+.oc-tick{color:var(--green-brew);font-weight:800}

@@ -12,7 +12,6 @@
     "test:e2e": "vitest run tests/e2e"
   },
   "dependencies": {
-    "@brewledger/costing": "workspace:*",
     "@brewledger/db": "workspace:*",
     "@brewledger/shared": "workspace:*",
     "@brewledger/ui": "workspace:*",

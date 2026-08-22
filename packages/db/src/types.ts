@@ -147,38 +147,32 @@ export type Database = {
       }
       ingredients: {
         Row: {
-          archived_at: string | null
           base_unit: string
           current_stock_base_unit: number
           current_unit_cost_satang: number | null
           id: string
           low_stock_threshold: number | null
           name: string
-          pack_size: number | null
           store_id: string
           updated_at: string
         }
         Insert: {
-          archived_at?: string | null
           base_unit: string
           current_stock_base_unit?: number
           current_unit_cost_satang?: number | null
           id?: string
           low_stock_threshold?: number | null
           name: string
-          pack_size?: number | null
           store_id: string
           updated_at?: string
         }
         Update: {
-          archived_at?: string | null
           base_unit?: string
           current_stock_base_unit?: number
           current_unit_cost_satang?: number | null
           id?: string
           low_stock_threshold?: number | null
           name?: string
-          pack_size?: number | null
           store_id?: string
           updated_at?: string
         }

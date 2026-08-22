@@ -4,19 +4,24 @@
 // `anon_select_menu_images`), because a published store's photos are
 // customer-facing. Never reuse getBillSignedUrl's signed-URL pattern here —
 // there is nothing to keep private.
+//
+// The pure path/URL helpers (MENU_IMAGES_BUCKET, menuImageObjectPath,
+// menuImagePublicUrl) live in ./menuImagePath.ts and are re-exported below
+// unchanged, so nothing importing them from this file breaks. They moved out
+// because this file also pulls in compressImage (./compress.ts, browser
+// canvas/DOM only) for its upload flow, and serializers/public.ts (a Deno
+// Edge Function's own module graph) needs menuImagePublicUrl WITHOUT
+// dragging compress.ts's DOM-only code along with it — see
+// menuImagePath.ts's header. (public.ts ends up with its own private inline
+// copy rather than importing menuImagePath.ts directly — see public.ts's
+// header comment for why: a reproducible local `supabase functions serve`
+// CLI bug with two-hop-deep relative .ts-extensioned imports, not a design
+// preference.)
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { compressImage } from "./compress";
+import { MENU_IMAGES_BUCKET, menuImageObjectPath, menuImagePublicUrl } from "./menuImagePath";
 
-export const MENU_IMAGES_BUCKET = "menu-images";
-
-// {store_id}/{menu_item_id}.webp — matches 0022_storage_policies.sql's
-// (storage.foldername(name))[1] check against auth_store_ids(). A menu item
-// gets its id from the DB before a photo can be uploaded (the id names the
-// file), so the item row must already exist — see saveMenuItem's two-step
-// save in apps/console/src/app/console/(app)/menu/[id]/actions.ts.
-export function menuImageObjectPath(storeId: string, menuItemId: string): string {
-  return `${storeId}/${menuItemId}.webp`;
-}
+export { MENU_IMAGES_BUCKET, menuImageObjectPath, menuImagePublicUrl };
 
 /**
  * Uploads an already-compressed blob. Split out from `uploadMenuImage` below

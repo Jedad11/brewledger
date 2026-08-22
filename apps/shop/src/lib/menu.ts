@@ -2,6 +2,16 @@
 // and folding a Realtime postgres_changes payload into local item state.
 // Kept dependency-free and side-effect-free so qa_engineer can unit test
 // them directly without a browser or a live Supabase project.
+// Direct dist subpath, not the barrel — same reasoning as MenuList.tsx's
+// import of createBrowserClient. menuImagePublicUrl is a plain string
+// function (no Database row type involved), so importing it doesn't
+// reintroduce the type-boundary problem the rest of this file's
+// re-declared-not-imported posture exists to avoid — see the
+// RealtimeMenuItemRow comment below. Imports from menuImagePath (not
+// menuImages) specifically: menuImages also pulls in compressImage
+// (canvas/DOM compression code apps/shop's realtime mapper has no use for)
+// for its upload flow — menuImagePath is the pure path/URL slice.
+import { menuImagePublicUrl } from "@brewledger/shared/dist/storage/menuImagePath";
 import type { PublicMenuCategory, PublicMenuItem } from "./publicApi";
 
 export interface MenuGroup {
@@ -54,14 +64,17 @@ export interface RealtimeMenuItemRow {
 // Mirrors toPublicMenuItem (packages/shared/src/serializers/public.ts) field
 // for field. A mismatch against that function is a signal to fix here, not
 // something to unify away — same posture public.schema.ts already takes
-// toward public.ts.
-export function toPublicMenuItemFromRealtimeRow(row: RealtimeMenuItemRow): PublicMenuItem {
+// toward public.ts. `supabaseUrl` is NEXT_PUBLIC_SUPABASE_URL, already read
+// by MenuList.tsx's effect to build its Realtime channel client; threaded
+// through here rather than re-read so this stays a pure function of its
+// arguments.
+export function toPublicMenuItemFromRealtimeRow(row: RealtimeMenuItemRow, supabaseUrl: string): PublicMenuItem {
   return {
     id: row.id,
     categoryId: row.category_id,
     name: row.name,
     description: row.description,
-    imageUrl: row.image_path,
+    imageUrl: row.image_path ? menuImagePublicUrl(supabaseUrl, row.image_path) : null,
     priceSatang: row.price_satang,
     availability: row.availability,
     sortOrder: row.sort_order,
@@ -88,6 +101,7 @@ export interface RealtimeMenuItemChange {
 export function applyRealtimeMenuItemChange(
   current: PublicMenuItem[],
   change: RealtimeMenuItemChange,
+  supabaseUrl: string,
 ): PublicMenuItem[] {
   if (change.eventType === "DELETE") {
     const removedId = change.old?.id;
@@ -115,7 +129,7 @@ export function applyRealtimeMenuItemChange(
     return current;
   }
 
-  const mapped = toPublicMenuItemFromRealtimeRow(row as RealtimeMenuItemRow);
+  const mapped = toPublicMenuItemFromRealtimeRow(row as RealtimeMenuItemRow, supabaseUrl);
   const exists = current.some((item) => item.id === mapped.id);
   return exists ? current.map((item) => (item.id === mapped.id ? mapped : item)) : [...current, mapped];
 }

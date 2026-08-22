@@ -10,15 +10,6 @@ type OptionGroupRow = Database["public"]["Tables"]["menu_option_groups"]["Row"];
 type OptionRow = Database["public"]["Tables"]["menu_options"]["Row"];
 type SlotRow = Database["public"]["Tables"]["pickup_slots"]["Row"];
 
-// No Storage bucket has been provisioned yet (not a WBS 3.7 deliverable) —
-// menu_items.image_path is a storage object path, not a URL. Once a public
-// bucket exists, this is where its base URL gets prefixed. Passing the path
-// through unchanged for now follows the same "flag the gap, don't invent"
-// rule the design doc applies to PublicPaymentIntent (§2).
-function publicImageUrl(imagePath: string): string {
-  return imagePath;
-}
-
 export interface PublicStore {
   id: string;
   slug: string;
@@ -64,13 +55,54 @@ export interface PublicMenuItem {
   sortOrder: number;
 }
 
-export function toPublicMenuItem(row: MenuItemRow): PublicMenuItem {
+// Deliberately NOT imported from ../storage/menuImagePath.ts, even though
+// that file holds the canonical implementation menuImages.ts and
+// apps/shop/src/lib/menu.ts both use. This file is resolved directly (by
+// relative path, never through this package's dist output) by every
+// supabase/functions/public-* Edge Function, and toPublicMenuItem needs the
+// real function at Deno runtime, not just its type — so any import of it
+// here would need the literal .ts extension Deno's resolver requires for a
+// local relative specifier. That's fine for a first-level import (every
+// public-* Edge Function already does exactly this to reach THIS file), but
+// a second-level one — this file, itself Deno-resolved, reaching a THIRD
+// file via its own .ts-suffixed relative import — reproducibly crashes this
+// repo's local `supabase functions serve` CLI's own preflight dependency
+// scan before it serves a single request (confirmed by bisection: identical
+// logic through an extensionless import boots and serves fine; the same
+// import with .ts added, even with every other file held constant, crashes
+// "Setting up Edge Functions runtime" with an unrelated garbled path —
+// `packages/shared/src/storage/normalize.ts`, a file that doesn't exist).
+// That's a local-CLI tooling defect, not a Deno spec issue, but it blocks
+// exactly the live boot-reachability check this fix must pass. Inlining
+// this one-line pure function avoids the import chain that trips it. Kept
+// in lockstep with menuImagePath.ts's menuImagePublicUrl by public.test.ts's
+// own hardcoded-URL assertions below (any drift fails there directly) —
+// change one, check the other.
+function buildMenuImagePublicUrl(supabaseUrl: string, path: string): string {
+  return encodeURI(`${supabaseUrl}/storage/v1/object/public/menu-images/${path}`);
+}
+
+// `supabaseUrl` must be a URL a BROWSER can reach (menu-images is a public
+// bucket — WBS 3.8, supabase/config.toml, 0022_storage_policies.sql's
+// `anon_select_menu_images` — so no session/signing is needed, just the
+// project URL). Deliberately NOT necessarily the literal SUPABASE_URL env
+// var: that reserved name is auto-injected by the Supabase CLI/platform and,
+// under local `supabase functions serve`, resolves to the edge-runtime
+// container's internal Docker view of Kong (http://kong:8000) — unreachable
+// from a browser. Callers pass their own browser-reachable value instead
+// (public-menu/index.ts reads PROJECT_PUBLIC_URL, deliberately not
+// SUPABASE_-prefixed — the CLI silently drops any .env entry with that
+// prefix; see supabase/functions/.env.example). image_path is a storage object path
+// ({store_id}/{menu_item_id}.webp, packages/shared/src/storage/menuImagePath.ts's
+// menuImageObjectPath), never a fetchable URL on its own — a browser <img>
+// or next/image src needs the full public object URL.
+export function toPublicMenuItem(row: MenuItemRow, supabaseUrl: string): PublicMenuItem {
   return {
     id: row.id,
     categoryId: row.category_id,
     name: row.name,
     description: row.description,
-    imageUrl: row.image_path ? publicImageUrl(row.image_path) : null,
+    imageUrl: row.image_path ? buildMenuImagePublicUrl(supabaseUrl, row.image_path) : null,
     priceSatang: row.price_satang,
     availability: row.availability as PublicMenuItem["availability"],
     sortOrder: row.sort_order,

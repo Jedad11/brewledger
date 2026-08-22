@@ -31,7 +31,7 @@ export const publicMenuItemSchema = z.object({
   categoryId: z.string().uuid().nullable(),
   name: z.string(),
   description: z.string().nullable(),
-  imageUrl: z.string().nullable(),
+  imageUrl: z.string().url().nullable(),
   priceSatang: z.number().int().nonnegative(),
   availability: z.enum(["available", "out_of_stock", "hidden"]),
   sortOrder: z.number().int(),

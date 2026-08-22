@@ -20,6 +20,7 @@
     "./dist/serializers/public.schema": "./dist/serializers/public.schema.js",
     "./dist/storage/bills": "./dist/storage/bills.js",
     "./dist/storage/compress": "./dist/storage/compress.js",
+    "./dist/storage/menuImagePath": "./dist/storage/menuImagePath.js",
     "./dist/storage/menuImages": "./dist/storage/menuImages.js",
     "./dist/storage/usage": "./dist/storage/usage.js",
     "./dist/supabase/admin": "./dist/supabase/admin.js",

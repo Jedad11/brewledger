@@ -58,11 +58,15 @@ export function MenuList({
         { event: "*", schema: "public", table: "menu_items", filter: `store_id=eq.${storeId}` },
         (payload) => {
           setItems((current) =>
-            applyRealtimeMenuItemChange(current, {
-              eventType: payload.eventType,
-              new: payload.new,
-              old: payload.old,
-            }),
+            applyRealtimeMenuItemChange(
+              current,
+              {
+                eventType: payload.eventType,
+                new: payload.new,
+                old: payload.old,
+              },
+              supabaseUrl,
+            ),
           );
         },
       )

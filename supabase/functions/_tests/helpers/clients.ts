@@ -80,14 +80,25 @@ export function serviceClient(): SupabaseClient {
  * `pnpm functions:serve`, run here with `--no-verify-jwt` so requests with
  * no/invalid Authorization header reach our own withConsoleAuth guard
  * instead of being rejected by the platform's own JWT gate first).
+ *
+ * Deliberately does NOT treat an HTTP 5xx response as "unreachable" — a
+ * function that boots but then fails (e.g. a Deno BOOT_ERROR from a bad
+ * import) still answers the OPTIONS request with a real response, just a
+ * 5xx one. Callers that skip their assertions on `false` here rely on that:
+ * "unreachable" must mean "the process never answered" (connection
+ * refused/timed out — the local stack genuinely isn't running, a legitimate
+ * skip), never "answered, but broken" (a real regression that should fail
+ * the test, not silently skip it — see public_snapshots.test.ts's own
+ * per-function gating for exactly the incident this distinction exists to
+ * catch).
  */
 export async function isFunctionReachable(name: string): Promise<boolean> {
   try {
-    const res = await fetch(functionUrl(name), {
+    await fetch(functionUrl(name), {
       method: "OPTIONS",
       headers: { apikey: LOCAL_ANON_KEY },
     });
-    return res.status < 500;
+    return true;
   } catch {
     return false;
   }

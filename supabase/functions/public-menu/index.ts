@@ -79,7 +79,17 @@ Deno.serve(async (req) => {
   const categories = (categoryRows ?? []).map((row) =>
     parseOrThrow(publicMenuCategorySchema, toPublicMenuCategory(row)),
   );
-  const items = (itemRows ?? []).map((row) => parseOrThrow(publicMenuItemSchema, toPublicMenuItem(row)));
+  // NOT Deno.env.get("SUPABASE_URL") — that reserved var is auto-injected
+  // and, under the local CLI's Docker Compose network, resolves to the
+  // edge-runtime container's internal view of Kong (http://kong:8000),
+  // unreachable from a browser. PROJECT_PUBLIC_URL is this function's own
+  // explicit var (deliberately not SUPABASE_-prefixed — the CLI silently
+  // drops any .env entry with that prefix) for a URL apps/shop can actually
+  // fetch. See supabase/functions/.env.example.
+  const publicUrl = Deno.env.get("PROJECT_PUBLIC_URL")!;
+  const items = (itemRows ?? []).map((row) =>
+    parseOrThrow(publicMenuItemSchema, toPublicMenuItem(row, publicUrl)),
+  );
   const optionGroups = (groupRows ?? []).map((row) =>
     parseOrThrow(publicOptionGroupSchema, toPublicOptionGroup(row)),
   );

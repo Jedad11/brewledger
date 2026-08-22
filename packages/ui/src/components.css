@@ -399,3 +399,24 @@ button{font-family:inherit;letter-spacing:var(--tracking-normal)}
 .oc-row{display:grid;grid-template-columns:auto 48px 1fr auto;gap:1.4rem;align-items:center;padding:1.2rem var(--space-3);border-top:1px solid var(--hairline)}
 .oc-rows .oc-row:first-child{border-top:0}
 .oc-tick{color:var(--green-brew);font-weight:800}
+/* WBS 7.7 — ported verbatim from /design/Console Reports.html <style>
+ * (.oc-cmphead/.oc-cmpgrid/.oc-cmp/.oc-delta/.oc-legend/.sw/.sw--rev/
+ * .sw--pro), not previously extracted into this file since no screen used
+ * the period-comparison layout before the overview report. .oc-bars/
+ * .oc-barcol/.oc-bar/.oc-barlab (the prototype's own hand-rolled div bars)
+ * are deliberately NOT ported — the overview chart is drawn with recharts
+ * per the WBS 7.7 Claude Code Prompt's own step 3, not flex/height divs;
+ * .oc-bars is reused here only as the chart's sizing container. */
+.oc-cmphead{display:grid;gap:.4rem}
+.oc-cmpgrid{display:grid;gap:var(--space-3);grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.oc-cmp{display:grid;gap:.4rem;align-content:start}
+.oc-delta{font-size:var(--text-2);font-weight:700}
+.oc-delta.is-up{color:var(--green-brew)}
+.oc-delta.is-down{color:var(--red)}
+.oc-delta.is-unknown{color:var(--c-unknown)}
+.oc-bars{margin-top:1.6rem}
+.oc-legend{display:flex;gap:var(--space-3);margin-top:1.2rem;font-size:var(--text-2);color:var(--text-black-soft)}
+.oc-legend span{display:flex;align-items:center;gap:.6rem}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+.sw--rev{background:var(--green-brew)}
+.sw--pro{background:var(--green-ledger);opacity:.55}

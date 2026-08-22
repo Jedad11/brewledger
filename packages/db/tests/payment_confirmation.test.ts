@@ -112,6 +112,15 @@ afterAll(async () => {
     // orders enqueued (store_id set) cascade too; the expiry-sweep test's
     // own self-perpetuating job_queue row (store_id NULL) is cleaned up
     // explicitly inside that test.
+    //
+    // WBS 5.7 regression note: console_confirm_payment/console_reject_payment
+    // now delegate to transition_order (0033), so every order this file
+    // confirms/rejects has a committed order_status_history row by the time
+    // this runs. 0034 fixed the append-only trigger to exempt
+    // cascade-originated UPDATE/DELETE (pg_trigger_depth() > 1) and made
+    // order_status_history_order_id_fkey deferrable to resolve a cascade
+    // ordering hazard between that FK and the actor -> merchants
+    // ON DELETE SET NULL path — a plain cascading delete now works.
     for (const id of createdAuthUserIds) {
       await client.query("delete from auth.users where id = $1", [id]);
     }

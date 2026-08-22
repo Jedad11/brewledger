@@ -84,21 +84,23 @@ describe("§7.1 — RLS introspection", () => {
     expect(rows).toEqual([]);
   });
 
-  it("the table count actually checked is pinned at 19 (not a false pass from an empty match)", async () => {
-    // Was 18 as of WBS 3.6; WBS 4.1's migration 0024_auth_attempts.sql adds
+  it("the table count actually checked is pinned at 20 (not a false pass from an empty match)", async () => {
+    // Was 18 as of WBS 3.6; WBS 4.1's migration 0024_auth_attempts.sql added
     // a 19th table (auth_attempts, RLS enabled, zero policies — same shape
-    // as job_queue). Updated here rather than left stale, per this file's
-    // own stated purpose: proving the migration actually closes what it
-    // claims, against the real as-built schema.
+    // as job_queue). WBS 5.7's migration 0032_order_status_history.sql adds
+    // a 20th (order_status_history, RLS enabled, one authenticated SELECT
+    // policy — see §7 below). Updated here rather than left stale, per this
+    // file's own stated purpose: proving the migration actually closes what
+    // it claims, against the real as-built schema.
     if (!ready) return;
     const { rows } = await pg.query(`
       select count(*)::int as n from information_schema.tables
        where table_schema = 'public' and table_type = 'BASE TABLE'
     `);
-    expect(rows[0].n).toBe(19);
+    expect(rows[0].n).toBe(20);
   });
 
-  it("all 19 real tables are present by name", async () => {
+  it("all 20 real tables are present by name", async () => {
     if (!ready) return;
     const { rows } = await pg.query(`
       select table_name from information_schema.tables
@@ -120,6 +122,7 @@ describe("§7.1 — RLS introspection", () => {
         "merchants",
         "order_item_options",
         "order_items",
+        "order_status_history",
         "orders",
         "payments",
         "pickup_slots",

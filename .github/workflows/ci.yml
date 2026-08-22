@@ -40,6 +40,9 @@ jobs:
       - name: Lint (RL-3 import boundary)
         run: pnpm lint:boundary
 
+      - name: Lint (order status lifecycle guard, WBS 5.7)
+        run: pnpm lint:lifecycle
+
       - name: Build
         run: pnpm build
 

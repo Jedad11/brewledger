@@ -120,6 +120,15 @@ afterAll(async () => {
       // self-perpetuating next-run row (store_id NULL by construction,
       // worker/src/handlers/expireOrders.ts) is deleted explicitly inside
       // the test that produces it.
+      //
+      // WBS 5.7 regression note: expireOrders.ts now calls transition_order
+      // per row (0032/§6), so every EXPIRED order here has a committed
+      // order_status_history row by the time this runs. 0034 fixed the
+      // append-only trigger to exempt cascade-originated UPDATE/DELETE
+      // (pg_trigger_depth() > 1) and made order_status_history_order_id_fkey
+      // deferrable to resolve a cascade ordering hazard between that FK and
+      // the actor -> merchants ON DELETE SET NULL path — a plain cascading
+      // delete now works.
       await client.query("delete from auth.users where id = $1", [authUserId]);
     } finally {
       await client.end();

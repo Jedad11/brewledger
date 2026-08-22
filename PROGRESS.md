@@ -92,6 +92,22 @@ touched files; `apps/console` vitest suite 191/191, no regression; dev
 server confirmed via curl — all 5 routes return 307 (login redirect), as
 expected for an unauthenticated request.
 
+**Reviewed by: redline_reviewer (`86b1941` + `7b3d534`) — clean, no
+CRITICAL/HIGH/MEDIUM/LOW findings against the change itself.** Confirmed by
+direct file-existence check (not grep alone) that all 5 remaining `TABS`
+entries resolve to a real `page.tsx`; confirmed zero stale references to
+`/console/settings/notifications` anywhere outside the explanatory code
+comment; confirmed the `เมนู`→`/console/menu` exact-match routing can't
+mis-highlight; confirmed `/console/settings/capacity`'s exclusion is correct
+per the prototype/screen_inventory (not present in either). Re-ran
+`tsc --noEmit`/`eslint`/full vitest suite (191/191) directly — all clean.
+**Pre-existing gap surfaced, not introduced by this change, not blocking**:
+`/console/settings/capacity` (built in WBS 5.3, commit `90b8b06`) has zero
+inbound links from anywhere in the app — orphaned, reachable only by typing
+the URL. Flagged for a future decision (add it to the prototype's `SETUP`
+array + a tab, or document the intended access path) rather than silently
+left unnoticed.
+
 **Incidental fix required to keep WBS 2.2's fidelity gate green:**
 `packages/ui/scripts/verify-fidelity.mjs`'s browser bundle broke entirely
 (0/21 rows resolving — "process is not defined") once `NavShell` started

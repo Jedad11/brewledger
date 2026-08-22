@@ -84,7 +84,7 @@ describe("§7.1 — RLS introspection", () => {
     expect(rows).toEqual([]);
   });
 
-  it("the table count actually checked is pinned at 22 (not a false pass from an empty match)", async () => {
+  it("the table count actually checked is pinned at 23 (not a false pass from an empty match)", async () => {
     // Was 18 as of WBS 3.6; WBS 4.1's migration 0024_auth_attempts.sql added
     // a 19th table (auth_attempts, RLS enabled, zero policies — same shape
     // as job_queue). WBS 5.7's migration 0032_order_status_history.sql adds
@@ -95,18 +95,21 @@ describe("§7.1 — RLS introspection", () => {
     // own change, while adding the 22nd: WBS 5.8's push_subscriptions
     // (0038_push_subscriptions_and_inbox_state.sql, RLS enabled, one
     // authenticated policy scoped by store_id — same shape as every other
-    // direct-store_id table). Updated here rather than left stale, per this
-    // file's own stated purpose: proving the migration actually closes what
-    // it claims, against the real as-built schema.
+    // direct-store_id table). WBS 6.6's migration
+    // 0045_ingredient_cost_history.sql adds the 23rd (ingredient_cost_history,
+    // RLS enabled, one authenticated SELECT policy scoped by store_id — same
+    // shape). Updated here rather than left stale, per this file's own
+    // stated purpose: proving the migration actually closes what it claims,
+    // against the real as-built schema.
     if (!ready) return;
     const { rows } = await pg.query(`
       select count(*)::int as n from information_schema.tables
        where table_schema = 'public' and table_type = 'BASE TABLE'
     `);
-    expect(rows[0].n).toBe(22);
+    expect(rows[0].n).toBe(23);
   });
 
-  it("all 22 real tables are present by name", async () => {
+  it("all 23 real tables are present by name", async () => {
     if (!ready) return;
     const { rows } = await pg.query(`
       select table_name from information_schema.tables
@@ -119,6 +122,7 @@ describe("§7.1 — RLS introspection", () => {
         "auth_attempts",
         "bom_lines",
         "daily_financials",
+        "ingredient_cost_history",
         "ingredients",
         "job_queue",
         "menu_categories",

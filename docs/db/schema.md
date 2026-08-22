@@ -68,6 +68,16 @@ it. This system does not smooth that away — WBS 7.4's drift alert is the
 intended way it gets surfaced to the merchant, so they can see the spike and
 judge it themselves rather than have it silently averaged into invisibility.
 
+`ingredient_cost_history` (WBS 6.6, `packages/db/migrations/
+0045_ingredient_cost_history.sql`) is the append-only audit trail this
+method produces: one row per confirmed purchase that actually moved
+`current_unit_cost_satang`, carrying the old cost, the new cost, and the
+source invoice. It is the only way to answer "why did this ingredient's
+cost change" after the fact, and it is what WBS 7.4's drift baseline reads.
+Only `console_confirm_purchase_invoice` writes to it; no policy grants
+`authenticated` or `anon` write access, the same posture as
+`order_status_history` (0032).
+
 ## RL-1 — no platform balance, ever
 
 `packages/db/migrations/0020_rl1_structural_proof.sql` is a dedicated,

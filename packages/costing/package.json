@@ -6,7 +6,8 @@
   "types": "./dist/index.d.ts",
   "sideEffects": false,
   "exports": {
-    "./dist/units": "./dist/units.js"
+    "./dist/units": "./dist/units.js",
+    "./dist/cost": "./dist/cost.js"
   },
   "scripts": {
     "typecheck": "tsc --noEmit && tsc -p tsconfig.tests.json",

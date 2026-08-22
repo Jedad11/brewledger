@@ -87,7 +87,30 @@ not scriptable here) — confirmed instead via `verify-fidelity.mjs`'s real
 Playwright/browser render of `NavShell` and via direct code/CSS review;
 flagged for `redline_reviewer` to do a live pass.
 
-Implemented by: engineer. Not yet reviewed.
+Implemented by: engineer. **Reviewed by: redline_reviewer — clean, no CRITICAL/HIGH/MEDIUM findings.**
+Independently diffed Fix 1's CSS byte-for-byte against `/design/Owner
+Console.html`'s real `<style>` block (verbatim match, not paraphrased).
+Verified all 5 NavShell route mappings against `docs/design/screen_inventory.md`
+and confirmed `reports→pnl` matches the prototype's own default
+(`console-reports.js` line 59, `S={screen:'pnl',...}`). Confirmed no other
+code still expects the old `.oc-nav button`/`.oc-side button` selector shape
+(grep found matches only in read-only `/design/` and `/prototype/`
+artifacts). Confirmed `MetricCard` is `DashboardClient.tsx`'s only caller
+(no other screen needed 2-decimal precision) and that `MoneyValue`'s
+`null → "—"` path is entirely independent of the `decimals` prop, so RL-2
+discipline is unaffected. Confirmed `ReportsSubNav` renders from exactly the
+3 intended pages and nowhere else. Re-ran `verify-fidelity.mjs` directly
+(not trusted from the report): 18 PASS/0 FAIL/3 NO_REFERENCE, exact match.
+Re-ran `pnpm lint:boundary`, `tsc --noEmit`, `eslint`, and the RL-2 grep
+directly — all clean. Attempted a live authenticated Playwright render
+(went further than the engineer's session) but hit a different environment
+blocker: `pnpm functions:serve` wasn't running, so the OTP request's Edge
+Function call failed — unrelated to this diff (login is untouched by it).
+One LOW, non-blocking: `packages/ui/package.json`'s new `next` optional
+peer dependency doesn't introduce any RL-3 boundary risk (the boundary rule
+targets `apps/shop` importing `apps/console`/`packages/costing`, not `next`
+itself) — flagged only so it's visibly checked, not silently assumed safe.
+**Marking this cross-cutting fix reviewed and closed.**
 
 | WBS | Title | Phase | Status | Pattern | Implemented by | Reviewed by | Commit/PR ref | Notes |
 |---|---|---|---|---|---|---|---|---|

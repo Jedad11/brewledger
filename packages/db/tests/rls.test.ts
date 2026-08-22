@@ -84,12 +84,15 @@ describe("§7.1 — RLS introspection", () => {
     expect(rows).toEqual([]);
   });
 
-  it("the table count actually checked is pinned at 20 (not a false pass from an empty match)", async () => {
+  it("the table count actually checked is pinned at 21 (not a false pass from an empty match)", async () => {
     // Was 18 as of WBS 3.6; WBS 4.1's migration 0024_auth_attempts.sql added
     // a 19th table (auth_attempts, RLS enabled, zero policies — same shape
     // as job_queue). WBS 5.7's migration 0032_order_status_history.sql adds
     // a 20th (order_status_history, RLS enabled, one authenticated SELECT
-    // policy — see §7 below). Updated here rather than left stale, per this
+    // policy — see §7 below). WBS 5.10's migration
+    // 0036_order_lookup_rate_limit.sql adds a 21st (order_lookup_attempts,
+    // RLS enabled, zero policies — same shape as auth_attempts/job_queue,
+    // see §7 below). Updated here rather than left stale, per this
     // file's own stated purpose: proving the migration actually closes what
     // it claims, against the real as-built schema.
     if (!ready) return;
@@ -97,10 +100,10 @@ describe("§7.1 — RLS introspection", () => {
       select count(*)::int as n from information_schema.tables
        where table_schema = 'public' and table_type = 'BASE TABLE'
     `);
-    expect(rows[0].n).toBe(20);
+    expect(rows[0].n).toBe(21);
   });
 
-  it("all 20 real tables are present by name", async () => {
+  it("all 21 real tables are present by name", async () => {
     if (!ready) return;
     const { rows } = await pg.query(`
       select table_name from information_schema.tables
@@ -122,6 +125,7 @@ describe("§7.1 — RLS introspection", () => {
         "merchants",
         "order_item_options",
         "order_items",
+        "order_lookup_attempts",
         "order_status_history",
         "orders",
         "payments",
@@ -336,6 +340,65 @@ describe("§7.2, §7.5, §7.6, §7.7, §7.8 — merchant-scoped suite", () => {
       const clientA = authenticatedClient(fixtureA.authUserId);
       const { data } = await clientA.from("auth_attempts").select("*");
       expect((data ?? []).length).toBe(0);
+    });
+  });
+
+  // --- extra, WBS 5.10: order_lookup_attempts — same zero-policy shape as
+  //     auth_attempts/job_queue (packages/db/migrations/
+  //     0036_order_lookup_rate_limit.sql's own header comment: "Same shape
+  //     as job_queue/auth_attempts: RLS enabled, ZERO policies. Only
+  //     service_role ... may touch this table"). This is the rate-limit
+  //     bucket for /track's phone+code lookup — covered here for the same
+  //     reason auth_attempts is, not left to the table-name/count checks
+  //     above alone. ---
+  describe("order_lookup_attempts (WBS 5.10) has no access via anon or authenticated, same zero-policy shape as auth_attempts", () => {
+    let insertedId: string | undefined;
+
+    beforeAll(async () => {
+      if (!ready) return;
+      const { rows } = await pg.query(
+        `insert into order_lookup_attempts (ip_hash) values ($1) returning id`,
+        [`qa-rls-order-lookup-ip-hash-${Date.now()}`],
+      );
+      insertedId = rows[0].id as string;
+    });
+
+    afterAll(async () => {
+      if (!ready || !insertedId) return;
+      await pg.query(`delete from order_lookup_attempts where id = $1`, [insertedId]);
+    });
+
+    it("anon sees zero order_lookup_attempts rows, service_role proves the row exists", async () => {
+      if (!ready) return;
+      const anon = anonClient();
+      const { data } = await anon.from("order_lookup_attempts").select("*");
+      expect((data ?? []).length).toBe(0);
+
+      const svc = serviceClient();
+      const { data: adminData, error } = await svc
+        .from("order_lookup_attempts")
+        .select("id")
+        .eq("id", insertedId);
+      expect(error).toBeNull();
+      expect(adminData).toHaveLength(1);
+    });
+
+    it("an authenticated merchant also sees zero order_lookup_attempts rows (no merchant-scoped policy exists, by design)", async () => {
+      if (!ready) return;
+      const clientA = authenticatedClient(fixtureA.authUserId);
+      const { data } = await clientA.from("order_lookup_attempts").select("*");
+      expect((data ?? []).length).toBe(0);
+    });
+
+    it("anon cannot directly INSERT into order_lookup_attempts (writes only happen via the SECURITY DEFINER function)", async () => {
+      if (!ready) return;
+      const anon = anonClient();
+      const { data, error } = await anon
+        .from("order_lookup_attempts")
+        .insert({ ip_hash: `qa-rls-anon-insert-${Date.now()}` })
+        .select("id");
+      expect(data ?? []).toHaveLength(0);
+      expect(error).not.toBeNull();
     });
   });
 

@@ -758,7 +758,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          image_path: string
+          image_path: string | null
           invoice_date: string | null
           ocr_status: string
           raw_ocr_output: Json | null
@@ -770,7 +770,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
-          image_path: string
+          image_path?: string | null
           invoice_date?: string | null
           ocr_status?: string
           raw_ocr_output?: Json | null
@@ -782,7 +782,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
-          image_path?: string
+          image_path?: string | null
           invoice_date?: string | null
           ocr_status?: string
           raw_ocr_output?: Json | null

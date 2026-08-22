@@ -464,6 +464,23 @@ async function main(): Promise<void> {
       if (day % 30 === 0) console.log(`perf-seed: day ${day}/${WINDOW_DAYS} (${businessDateStr})...`);
     }
 
+    // Without this, the planner's row estimates on a freshly bulk-loaded
+    // table are whatever autovacuum last left behind (often nothing, on a
+    // brand new local stack), which produces false-positive Seq Scan
+    // findings in the perf test even when the real, ANALYZE'd plan uses the
+    // index correctly. See docs/db/query_plans.md's "IMPORTANT" note.
+    console.log("perf-seed: running ANALYZE on fixture tables...");
+    for (const table of [
+      "orders",
+      "order_items",
+      "daily_financials",
+      "stock_ledger",
+      "purchase_invoices",
+      "purchase_line_items",
+    ]) {
+      await client.query(`analyze ${table}`);
+    }
+
     console.log("perf-seed: done.");
     console.log(`perf-seed: store_id=${storeId} slug=${PERF_STORE_SLUG}`);
     console.log(

@@ -75,14 +75,17 @@ silently wrong in the others.
    `pathname === tab.href` exact-match logic (same as `ReportsSubNav`) means
    it can't spuriously highlight or get highlighted by any `/console/settings/*`
    page. **`/console/settings/notifications` (การแจ้งเตือน) has no page.tsx yet**
-   — only `docs/design/screen_inventory.md` documents the route, no file
-   exists under `apps/console/src/app/console/(app)/settings/notifications/`.
-   Left in `TABS` (matching state_matrix/screen_inventory as the source of
-   truth for the tab set) but not rendered anywhere yet since the page
-   doesn't exist; will 404 until that page lands — flagged, not silently
-   dropped. `/console/settings/capacity` deliberately excluded as a 7th tab —
-   not in the prototype's `SETUP` array or `screen_inventory.md`, same
-   omit-rather-than-invent rule Fix 4 used.
+   — only `docs/design/screen_inventory.md` documents the route (owned by
+   WBS 5.8, which built the push-subscription flow inline in the order
+   inbox rather than as a dedicated settings screen), no file exists under
+   `apps/console/src/app/console/(app)/settings/notifications/`. The
+   engineer's first pass left it in `TABS`, which would have 404'd —
+   **orchestrating session removed it from `TABS`** (same omit-rather-than-
+   dead-link rule `ReportsSubNav` already uses for its 4 unbuilt tabs) so
+   this ships as 5 working tabs, not 6 with one broken. Add it back the
+   moment that page exists. `/console/settings/capacity` deliberately
+   excluded as a 7th tab — not in the prototype's `SETUP` array or
+   `screen_inventory.md`, same omit-rather-than-invent rule Fix 4 used.
 
 **Verification (Fix 5):** `npx tsc --noEmit` and `npx eslint` clean on all
 touched files; `apps/console` vitest suite 191/191, no regression; dev

@@ -11,6 +11,14 @@
 // SETUP array and has no screen_inventory.md entry, so (matching
 // ReportsSubNav's own "don't link a route the prototype doesn't name" rule)
 // it is intentionally omitted here, not a 7th tab.
+//
+// การแจ้งเตือน (/console/settings/notifications) is deliberately omitted too,
+// the opposite situation from capacity: it IS in the prototype's SETUP array
+// and IS documented in screen_inventory.md (owned by WBS 5.8), but no
+// page.tsx exists at that route today -- WBS 5.8 built the push-subscription
+// flow inline in the order inbox instead of as a dedicated settings screen.
+// Linking it here would be a dead 404. Add it back the moment that page
+// exists, matching ReportsSubNav's own precedent for its 4 omitted tabs.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -19,7 +27,6 @@ const TABS: Array<{ href: string; label: string }> = [
   { href: "/console/menu", label: "เมนู" },
   { href: "/console/settings/payments", label: "การรับเงิน" },
   { href: "/console/settings/link", label: "ลิงก์และ QR" },
-  { href: "/console/settings/notifications", label: "การแจ้งเตือน" },
   { href: "/console/settings/subscription", label: "แพ็กเกจ" },
 ];
 

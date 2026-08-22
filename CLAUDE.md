@@ -20,7 +20,7 @@ specification; this file is orientation.
 | Async jobs | **Node worker on Render** — anything nobody waits on |
 | Auth | Supabase Auth, phone OTP |
 | Payments | **Direct merchant-owned PromptPay**, EMVCo QR generated locally. No gateway. |
-| OCR | Typhoon OCR via the Float16 API |
+| OCR | Typhoon OCR via the Float16 API — **deferred, see WBS 6.2/6.3.** Ingredient costing runs on manual entry only for now. |
 | Notifications | Web Push (VAPID) with a mandatory polling fallback |
 
 > **This stack replaced an earlier GCP plan** (Cloud Run + Cloud SQL + Prisma +

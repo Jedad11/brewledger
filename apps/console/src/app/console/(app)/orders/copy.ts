@@ -45,3 +45,39 @@ export const NOTIFY_IOS_HINT =
 // note on this toggle).
 export const MUTE_TOGGLE_LABEL = "เสียงแจ้งเตือนออเดอร์ใหม่";
 export const MUTE_TOGGLE_DESCRIPTION = "เสียงและการสั่นเมื่อมีออเดอร์ใหม่เข้ามา";
+
+// WBS 5.9 -- status action buttons. Failure copy sourced from
+// interaction_spec.md line 13 ("on failure the badge reverts and a
+// persistent inline message appears") -- the message text itself is
+// authored (no exact string existed anywhere), same generic-failure idiom
+// as the rest of this app (requestOtp.ts / menu save / capacity save all
+// use the identical "ลองใหม่อีกครั้ง" pattern), plus one MORE specific
+// message for the one distinguishable failure mode (another tab/device
+// already moved this order) rather than folding it into the generic one.
+export const ADVANCE_FAILED = "ทำรายการไม่สำเร็จ ลองใหม่อีกครั้ง";
+export const ADVANCE_STALE = "สถานะออเดอร์นี้เปลี่ยนไปแล้ว ลองรีเฟรชหน้าอีกครั้ง";
+
+// WBS 5.9 -- bulk "mark all ready" per pickup slot. Button label verbatim
+// from design/owner-console.js's own scOrders() (`data-bulk`), confirmed
+// against the WBS 5.9 Claude Code Prompt's identical string -- added here
+// and to docs/design/state_matrix.md in this same change (state_matrix.md
+// had documented the working queue's grouping but not this control, per
+// its own note "WBS 5.9/5.11 add them"). Result copy is authored: the
+// prototype's own bulk handler is a client-side-only mutation with no
+// failure case to source language from.
+export const BULK_READY_LABEL = "ทำเสร็จทั้งช่วงเวลานี้";
+export function bulkReadyPartialResult(successCount: number, failedCodes: string[]): string {
+  return `ทำสำเร็จ ${successCount} ออเดอร์ · ไม่สำเร็จ ${failedCodes.length} ออเดอร์ (${failedCodes.join(", ")})`;
+}
+export const BULK_READY_TOTAL_FAILURE = "ทำรายการไม่สำเร็จทั้งหมด ลองใหม่อีกครั้ง";
+
+// WBS 5.9 -- order detail screen `/console/orders/{id}`. No counterpart in
+// docs/design/state_matrix.md (only the working-queue *list* was
+// documented there, WBS 5.8) -- authored here from
+// design/owner-console.js's own scDetail(), same posture as WBS 4.7/5.3's
+// own authored screens, and added to state_matrix.md in this same change.
+export const DETAIL_BACK = "ย้อนกลับ";
+export const DETAIL_CONTACT_TITLE = "ติดต่อลูกค้า";
+export const DETAIL_CONTACT_MISSING = "ลูกค้าไม่ได้ให้เบอร์โทร";
+export const DETAIL_CALL_CUSTOMER = "โทรหาลูกค้า";
+export const DETAIL_HISTORY_TITLE = "ประวัติสถานะ";

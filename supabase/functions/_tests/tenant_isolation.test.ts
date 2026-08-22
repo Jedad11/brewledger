@@ -69,6 +69,23 @@ const LOCAL_DB_URL =
 // claim that needs to stay true -- it is not a place to silence a real gap.
 const KNOWN_NON_GUARDED_EXCEPTIONS = new Set<string>([
   "console-auth-request-otp", // issues the OTP itself; cannot require a session to call it (WBS 4.1)
+  // WBS 5.9 — console-bulk-ready-orders processes each orderId in its
+  // request body INDEPENDENTLY (its own header comment: "process per order,
+  // not as one transaction" -- the WBS 5.9 acceptance criterion this
+  // implements) and reports a foreign-tenant id as {orderId, ok:false,
+  // code:"NOT_FOUND"} INSIDE a 200 response body (ctx.supabase is RLS-scoped
+  // to the caller's own stores, so a foreign order id simply has no visible
+  // row -- there is no separate storeId parameter on this endpoint to reject
+  // at the auth boundary at all). This suite's generic manifest shape
+  // (ENDPOINT_MANIFEST + the describe.each below) hard-codes a single
+  // top-level 403-with-empty-body rejection, which this endpoint's contract
+  // does not produce even when it correctly refuses cross-tenant access --
+  // an entry here is NOT a claim that this endpoint is unverified, see the
+  // dedicated "console-bulk-ready-orders — per-item cross-tenant handling"
+  // describe block below, which drives the real endpoint over real HTTP and
+  // asserts exactly this NOT_FOUND-per-item behavior plus zero mutation of
+  // the foreign order.
+  "console-bulk-ready-orders",
 ]);
 
 interface EndpointManifestEntry {
@@ -147,6 +164,38 @@ const ENDPOINT_MANIFEST: EndpointManifestEntry[] = [
     }),
     assertSuccessBody: assertPaymentActionSuccessBody,
   },
+  {
+    // WBS 5.9 — console-advance-order (packages/db/migrations/
+    // 0040_console_advance_order.sql). Same shape as console-confirm-payment/
+    // console-reject-payment above: no client-supplied storeId param, the
+    // ownership check happens inside console_advance_order() itself
+    // (auth_store_ids()) and the Edge Function maps its FORBIDDEN code to a
+    // real 403 with no body (index.ts's own errorResponse(403) call) --
+    // `storeId` here just selects which pre-seeded ACCEPTED throwaway order
+    // (owned by storeA or storeB) the generic tests below target. The two
+    // success-path tests both advance the SAME order (storeA's) to
+    // PREPARING -- the second call lands on console_advance_order's own
+    // {ok:true, already:true} idempotent branch, still a 200 with ok:true,
+    // which assertPaymentActionSuccessBody (checks only body.ok===true)
+    // already tolerates without a bespoke assertion.
+    functionName: "console-advance-order",
+    request: ({ jwt, storeId }) => ({
+      url: functionUrl("console-advance-order"),
+      init: {
+        method: "POST",
+        headers: {
+          apikey: LOCAL_ANON_KEY,
+          Authorization: `Bearer ${jwt}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          orderId: storeId === storeB ? advanceOrderB : advanceOrderA,
+          to: "PREPARING",
+        }),
+      },
+    }),
+    assertSuccessBody: assertPaymentActionSuccessBody,
+  },
 ];
 
 function listGuardableFunctionDirNames(): string[] {
@@ -198,6 +247,21 @@ let confirmOrderA: string | undefined;
 let confirmOrderB: string | undefined;
 let rejectOrderA: string | undefined;
 let rejectOrderB: string | undefined;
+// WBS 5.9 — console-advance-order needs a source order already at ACCEPTED
+// (its own allow-list only accepts PREPARING/READY/COLLECTED as targets, and
+// PREPARING requires an ACCEPTED row -- packages/db/migrations/
+// 0040_console_advance_order.sql), unlike confirm/reject's PENDING_PAYMENT
+// throwaways above.
+let advanceOrderA: string | undefined;
+let advanceOrderB: string | undefined;
+// WBS 5.9 — console-bulk-ready-orders' own dedicated describe block (below
+// the manifest-driven describe.each) needs a SEPARATE pair of ACCEPTED
+// orders, one per store, that the generic manifest entry above never
+// touches -- reusing advanceOrderA/B there would make that block's
+// assertions depend on execution order against the manifest loop's own
+// mutations of the same rows.
+let bulkOrderOwnA: string | undefined;
+let bulkOrderForeignB: string | undefined;
 
 beforeAll(async () => {
   const reachable = await isFunctionReachable("qa-console-auth-probe");
@@ -222,6 +286,10 @@ beforeAll(async () => {
   confirmOrderB = await insertThrowawayOrder(storeB, "confirm-b");
   rejectOrderA = await insertThrowawayOrder(storeA, "reject-a");
   rejectOrderB = await insertThrowawayOrder(storeB, "reject-b");
+  advanceOrderA = await insertThrowawayOrder(storeA, "advance-a", "ACCEPTED");
+  advanceOrderB = await insertThrowawayOrder(storeB, "advance-b", "ACCEPTED");
+  bulkOrderOwnA = await insertThrowawayOrder(storeA, "bulk-own-a", "ACCEPTED");
+  bulkOrderForeignB = await insertThrowawayOrder(storeB, "bulk-foreign-b", "ACCEPTED");
 });
 
 afterAll(async () => {
@@ -256,16 +324,26 @@ async function insertStoreForMerchant(merchantId: string, label: string): Promis
 // checkout fixture packages/db/tests/payment_confirmation.test.ts builds
 // for its own deeper RPC-level assertions -- this suite only needs the
 // endpoint to be callable, not its side effects verified.
-async function insertThrowawayOrder(storeId: string, label: string): Promise<string> {
+// `status` optional -- omitted defaults to the orders table's own default
+// (PENDING_PAYMENT), which is what confirm/reject's own throwaway orders
+// need. WBS 5.9's console-advance-order/console-bulk-ready-orders fixtures
+// pass "ACCEPTED" explicitly (see insertThrowawayOrder's callers above).
+async function insertThrowawayOrder(storeId: string, label: string, status?: string): Promise<string> {
   const client = new PgClient({ connectionString: LOCAL_DB_URL });
   await client.connect();
   try {
     const orderCode = `QTI${label.toUpperCase()}${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
-    const { rows } = await client.query<{ id: string }>(
-      `insert into orders (store_id, order_code, customer_name, subtotal_satang, total_satang)
-       values ($1, $2, $3, $4, $4) returning id`,
-      [storeId, orderCode, `QA Tenant Isolation Customer ${label}`, 10000],
-    );
+    const { rows } = status
+      ? await client.query<{ id: string }>(
+          `insert into orders (store_id, order_code, customer_name, subtotal_satang, total_satang, status)
+           values ($1, $2, $3, $4, $4, $5) returning id`,
+          [storeId, orderCode, `QA Tenant Isolation Customer ${label}`, 10000, status],
+        )
+      : await client.query<{ id: string }>(
+          `insert into orders (store_id, order_code, customer_name, subtotal_satang, total_satang)
+           values ($1, $2, $3, $4, $4) returning id`,
+          [storeId, orderCode, `QA Tenant Isolation Customer ${label}`, 10000],
+        );
     return rows[0].id;
   } finally {
     await client.end();
@@ -337,5 +415,45 @@ describe("sanity — both merchants' stores genuinely exist via service_role", (
     if (!ready) return;
     expect(merchantA!.merchantId).not.toBe(merchantB!.merchantId);
     expect(storeA).not.toBe(storeB);
+  });
+});
+
+// WBS 5.9 — console-bulk-ready-orders' own cross-tenant behavior, driven
+// separately from the generic ENDPOINT_MANIFEST describe.each above (see
+// KNOWN_NON_GUARDED_EXCEPTIONS's own comment on this endpoint for why: it
+// has no single top-level 403 to assert, since every orderId in the batch
+// is resolved independently through the caller's own RLS-scoped client).
+// Real HTTP against the real Edge Runtime, same as every other block in
+// this file -- not a mock of ctx.supabase or of the RLS policy it relies on.
+describe("console-bulk-ready-orders — per-item cross-tenant handling (does not fit the generic 403 manifest shape)", () => {
+  it("REQUIRED: merchant A's bulk request naming one of A's own orders AND one of merchant B's orders advances A's own order and reports B's as NOT_FOUND -- never FORBIDDEN-with-a-leak, never silently advancing B's order too", async () => {
+    if (!ready) return;
+    const jwtA = mintAuthenticatedJwt(merchantA!.authUserId);
+    const res = await fetch(functionUrl("console-bulk-ready-orders"), {
+      method: "POST",
+      headers: { apikey: LOCAL_ANON_KEY, Authorization: `Bearer ${jwtA}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ orderIds: [bulkOrderOwnA, bulkOrderForeignB] }),
+    });
+    expect(res.status).toBe(200); // this endpoint's own contract: always 200, per-item results inside
+    const body = (await res.json()) as { ok: boolean; results: Array<{ orderId: string; ok: boolean; code?: string }> };
+    expect(body.ok).toBe(true);
+
+    const ownResult = body.results.find((r) => r.orderId === bulkOrderOwnA);
+    const foreignResult = body.results.find((r) => r.orderId === bulkOrderForeignB);
+    expect(ownResult).toEqual({ orderId: bulkOrderOwnA, ok: true });
+    // NOT_FOUND, not FORBIDDEN: RLS makes the foreign row genuinely invisible
+    // to A's own authenticated client rather than visible-but-rejected --
+    // still a real refusal (proven by the DB read below), just a different
+    // observable code than console_advance_order's own explicit FORBIDDEN
+    // (that function DOES see the row, via auth_store_ids(), and rejects it
+    // by name -- flagged here as a real, disclosed difference between the
+    // two endpoints' failure shapes, not an inconsistency to silently paper
+    // over).
+    expect(foreignResult).toEqual({ orderId: bulkOrderForeignB, ok: false, code: "NOT_FOUND" });
+
+    // Zero mutation of B's order, proven via service_role (bypasses RLS).
+    const service = serviceClient();
+    const { data } = await service.from("orders").select("status").eq("id", bulkOrderForeignB!).maybeSingle();
+    expect((data as { status: string } | null)?.status).toBe("ACCEPTED"); // unchanged
   });
 });

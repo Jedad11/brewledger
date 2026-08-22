@@ -28,3 +28,30 @@ export function toUiOrderStatus(dbStatus: string): UiOrderStatus {
 // handling. PENDING_PAYMENT has its own section (WBS 5.6); COLLECTED/
 // CANCELLED/REFUNDED/EXPIRED are terminal and drop off the queue.
 export const WORKING_QUEUE_STATUSES = ["ACCEPTED", "PREPARING", "READY"] as const;
+
+// WBS 5.9 — the three forward transitions a merchant drives directly,
+// keyed both ways: the literal DB value console-advance-order's RPC expects
+// as `to`, and the UI status an optimistic update should show immediately
+// (packages/ui's OrderCard computes its OWN button label from this same UI
+// status via its NEXT_ACTION_LABEL map — kept in sync only by both being
+// derived from the identical three-status set, not by importing one from
+// the other across the app/package boundary).
+const NEXT_DB_STATUS: Partial<Record<UiOrderStatus, "PREPARING" | "READY" | "COLLECTED">> = {
+  accepted: "PREPARING",
+  making: "READY",
+  ready: "COLLECTED",
+};
+
+const NEXT_UI_STATUS: Partial<Record<UiOrderStatus, UiOrderStatus>> = {
+  accepted: "making",
+  making: "ready",
+  ready: "collected",
+};
+
+export function nextDbStatusFor(status: UiOrderStatus): "PREPARING" | "READY" | "COLLECTED" | null {
+  return NEXT_DB_STATUS[status] ?? null;
+}
+
+export function nextUiStatusFor(status: UiOrderStatus): UiOrderStatus | null {
+  return NEXT_UI_STATUS[status] ?? null;
+}

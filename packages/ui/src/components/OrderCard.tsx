@@ -57,6 +57,25 @@ export interface OrderCardProps {
   onOpen?: (orderId: string) => void;
 }
 
+/**
+ * WBS 5.9 — the verb for the single legal next tap, not a generic
+ * "continue". Sourced verbatim from `design/owner-console.js`'s own `NEXT`
+ * map (`docs/design/interaction_spec.md` line 13 confirms the same three
+ * strings) — a status absent here (unpaid/collected/cancelled/refunded/
+ * expired) has no legal forward transition a merchant drives from this
+ * card, so it gets no button, regardless of what the caller passes for
+ * showNextAction/onAdvance. This is the SAME guarantee "illegal
+ * transitions are never offered in the UI at all" needs, enforced here
+ * too (not only by which props WBS 5.9's callers choose to pass) so it
+ * cannot regress if a future caller wires onAdvance for a terminal status
+ * by mistake.
+ */
+export const NEXT_ACTION_LABEL: Partial<Record<OrderStatus, string>> = {
+  accepted: "เริ่มทำ",
+  making: "พร้อมรับ",
+  ready: "รับแล้ว",
+};
+
 export function OrderCard({
   order,
   variant,
@@ -66,6 +85,7 @@ export function OrderCard({
   onCancel,
   onOpen,
 }: OrderCardProps) {
+  const nextActionLabel = NEXT_ACTION_LABEL[order.status];
   return (
     <div
       className={`card oc-order${unseen ? " is-new" : ""}`}
@@ -110,14 +130,14 @@ export function OrderCard({
         <MoneyValue value={order.totalSatang} role="revenue" />
       </div>
 
-      {showNextAction && onAdvance ? (
+      {showNextAction && onAdvance && nextActionLabel ? (
         <button
           type="button"
           className="btn btn--primary btn--wet"
           onClick={() => onAdvance(order.id)}
           data-testid="order-card-advance"
         >
-          ดำเนินการต่อ
+          {nextActionLabel}
         </button>
       ) : null}
 

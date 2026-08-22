@@ -11,6 +11,7 @@
     "lint": "pnpm -r lint",
     "lint:boundary": "eslint . -c eslint.config.mjs",
     "lint:functions": "eslint supabase/functions -c supabase/functions/eslint.config.mjs",
+    "lint:lifecycle": "node scripts/scan-order-status-bypass.mjs",
     "functions:serve": "supabase functions serve --import-map supabase/functions/deno.json",
     "lint:adherence": "node scripts/lint-adherence.mjs",
     "scan:forbidden-fields": "node scripts/scan-forbidden-fields.mjs",
@@ -34,6 +35,7 @@
     "husky": "^9.1.7",
     "oxlint": "^1.78.0",
     "pg": "^8.23.0",
+    "supabase": "2.115.0",
     "typescript": "^5",
     "typescript-eslint": "^8"
   }

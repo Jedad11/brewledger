@@ -156,10 +156,33 @@ button{font-family:inherit;letter-spacing:var(--tracking-normal)}
 .cw-stepitem.is-now{color:var(--green-ledger);font-weight:700}
 .cw-stepitem.is-now .cw-dot{border-color:var(--green-brew);box-shadow:0 0 0 4px var(--green-mist-tint)}
 
-/* ---- Console shell ---- */
+/* ---- Console shell ----
+ * Cross-cutting fix (2026-08): the base page scaffold from
+ * /design/Owner Console.html's <style> block (its .oc/.oc-main rules and
+ * the matching slice of its @media(min-width:1280px) block) was never
+ * ported -- only the piecemeal .oc-nav/.oc-side/.oc-body-adjacent parts
+ * existed. Confirmed live: every console screen rendered single-column and
+ * off-center at desktop widths with no sidebar, because .oc-main never
+ * received flex:1 and .oc never switched to flex-direction:row. .oc-body
+ * itself (used by DashboardClient, PnlPage, ProfitPerDishPage already) was
+ * ALSO completely absent from this file -- ported here too, verbatim from
+ * the same <style> block, not previously extracted. .oc--auth and the
+ * cart-only .oc-total rule from that same <style> block are deliberately
+ * NOT ported -- out of scope for this fix (no authenticated screen uses
+ * .oc--auth yet, .oc-total belongs to a screen this package doesn't have). */
+.oc{min-height:100vh;display:flex;flex-direction:column}
+.oc-main{flex:1}
+.oc-body{padding:var(--space-3) var(--gutter-md) var(--space-6);display:flex;flex-direction:column;gap:var(--space-3);max-width:1100px}
+@media(min-width:1280px){
+.oc{flex-direction:row}
+.oc-body{padding-bottom:var(--space-9)}
+.oc-main{flex:1;min-width:0}
+.oc-body{max-width:1180px}
+}
+
 .oc-nav{display:grid;grid-template-columns:repeat(5,1fr);align-items:end;background:var(--white);box-shadow:var(--shadow-nav);padding:.6rem 0 1rem}
-.oc-nav button{position:relative;display:flex;flex-direction:column;align-items:center;gap:.4rem;min-height:var(--tap-min);border:0;background:none;cursor:pointer;font-size:var(--text-1);font-weight:600;color:var(--text-black-soft);padding:.6rem 0}
-.oc-nav button.is-active{color:var(--green-ledger)}
+.oc-nav a{position:relative;display:flex;flex-direction:column;align-items:center;gap:.4rem;min-height:var(--tap-min);border:0;background:none;cursor:pointer;font-size:var(--text-1);font-weight:600;color:var(--text-black-soft);padding:.6rem 0;text-decoration:none}
+.oc-nav a.is-active{color:var(--green-ledger)}
 .oc-nav .glyph{width:24px;height:24px;display:grid;place-items:center}
 .oc-nav .slot-sell{transform:translateY(-14px)}
 .oc-nav .slot-sell .glyph{width:var(--tap-wet);height:var(--tap-wet);border-radius:var(--radius-circle);background:var(--green-brew);color:#fff;box-shadow:var(--shadow-fab-base),var(--shadow-fab-ambient)}
@@ -170,8 +193,8 @@ button{font-family:inherit;letter-spacing:var(--tracking-normal)}
 .oc-nav{display:none}
 .oc-side{display:flex;flex-direction:column;gap:.4rem;width:232px;padding:var(--space-4) var(--space-3);background:var(--white);box-shadow:var(--shadow-nav);min-height:100%}
 .oc-side .wordmark{font-weight:800;font-size:var(--text-4);color:var(--green-ledger);margin-bottom:var(--space-3)}
-.oc-side button{display:flex;align-items:center;gap:1.2rem;min-height:var(--tap-min);padding:0 1.4rem;border:0;border-radius:var(--radius-pill);background:none;cursor:pointer;font-size:var(--text-3);font-weight:600;color:var(--text-black-soft);text-align:left}
-.oc-side button.is-active{background:var(--green-mist);color:var(--green-ledger)}
+.oc-side a{display:flex;align-items:center;gap:1.2rem;min-height:var(--tap-min);padding:0 1.4rem;border:0;border-radius:var(--radius-pill);background:none;cursor:pointer;font-size:var(--text-3);font-weight:600;color:var(--text-black-soft);text-align:left;text-decoration:none}
+.oc-side a.is-active{background:var(--green-mist);color:var(--green-ledger)}
 }
 
 /* ---- Ported from /design/Owner Console.html <style> — order inbox/detail,
@@ -196,6 +219,14 @@ button{font-family:inherit;letter-spacing:var(--tracking-normal)}
  * extracted into this file since no screen used them before the P&L report.
  * .oc-absorbed (the prototype's struck-through gateway-fee row) is
  * deliberately NOT ported — WBS 4.8 removed the fee line it styled. */
+/* Cross-cutting fix (2026-08) -- ported verbatim from /design/Console
+ * Reports.html <style> (.oc-subnav), not previously extracted into this
+ * file since no screen rendered the Reports sub-nav before now
+ * (ReportsSubNav.tsx, apps/console). */
+.oc-subnav{position:sticky;top:0;z-index:6;display:flex;gap:.6rem;overflow-x:auto;padding:1.2rem var(--gutter-md);background:var(--white);box-shadow:var(--shadow-nav)}
+.oc-subnav a{white-space:nowrap;flex:none;display:inline-flex;align-items:center;min-height:var(--tap-min);padding:0 1.8rem;border:0;border-radius:var(--radius-pill);background:none;font-family:inherit;font-size:var(--text-3);font-weight:600;color:var(--text-black-soft);cursor:pointer;text-decoration:none}
+.oc-subnav a.is-active{background:var(--green-mist);color:var(--green-ledger)}
+
 .oc-datesel{display:flex;align-items:center;justify-content:space-between;gap:1.2rem;background:var(--white);border-radius:var(--radius-pill);box-shadow:var(--shadow-card);padding:.6rem 1.2rem}
 .oc-arrow{width:var(--tap-min);height:var(--tap-min);border:0;border-radius:50%;background:var(--ceramic);color:var(--green-ledger);font-size:var(--text-5);cursor:pointer}
 .oc-arrow:disabled{color:var(--c-unknown);cursor:default}

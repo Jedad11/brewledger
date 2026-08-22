@@ -12,6 +12,83 @@ only set Status to `needs review` and fill in `Implemented by` + `Commit
 ref`. Only the reviewing leg (`qa_engineer` or `redline_reviewer`) may set
 Status to `done` and fill in `Reviewed by`. Never self-certify.
 
+## Cross-cutting fix (2026-08) — Owner Console shared shell was silently non-compliant
+
+Found by the user, comparing the live running app against `/design/Owner
+Console.html` and `/design/Console Reports.html` side-by-side across several
+rounds. Every already-"done" console screen (WBS 4.3, 4.4, 5.8, 5.9, 6.5,
+7.1, 7.5, 7.6) was affected, because the defect lived in the shared
+shell/layout, not in any one screen. Matters because "done" for those
+entries was certified against the screen's own content, not the scaffold it
+renders inside — the scaffold was never built at all in one case (Fix 2) and
+silently wrong in the others.
+
+1. **`.oc`/`.oc-main` base scaffold CSS was never ported** from
+   `/design/Owner Console.html`'s `<style>` block into
+   `packages/ui/src/components.css` — confirmed by grep, zero hits before
+   this fix. `.oc-body` (used by `DashboardClient`, `PnlPage`,
+   `ProfitPerDishPage` already) was **also** completely absent. Ported the
+   base rules plus the `@media(min-width:1280px)` slice verbatim (not
+   `.oc--auth`/`.oc-total`, out of scope). This is why every screen rendered
+   single-column/off-center at desktop widths with no sidebar.
+2. **`NavShell` existed but was never rendered anywhere, and had no real
+   routing.** `apps/console/src/app/console/(app)/layout.tsx` rendered zero
+   chrome. `NavShell.tsx` now uses `next/link` + `usePathname()` (derives
+   its own active tab; a caller can still override `active` for the
+   fidelity gallery, which renders outside any router context) and is
+   rendered from `layout.tsx` wrapping `{children}` in `.oc`/`.oc-main`.
+   `settings` routes to `/console/settings/store` (no index route exists —
+   flagged for `redline_reviewer` as the most sensible default, not a
+   spec value). `badge` (unseen order count) intentionally left unset — WBS
+   5.8's unseen-order mechanism (`orders/unseen.ts`) is client-side, scoped
+   to `InboxClient`'s own realtime feed, not cheaply available at this
+   server layout. Known follow-up, not silently dropped.
+3. **`MetricCard` always rendered money to 2 decimals**; the prototype
+   (`console-reports.js`'s own `B()` helper) shows integers — "฿3,240" not
+   "฿3,240.00". Fixed at the `MetricCard` call site only
+   (`decimals={0}` passed to `MoneyValue`); `MoneyValue`'s own default stays
+   2, flagged as a separate open question for `redline_reviewer`. Broke two
+   pre-existing assertions in `DashboardClient.test.tsx` that expected the
+   old 2-decimal string ("324.00"/"118.00") — those are now correct per the
+   fix and need `qa_engineer` to update, not revert.
+4. **No sub-navigation within the Reports section.** Built
+   `apps/console/src/components/ReportsSubNav.tsx` (ports `.oc-subnav` from
+   `/design/Console Reports.html`, added to `components.css`), rendered at
+   the top of `/console/inventory`, `/console/reports/pnl`,
+   `/console/reports/profit-per-dish`. **Only 3 of the prototype's 7 `TABS`
+   entries have a real route today** — สแกนบิล (WBS 6.1), ตรวจบิล (WBS 6.4),
+   รายการเดินบัญชี (GAP-1), เปรียบเทียบ (WBS 7.7) are not built and were
+   deliberately omitted rather than linked dead. Extend `TABS` in that file
+   as each lands.
+
+**Incidental fix required to keep WBS 2.2's fidelity gate green:**
+`packages/ui/scripts/verify-fidelity.mjs`'s browser bundle broke entirely
+(0/21 rows resolving — "process is not defined") once `NavShell` started
+importing real `next/link`/`next/navigation` code, which reads
+`process.env.*` keys beyond `NODE_ENV` in a plain-browser page with no
+Node/webpack `process` global. Added a minimal `process` shim via esbuild's
+`banner` option. Re-ran after: back to 18 PASS, 0 FAIL, 3 NO_REFERENCE,
+matching the pre-fix baseline exactly.
+
+**Also updated:** `.oc-nav`/`.oc-side`/`.oc-subnav` CSS selectors in
+`components.css` targeted `button`, now target `a` (both `NavShell` and
+`ReportsSubNav` render real `<Link>` anchors, not buttons).
+`packages/ui/package.json` gained `next` as an optional peer dependency.
+
+**Verification:** `pnpm --filter @brewledger/ui build`, `npx tsc --noEmit`
+(apps/console), `npx eslint` on every touched file, `pnpm lint:boundary`,
+the forbidden-copy grep, `packages/ui`'s vitest suite (21/21), and
+`verify-fidelity.mjs` all clean/green. `apps/console`'s existing vitest
+suite: 184/186 pass — the 2 failures are `DashboardClient.test.tsx`'s stale
+2-decimal assertions from Fix 3 above, left for `qa_engineer` to update
+rather than edited here. **Not independently confirmed against a live
+authenticated render** in this session (`/console` requires phone-OTP login,
+not scriptable here) — confirmed instead via `verify-fidelity.mjs`'s real
+Playwright/browser render of `NavShell` and via direct code/CSS review;
+flagged for `redline_reviewer` to do a live pass.
+
+Implemented by: engineer. Not yet reviewed.
+
 | WBS | Title | Phase | Status | Pattern | Implemented by | Reviewed by | Commit/PR ref | Notes |
 |---|---|---|---|---|---|---|---|---|
 | 3.1 | Repository, Monorepo Layout and CI | 3 | pre-existing (adapt, do not scaffold) | — | — | — | `b051af7`, `2617638` | `apps/shop` + `apps/console` already scaffolded and live on Vercel (competition QR code entry), predates this WBS. The dictionary's Claude Code prompt assumes greenfield scaffolding — do not run it verbatim. Read `docs/ops/migration_notes.md` before dispatching any agent against this entry. |

@@ -8,6 +8,7 @@ import { fetchPnlDay, fetchPnlTrend } from "./fetchPnlDay";
 import { PnlClient, PnlView } from "./PnlClient";
 import { PAGE_TITLE, TREND_TITLE } from "./copy";
 import { Sparkline } from "@brewledger/ui";
+import { ReportsSubNav } from "@/components/ReportsSubNav";
 import { businessDateBoundsUtc } from "../../businessDate";
 import type { Database } from "@brewledger/db/types";
 
@@ -55,16 +56,19 @@ export default async function PnlPage() {
       source: "live" as const,
     };
     return (
-      <main className="mx-auto w-full max-w-2xl px-4 py-8">
-        {heading}
-        <div className="oc-body">
-          <PnlView day={emptyDay} />
-          <div className="card">
-            <h3>{TREND_TITLE}</h3>
-            <Sparkline values={[]} />
+      <>
+        <ReportsSubNav />
+        <main className="mx-auto w-full max-w-2xl px-4 py-8">
+          {heading}
+          <div className="oc-body">
+            <PnlView day={emptyDay} />
+            <div className="card">
+              <h3>{TREND_TITLE}</h3>
+              <Sparkline values={[]} />
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </>
     );
   }
 
@@ -73,15 +77,18 @@ export default async function PnlPage() {
   const initialTrend = await fetchPnlTrend(supabase, store.id, initialDay);
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
-      {heading}
-      <PnlClient
-        storeId={store.id}
-        timezone={store.timezone}
-        todayBusinessDate={todayBusinessDate}
-        initialDay={initialDay}
-        initialTrend={initialTrend}
-      />
-    </main>
+    <>
+      <ReportsSubNav />
+      <main className="mx-auto w-full max-w-2xl px-4 py-8">
+        {heading}
+        <PnlClient
+          storeId={store.id}
+          timezone={store.timezone}
+          todayBusinessDate={todayBusinessDate}
+          initialDay={initialDay}
+          initialTrend={initialTrend}
+        />
+      </main>
+    </>
   );
 }

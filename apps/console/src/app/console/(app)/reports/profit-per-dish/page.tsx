@@ -9,6 +9,7 @@ import { fetchProfitPerDish } from "./fetchProfitPerDish";
 import { periodBounds } from "./period";
 import { ProfitPerDishClient, ProfitPerDishView } from "./ProfitPerDishClient";
 import { PAGE_TITLE } from "./copy";
+import { ReportsSubNav } from "@/components/ReportsSubNav";
 import type { Database } from "@brewledger/db/types";
 
 type StoreRow = Pick<Database["public"]["Tables"]["stores"]["Row"], "id" | "timezone">;
@@ -40,12 +41,15 @@ export default async function ProfitPerDishPage() {
   // hasn't finished WBS 4.3 can still reach any console route.
   if (!store) {
     return (
-      <main className="mx-auto w-full max-w-3xl px-4 py-8">
-        {heading}
-        <div className="oc-body">
-          <ProfitPerDishView report={{ tracked: [], untracked: [], insight: null }} />
-        </div>
-      </main>
+      <>
+        <ReportsSubNav />
+        <main className="mx-auto w-full max-w-3xl px-4 py-8">
+          {heading}
+          <div className="oc-body">
+            <ProfitPerDishView report={{ tracked: [], untracked: [], insight: null }} />
+          </div>
+        </main>
+      </>
     );
   }
 
@@ -53,9 +57,12 @@ export default async function ProfitPerDishPage() {
   const initialReport = await fetchProfitPerDish(supabase, store.id, bounds.startUtc, bounds.endUtc);
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8">
-      {heading}
-      <ProfitPerDishClient storeId={store.id} timezone={store.timezone} initialReport={initialReport} />
-    </main>
+    <>
+      <ReportsSubNav />
+      <main className="mx-auto w-full max-w-3xl px-4 py-8">
+        {heading}
+        <ProfitPerDishClient storeId={store.id} timezone={store.timezone} initialReport={initialReport} />
+      </main>
+    </>
   );
 }

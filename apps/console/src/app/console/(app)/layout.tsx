@@ -10,6 +10,7 @@
 import { redirect } from "next/navigation";
 import { resolveMerchantCtx } from "@/lib/merchant";
 import { MerchantProvider } from "@/lib/MerchantProvider";
+import { NavShell } from "@brewledger/ui";
 
 export default async function AuthenticatedConsoleLayout({ children }: LayoutProps<"/console">) {
   const merchant = await resolveMerchantCtx();
@@ -23,5 +24,21 @@ export default async function AuthenticatedConsoleLayout({ children }: LayoutPro
     redirect("/console/login");
   }
 
-  return <MerchantProvider merchant={merchant}>{children}</MerchantProvider>;
+  // Cross-cutting fix (2026-08): this layout previously rendered zero
+  // chrome -- no .oc/.oc-main scaffold, no NavShell -- so every screen
+  // under it rendered single-column with no way to navigate except typing
+  // a URL. NavShell derives its own active tab from usePathname()
+  // internally; `badge` (unseen order count) is left unset here rather than
+  // adding new data-fetching plumbing at the layout level -- WBS 5.8's
+  // unseen-order mechanism (orders/unseen.ts) is client-side and scoped to
+  // InboxClient's own realtime feed, not something this server layout has
+  // cheap access to. Flagged as a known follow-up, not silently dropped.
+  return (
+    <MerchantProvider merchant={merchant}>
+      <div className="oc">
+        <NavShell surface="console" />
+        <main className="oc-main">{children}</main>
+      </div>
+    </MerchantProvider>
+  );
 }

@@ -38,6 +38,15 @@ async function bundleGallery() {
     jsx: "automatic",
     loader: { ".tsx": "tsx", ".ts": "ts" },
     define: { "process.env.NODE_ENV": '"production"' },
+    // Cross-cutting fix (2026-08): NavShell now imports next/link and
+    // next/navigation (real routing, not a decoration) -- their bundled
+    // code reads `process.env.*` keys beyond NODE_ENV (e.g. router feature
+    // flags) that esbuild's `define` above doesn't literal-replace, which
+    // throws "process is not defined" in this bundle's plain-browser
+    // execution (no Node/webpack `process` global here) and blanks the
+    // entire gallery page before anything mounts. A minimal shim, not a
+    // real process -- this page never touches Node.
+    banner: { js: "var process = { env: { NODE_ENV: 'production' }, browser: true };" },
   });
   return result.outputFiles[0].text;
 }

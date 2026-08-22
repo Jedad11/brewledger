@@ -20,8 +20,12 @@
     "verify:fidelity": "node scripts/verify-fidelity.mjs"
   },
   "peerDependencies": {
+    "next": "^15 || ^16",
     "react": "^19",
     "react-dom": "^19"
+  },
+  "peerDependenciesMeta": {
+    "next": { "optional": true }
   },
   "devDependencies": {
     "@playwright/test": "^1.51.1",

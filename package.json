@@ -20,6 +20,7 @@
     "scan:forbidden-fields": "node scripts/scan-forbidden-fields.mjs",
     "scan:forbidden-fields:bundle": "node scripts/scan-forbidden-fields-bundle.mjs",
     "scan:forbidden-copy": "node scripts/scan-forbidden-copy.mjs",
+    "check:migration-numbers": "node scripts/check-migration-numbers.mjs",
     "ops:check-quota": "node scripts/check-quota.mjs",
     "ops:restore-drill": "node scripts/restore-drill.mjs",
     "test:lint-no-db-row-spread": "bash scripts/test-lint-no-db-row-spread-regression.sh",

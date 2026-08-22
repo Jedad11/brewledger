@@ -42,19 +42,35 @@ const PERIOD_CHIPS: { kind: PeriodKind; label: string }[] = [
 type SortKey = "name" | "unitsSold" | "revenueSatang" | "costSatang" | "marginPerUnitSatang" | "totalProfitSatang";
 const DEFAULT_SORT: SortKey = "totalProfitSatang";
 
+// `rows` is always `report.tracked` in practice (untracked rows render via
+// a separate, unsorted `DishTable` call below), so `costSatang` /
+// `marginPerUnitSatang` / `totalProfitSatang` are never actually null here
+// -- but the field TYPE is nullable (DishRow, shared with `untracked`), so
+// nothing stops a future caller from sorting a mixed/untracked array. `null`
+// now sorts last regardless of direction rather than being coerced to `0`,
+// which would otherwise rank an untracked item as the cheapest/least-
+// profitable on an ascending sort, or surface it first on a descending one
+// (post-review fix round, WBS 6.9).
 function sortTracked(rows: DishRow[], key: SortKey, dir: 1 | -1): DishRow[] {
   const copy = [...rows];
   copy.sort((a, b) => {
     if (key === "name") return dir * a.name.localeCompare(b.name, "th");
-    const av = a[key] ?? 0;
-    const bv = b[key] ?? 0;
+    const av = a[key];
+    const bv = b[key];
+    if (av === null && bv === null) return a.name.localeCompare(b.name, "th");
+    if (av === null) return 1;
+    if (bv === null) return -1;
     if (av === bv) return a.name.localeCompare(b.name, "th");
     return dir * (av - bv);
   });
   return copy;
 }
 
-function formatBahtPlain(satang: number): string {
+// RL-2: null-safe by construction, not just by the caller's current
+// invariant -- see the comment on DivergenceInsight.topProfitSatang in
+// fetchProfitPerDish.ts (post-review fix round, WBS 6.9).
+function formatBahtPlain(satang: number | null): string {
+  if (satang === null) return "—";
   return (satang / 100).toLocaleString("th-TH", { maximumFractionDigits: 0 });
 }
 

@@ -53,7 +53,15 @@ export interface DivergenceInsight {
   bestSellerName: string;
   bestSellerUnits: number;
   topProfitName: string;
-  topProfitSatang: number;
+  /**
+   * Typed nullable, not asserted non-null at the construction site below,
+   * even though `topProfit` is drawn only from `tracked` (never null there
+   * by construction -- see the `tracked.push` branch above). A `!` here
+   * would mask a future regression if that invariant ever breaks; a real
+   * `null` instead flows through the same null-safe renderer as every
+   * other cost/profit figure (post-review fix round, WBS 6.9).
+   */
+  topProfitSatang: number | null;
 }
 
 export interface ProfitPerDishReport {
@@ -220,7 +228,7 @@ export async function fetchProfitPerDish(
       bestSellerName: bestSeller.name,
       bestSellerUnits: bestSeller.unitsSold,
       topProfitName: topProfit.name,
-      topProfitSatang: topProfit.totalProfitSatang!,
+      topProfitSatang: topProfit.totalProfitSatang,
     };
   }
 

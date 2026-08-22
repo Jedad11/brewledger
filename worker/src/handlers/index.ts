@@ -3,18 +3,13 @@ import { generateSlots } from "./slots";
 import { expireOrders } from "./expireOrders";
 import { pushNotify } from "./pushNotify";
 import { dailyAggregate } from "./dailyAggregate";
+import { costRecalc } from "./costRecalc";
 import type { Job, JobHandler } from "./types";
 
 // Stub — real logic lands with the OCR WBS entries (6.x). Reads a purchase
 // invoice image, calls Typhoon OCR, stores raw extraction for review.
 const ocrExtract: JobHandler = async (job) => {
   log.info("stub handler invoked: ocr_extract", { job_id: job.id, job_type: job.job_type });
-};
-
-// Stub — real logic lands with the costing WBS entries (6.x). Recomputes
-// ingredients.current_unit_cost_satang and downstream cost-per-cup.
-const costRecalc: JobHandler = async (job) => {
-  log.info("stub handler invoked: cost_recalc", { job_id: job.id, job_type: job.job_type });
 };
 
 // Stub — real logic lands with WBS 7.3/7.4. Compares current vs snapshot

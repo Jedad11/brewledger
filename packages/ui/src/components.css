@@ -216,6 +216,22 @@ button{font-family:inherit;letter-spacing:var(--tracking-normal)}
 .oc-rectable .input{min-height:44px;padding:.8rem 1.2rem}
 .oc-costline{display:flex;align-items:baseline;justify-content:space-between;gap:1.2rem;padding-top:1.2rem;border-top:1px solid var(--hairline)}
 
+/* ---- WBS 6.5 — ported verbatim from design/Console Reports.html's own
+ * <style> block (.oc-invrows/.oc-invrow/.oc-invright/.oc-lowdays, lines
+ * ~54-61) for the /console/inventory list (คลังวัตถุดิบ). One deviation
+ * from the literal source: .oc-lowdays used a raw #8a6410 there; this is
+ * byte-identical to --st-unpaid-fg (confirmed during the WBS 2.2 fidelity
+ * pass on ConfidenceField's own low-confidence hint, which had the same raw
+ * hex) so it's referenced as the token instead of repeating the literal. ---- */
+.oc-invrows{display:grid;padding:0}
+.oc-invrow{display:flex;justify-content:space-between;gap:var(--space-3);padding:1.4rem var(--space-3);border-top:1px solid var(--hairline)}
+.oc-invrow>div:first-child{min-width:0}
+.oc-invright>*{white-space:nowrap}
+.oc-invrows .oc-invrow:first-child{border-top:0}
+.oc-invright{display:grid;justify-items:end;gap:.2rem;text-align:right}
+.oc-invright .note-plain{font-size:var(--text-1)}
+.oc-lowdays{font-size:var(--text-1);color:var(--st-unpaid-fg);font-weight:600;white-space:nowrap}
+
 /* ---- Ported from /design/Customer Web.html <style> — slot picker,
  * inline notices. ---- */
 .cw-notice{background:var(--white);border-left:0;border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:var(--space-3);display:grid;gap:.4rem}

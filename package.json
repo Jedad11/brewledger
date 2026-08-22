@@ -4,8 +4,11 @@
   "private": true,
   "packageManager": "pnpm@10.18.2",
   "scripts": {
+    "predev": "pnpm --filter @brewledger/shared --filter @brewledger/ui --filter @brewledger/costing build",
     "dev": "pnpm --filter @brewledger/console dev",
+    "predev:shop": "pnpm --filter @brewledger/shared --filter @brewledger/ui --filter @brewledger/costing build",
     "dev:shop": "pnpm --filter @brewledger/shop dev",
+    "predev:worker": "pnpm --filter @brewledger/shared --filter @brewledger/costing build",
     "dev:worker": "pnpm --filter @brewledger/worker dev",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",

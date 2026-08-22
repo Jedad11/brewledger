@@ -83,7 +83,11 @@ export default async function OrdersPage() {
   if (pendingOrders.length === 0 && workingOrders.length === 0) {
     return (
       <>
-        <h1>{PAGE_TITLE}</h1>
+        <header className="oc-top">
+          <div>
+            <h1>{PAGE_TITLE}</h1>
+          </div>
+        </header>
         <div className="oc-body">
           <PageEmptyState />
         </div>
@@ -93,7 +97,11 @@ export default async function OrdersPage() {
 
   return (
     <>
-      <h1>{PAGE_TITLE}</h1>
+      <header className="oc-top">
+        <div>
+          <h1>{PAGE_TITLE}</h1>
+        </div>
+      </header>
       <div className="oc-body">
         {pendingOrders.length > 0 ? <PendingPaymentSection orders={pendingOrders} /> : null}
         {storeId ? (

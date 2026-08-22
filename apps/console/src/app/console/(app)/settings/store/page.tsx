@@ -66,7 +66,11 @@ export default async function StoreSettingsPage() {
   return (
     <>
       <SettingsSubNav />
-      <h1>ข้อมูลร้าน</h1>
+      <header className="oc-top">
+        <div>
+          <h1>ข้อมูลร้าน</h1>
+        </div>
+      </header>
       <div className="oc-body">
         <StoreProfileForm
           store={store}

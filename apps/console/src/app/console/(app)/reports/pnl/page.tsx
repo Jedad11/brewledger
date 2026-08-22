@@ -33,7 +33,13 @@ export default async function PnlPage() {
     store = storeRow as StoreRow | null;
   }
 
-  const heading = <h1>{PAGE_TITLE}</h1>;
+  const heading = (
+    <header className="oc-top">
+      <div>
+        <h1>{PAGE_TITLE}</h1>
+      </div>
+    </header>
+  );
 
   // Mirrors WBS 7.1's own "no stores row yet" fallback (a merchant who
   // hasn't finished WBS 4.3 can still reach any console route) -- render a

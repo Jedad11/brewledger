@@ -46,7 +46,11 @@ export default async function CapacitySettingsPage() {
 
   return (
     <>
-      <h1>{PAGE_TITLE}</h1>
+      <header className="oc-top">
+        <div>
+          <h1>{PAGE_TITLE}</h1>
+        </div>
+      </header>
       <div className="oc-body">
         <CapacitySettingsForm
           storeId={storeId}

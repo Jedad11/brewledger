@@ -50,7 +50,11 @@ export default async function PaymentsSettingsPage() {
   return (
     <>
       <SettingsSubNav />
-      <h1>การรับเงิน</h1>
+      <header className="oc-top">
+        <div>
+          <h1>การรับเงิน</h1>
+        </div>
+      </header>
       <div className="oc-body">
         <PaymentsSettingsForm
           storeId={store?.id ?? null}

@@ -33,7 +33,11 @@ export default async function StoreLinkPage() {
   return (
     <>
       <SettingsSubNav />
-      <h1>{PAGE_TITLE}</h1>
+      <header className="oc-top">
+        <div>
+          <h1>{PAGE_TITLE}</h1>
+        </div>
+      </header>
       <div className="oc-body">
         <StoreLinkQR
           store={store ? { name: store.name, slug: store.slug, isPublished: store.is_published } : null}

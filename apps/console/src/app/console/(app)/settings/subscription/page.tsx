@@ -21,7 +21,11 @@ export default async function SubscriptionSettingsPage() {
   return (
     <>
       <SettingsSubNav />
-      <h1>{PAGE_TITLE}</h1>
+      <header className="oc-top">
+        <div>
+          <h1>{PAGE_TITLE}</h1>
+        </div>
+      </header>
       <div className="oc-body">
         <SubscriptionPlanView />
       </div>

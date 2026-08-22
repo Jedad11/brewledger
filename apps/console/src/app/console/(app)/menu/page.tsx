@@ -66,7 +66,11 @@ export default async function MenuListPage() {
   return (
     <>
       <SettingsSubNav />
-      <h1>เมนู</h1>
+      <header className="oc-top">
+        <div>
+          <h1>เมนู</h1>
+        </div>
+      </header>
       <div className="oc-body">
         <MenuListClient
           storeId={store?.id ?? null}

@@ -54,7 +54,11 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <h1>{PAGE_TITLE}</h1>
+      <header className="oc-top">
+        <div>
+          <h1>{PAGE_TITLE}</h1>
+        </div>
+      </header>
       {store ? (
         <DashboardClient storeId={store.id} timezone={store.timezone} initialSummary={summary} />
       ) : (

@@ -302,8 +302,10 @@ verbatim below.
 - **No fee line (WBS 7.5 — corrected here).** The delivered prototype (`design/console-reports.js` `scPnl()`) renders an absorbed-fee row (`ค่าธรรมเนียม (BrewLedger ออกให้): 45 บาท`, struck-through, excluded from merchant profit) — this bullet previously described it. WBS 4.8 ("Fee Model Documentation," superseding the earlier gateway-fee-absorption design) removed `merchants.absorb_gateway_fee`, `orders.gateway_fee_satang`, and `orders.fee_borne_by` from the schema and its own Claude Code Prompt explicitly lists "the absorbed-fee line in the WBS 7.5 P&L" among the lines to delete: the MVP uses direct merchant-owned PromptPay, so no per-transaction fee is ever attributable to BrewLedger. The line items on this screen are ยอดขาย / ต้นทุนวัตถุดิบ / ค่าใช้จ่ายอื่น / กำไรสุทธิ — no fee row, on any day, any variant.
 
 ### กำไรต่อเมนู `/console/reports/profit-per-dish`
+- **Period selector** — chips วันนี้ / 7 วัน / 30 วัน / กำหนดเอง; กำหนดเอง reveals two date fields labelled `จากวันที่` / `ถึงวันที่` (added here — not in the delivered prototype's dev-harness chip, which never implemented an actual custom range).
 - **Insight (only when best-seller ≠ top profit contributor)** — `ขายดีที่สุดคือ อเมริกาโน่ (210 แก้ว) แต่กำไรรวมสูงสุดคือ ลาเต้เย็น (3,240 บาท)`
 - **Untracked section** — `ยังไม่มีข้อมูลต้นทุน (5 รายการ)`; units and revenue shown, cost/profit `—`; never hidden, never sorted as zero.
+- **No sales in period (empty, added here — not in the delivered prototype)** — `ยังไม่มีรายการขายในช่วงนี้` / `ตัวเลขจะขึ้นที่นี่เมื่อมีการขาย`, same body-copy pattern as the ledger's empty-day state (`วันที่ไม่มีรายการ`, line above).
 
 ### เปรียบเทียบ `/console/reports/overview`
 - **Incomplete month** — `เทียบ 1–16 ส.ค. กับ 1–16 ก.ค.` / `เดือนนี้ยังไม่จบ ตัวเลขจึงเทียบเฉพาะช่วงวันเท่ากันของทั้งสองเดือน`

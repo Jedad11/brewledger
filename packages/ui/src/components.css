@@ -212,6 +212,25 @@ button{font-family:inherit;letter-spacing:var(--tracking-normal)}
 .oc-group{display:grid;gap:1.2rem}
 .oc-grouphead{display:flex;align-items:center;justify-content:space-between;gap:1.2rem;flex-wrap:wrap}
 .oc-grouphead h3{font-size:var(--text-4);display:flex;align-items:center;gap:1rem;flex-wrap:nowrap}
+/* WBS 7.6 — ported verbatim from /design/Console Reports.html <style>
+ * (.oc-chip/.oc-periods/.oc-insight/.oc-brieftag/.oc-tablewrap/.oc-table),
+ * not previously extracted into this file since no screen used a period-chip
+ * selector or a data table before the profit-per-dish report. .oc-chip's
+ * definition here matches Console Reports.html and Console Setup.html
+ * verbatim (identical in both source files). */
+.oc-chip{display:inline-flex;align-items:center;min-height:var(--tap-min);padding:0 1.8rem;border:1px solid var(--input-border);border-radius:var(--radius-pill);background:var(--white);font-family:inherit;font-size:var(--text-3);cursor:pointer;white-space:nowrap;transition:transform var(--duration-fast) var(--ease-standard)}
+.oc-chip:active{transform:scale(var(--press-scale))}
+.oc-chip.is-on{background:var(--green-mist);border-color:var(--green-brew);color:var(--green-ledger);font-weight:700}
+.oc-periods{display:flex;gap:.8rem;flex-wrap:wrap}
+.oc-insight{background:var(--green-cask);color:#fff;border-radius:var(--radius-card);padding:var(--space-4);display:grid;gap:.8rem}
+.oc-brieftag{font-size:var(--text-1);font-weight:700;letter-spacing:var(--tracking-loose);text-transform:uppercase;color:var(--gold-light)}
+.oc-insight p{font-size:var(--text-5);font-weight:700;line-height:var(--lh-thai-head)}
+.oc-form{display:grid;gap:1.6rem}
+.oc-tablewrap{overflow-x:auto}
+.oc-table{width:100%;border-collapse:collapse;min-width:620px}
+.oc-table th,.oc-table td{text-align:right;padding:1.1rem 1.2rem;border-top:1px solid var(--hairline);font-size:var(--text-2);white-space:nowrap}
+.oc-table th:first-child,.oc-table td:first-child{text-align:left;white-space:normal;min-width:180px}
+.oc-table th{border-top:0;color:var(--green-ledger);font-weight:700}
 .oc-nearest{font-size:var(--text-1);font-weight:700;color:var(--green-brew);background:var(--green-mist);border-radius:var(--radius-pill);padding:.2rem 1rem;white-space:nowrap;flex:none}
 .oc-log{display:grid;margin-top:1rem}
 .oc-logrow{display:grid;grid-template-columns:64px 1fr;gap:1.2rem;padding:.9rem 0;border-top:1px solid var(--hairline)}

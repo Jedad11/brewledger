@@ -55,9 +55,14 @@ export async function createStoreFixture(client: Client, label: string): Promise
   };
 
   try {
+    // migration 0023's AFTER INSERT trigger on auth.users
+    // (provision_merchant_on_signup) already inserted a merchants row for
+    // authUserId, synchronously, with this exact phone (new.phone) --
+    // inserting a second row here would collide on merchants_auth_user_id_key.
+    // Select the auto-provisioned row instead of creating a duplicate.
     const { rows: merchantRows } = await client.query(
-      `insert into merchants (auth_user_id, phone) values ($1, $2) returning id`,
-      [authUserId, phone],
+      `select id from merchants where auth_user_id = $1`,
+      [authUserId],
     );
     const merchantId = merchantRows[0].id as string;
 

@@ -86,6 +86,22 @@ const KNOWN_NON_GUARDED_EXCEPTIONS = new Set<string>([
   // asserts exactly this NOT_FOUND-per-item behavior plus zero mutation of
   // the foreign order.
   "console-bulk-ready-orders",
+  // WBS 5.12 — console-create-cash-sale (packages/db/migrations/
+  // 0050_console_cash_sale.sql) takes NO client-supplied store_id or
+  // orderId at all -- the store is resolved from p_merchant_id, which is
+  // itself re-checked against auth_store_ids() (the caller's own verified
+  // JWT identity, same posture as every other console-* RPC's header
+  // comment), so there is no foreign-tenant id in the request body for this
+  // suite's generic "swap the id, expect 403" shape to exercise. This is
+  // NOT a silenced gap: the RPC's own cross-tenant vector is a cart line's
+  // menuItemId belonging to another store, and that IS structurally
+  // blocked -- `select * into v_item_row from menu_items where id =
+  // v_menu_item_id and store_id = v_store_id` (0050 line ~199) scopes the
+  // lookup to the caller's own resolved store, so a foreign menuItemId
+  // simply matches no row. A dedicated describe block driving that exact
+  // vector (mirroring console-bulk-ready-orders' own block below) is a
+  // reasonable follow-up, not done here.
+  "console-create-cash-sale",
 ]);
 
 interface EndpointManifestEntry {
@@ -196,6 +212,97 @@ const ENDPOINT_MANIFEST: EndpointManifestEntry[] = [
     }),
     assertSuccessBody: assertPaymentActionSuccessBody,
   },
+  {
+    // WBS 5.11 — console-cancel-order (packages/db/migrations/
+    // 0051_console_cancel_order_refund.sql). Same shape as
+    // console-advance-order above: no client-supplied storeId param, the
+    // FORBIDDEN check runs purely on the order's own store_id before any
+    // status-dependent logic, so a fresh PENDING_PAYMENT throwaway order
+    // is sufficient -- PENDING_PAYMENT -> CANCELLED is an allowed
+    // transition (transition_order's own table, 0032). The two success
+    // calls both cancel the SAME order (storeA's); the second lands on the
+    // {ok:true, already:true} idempotent branch, same as
+    // console-advance-order's own note above.
+    functionName: "console-cancel-order",
+    request: ({ jwt, storeId }) => ({
+      url: functionUrl("console-cancel-order"),
+      init: {
+        method: "POST",
+        headers: {
+          apikey: LOCAL_ANON_KEY,
+          Authorization: `Bearer ${jwt}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          orderId: storeId === storeB ? cancelOrderB : cancelOrderA,
+          reason: "customer_request",
+        }),
+      },
+    }),
+    assertSuccessBody: assertPaymentActionSuccessBody,
+  },
+  {
+    // WBS 5.11 — console-resolve-refund (same migration as cancel-order
+    // above). Needs an order already CANCELLED with refund_status='pending'
+    // for the success path to land on transition_order's CANCELLED ->
+    // REFUNDED branch rather than ILLEGAL_TRANSITION -- refundPendingOrderA/B
+    // are inserted directly in that state (see insertThrowawayOrder's
+    // sibling helper below), bypassing the real cancel flow since this
+    // suite only needs the endpoint callable and ownership-checked, not its
+    // upstream cancel path re-verified (that's 5.11's own qa_engineer/
+    // redline_reviewer coverage, packages/db/tests/
+    // console_cancel_order_refund.test.ts). The FORBIDDEN check itself
+    // (this entry's real point) runs purely on store_id, same as every
+    // other entry -- the order's status is irrelevant to that check.
+    functionName: "console-resolve-refund",
+    request: ({ jwt, storeId }) => ({
+      url: functionUrl("console-resolve-refund"),
+      init: {
+        method: "POST",
+        headers: {
+          apikey: LOCAL_ANON_KEY,
+          Authorization: `Bearer ${jwt}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          orderId: storeId === storeB ? refundPendingOrderB : refundPendingOrderA,
+        }),
+      },
+    }),
+    assertSuccessBody: assertPaymentActionSuccessBody,
+  },
+  {
+    // WBS 5.12 — console-undo-cash-sale (packages/db/migrations/
+    // 0050_console_cash_sale.sql). Needs channel='cash', status='ACCEPTED',
+    // created within the last 2 minutes. UNLIKE the other three entries
+    // above, this endpoint has NO idempotent "already" branch -- a second
+    // undo on the same order is a genuine UNDO_NOT_AVAILABLE (409), not a
+    // 200 (0050's own header: it re-checks status==='ACCEPTED' itself and
+    // refuses otherwise). The describe.each below calls the success path
+    // TWICE (storeId=storeA, then no storeId), so this entry needs TWO
+    // distinct still-ACCEPTED cash orders for store A, not one reused
+    // order -- cashSaleOrderA for the storeId=storeA call, cashSaleOrderA2
+    // for the no-storeId call. The two FORBIDDEN calls above never reach
+    // the RPC's status check at all (auth_store_ids() rejects first), so
+    // they don't consume either order.
+    functionName: "console-undo-cash-sale",
+    request: ({ jwt, storeId }) => ({
+      url: functionUrl("console-undo-cash-sale"),
+      init: {
+        method: "POST",
+        headers: {
+          apikey: LOCAL_ANON_KEY,
+          Authorization: `Bearer ${jwt}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          orderId:
+            storeId === storeB ? cashSaleOrderB : storeId === storeA ? cashSaleOrderA : cashSaleOrderA2,
+        }),
+      },
+    }),
+    assertSuccessBody: assertPaymentActionSuccessBody,
+  },
 ];
 
 function listGuardableFunctionDirNames(): string[] {
@@ -262,6 +369,26 @@ let advanceOrderB: string | undefined;
 // mutations of the same rows.
 let bulkOrderOwnA: string | undefined;
 let bulkOrderForeignB: string | undefined;
+// WBS 5.11 — console-cancel-order needs a fresh PENDING_PAYMENT order per
+// store (PENDING_PAYMENT -> CANCELLED is an allowed transition, 0032); same
+// separate-order-per-entry convention as confirm/reject/advance above.
+let cancelOrderA: string | undefined;
+let cancelOrderB: string | undefined;
+// WBS 5.11 — console-resolve-refund needs an order already CANCELLED with
+// refund_status='pending' (transition_order's own CANCELLED->REFUNDED
+// invariant, 0032) -- inserted directly in that state, not produced via a
+// real cancel call, since this suite only needs the endpoint's ownership
+// check exercised.
+let refundPendingOrderA: string | undefined;
+let refundPendingOrderB: string | undefined;
+// WBS 5.12 — console-undo-cash-sale needs channel='cash', status='ACCEPTED',
+// created within the last 2 minutes. cashSaleOrderA2 is a SECOND store-A
+// order (see this endpoint's own manifest-entry comment above for why one
+// isn't enough: no idempotent "already" branch, so the generic describe.each's
+// two success calls need two distinct still-undoable orders).
+let cashSaleOrderA: string | undefined;
+let cashSaleOrderA2: string | undefined;
+let cashSaleOrderB: string | undefined;
 
 beforeAll(async () => {
   const reachable = await isFunctionReachable("qa-console-auth-probe");
@@ -290,6 +417,13 @@ beforeAll(async () => {
   advanceOrderB = await insertThrowawayOrder(storeB, "advance-b", "ACCEPTED");
   bulkOrderOwnA = await insertThrowawayOrder(storeA, "bulk-own-a", "ACCEPTED");
   bulkOrderForeignB = await insertThrowawayOrder(storeB, "bulk-foreign-b", "ACCEPTED");
+  cancelOrderA = await insertThrowawayOrder(storeA, "cancel-a");
+  cancelOrderB = await insertThrowawayOrder(storeB, "cancel-b");
+  refundPendingOrderA = await insertThrowawayCancelledRefundPendingOrder(storeA, "refund-a");
+  refundPendingOrderB = await insertThrowawayCancelledRefundPendingOrder(storeB, "refund-b");
+  cashSaleOrderA = await insertThrowawayCashOrder(storeA, "cash-a");
+  cashSaleOrderA2 = await insertThrowawayCashOrder(storeA, "cash-a2");
+  cashSaleOrderB = await insertThrowawayCashOrder(storeB, "cash-b");
 });
 
 afterAll(async () => {
@@ -344,6 +478,48 @@ async function insertThrowawayOrder(storeId: string, label: string, status?: str
            values ($1, $2, $3, $4, $4) returning id`,
           [storeId, orderCode, `QA Tenant Isolation Customer ${label}`, 10000],
         );
+    return rows[0].id;
+  } finally {
+    await client.end();
+  }
+}
+
+// WBS 5.11 — console-resolve-refund's success path needs an order already
+// CANCELLED with refund_status='pending' (transition_order's own
+// CANCELLED->REFUNDED invariant requires exactly this, 0032). Inserted
+// directly in that terminal state -- bypassing the real cancel flow, same
+// "this suite only needs the endpoint callable and ownership-checked"
+// posture as insertThrowawayOrder's own header comment above.
+async function insertThrowawayCancelledRefundPendingOrder(storeId: string, label: string): Promise<string> {
+  const client = new PgClient({ connectionString: LOCAL_DB_URL });
+  await client.connect();
+  try {
+    const orderCode = `QTI${label.toUpperCase()}${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
+    const { rows } = await client.query<{ id: string }>(
+      `insert into orders (store_id, order_code, customer_name, subtotal_satang, total_satang, status, refund_status)
+       values ($1, $2, $3, $4, $4, 'CANCELLED', 'pending') returning id`,
+      [storeId, orderCode, `QA Tenant Isolation Customer ${label}`, 10000],
+    );
+    return rows[0].id;
+  } finally {
+    await client.end();
+  }
+}
+
+// WBS 5.12 — console-undo-cash-sale's success path needs channel='cash',
+// status='ACCEPTED', created within the last 2 minutes (0050's own
+// re-checked window/channel/status guard) -- `created_at` defaults to
+// `now()` (0011_orders.sql), which satisfies the window at insert time.
+async function insertThrowawayCashOrder(storeId: string, label: string): Promise<string> {
+  const client = new PgClient({ connectionString: LOCAL_DB_URL });
+  await client.connect();
+  try {
+    const orderCode = `QTI${label.toUpperCase()}${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
+    const { rows } = await client.query<{ id: string }>(
+      `insert into orders (store_id, order_code, customer_name, subtotal_satang, total_satang, status, channel)
+       values ($1, $2, $3, $4, $4, 'ACCEPTED', 'cash') returning id`,
+      [storeId, orderCode, `QA Tenant Isolation Customer ${label}`, 10000],
+    );
     return rows[0].id;
   } finally {
     await client.end();

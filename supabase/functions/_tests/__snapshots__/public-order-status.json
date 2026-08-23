@@ -4,6 +4,8 @@
     "status": "PENDING_PAYMENT",
     "pickupAt": null,
     "itemName": "Latte",
-    "quantity": 2
+    "quantity": 2,
+    "cancelReason": null,
+    "refundStatus": null
   }
 ]

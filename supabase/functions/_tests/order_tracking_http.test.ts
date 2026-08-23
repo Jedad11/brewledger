@@ -34,6 +34,7 @@
 // public_snapshots.test.ts's header for the exact bring-up commands.
 import { Client as PgClient } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { fileURLToPath } from "node:url";
 // eslint-disable-next-line import/no-relative-packages
 import { loadForbiddenSubstrings } from "../../../scripts/scan-forbidden-fields.mjs";
 import { functionUrl, isFunctionReachable, LOCAL_ANON_KEY, serviceClient } from "./helpers/clients";
@@ -41,7 +42,10 @@ import { functionUrl, isFunctionReachable, LOCAL_ANON_KEY, serviceClient } from 
 const LOCAL_DB_URL =
   process.env.TEST_DATABASE_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 
-const FORBIDDEN_FIELDS_PATH = new URL("../../../docs/design/forbidden_fields.json", import.meta.url).pathname;
+// `.pathname` alone (e.g. "/C:/brewLedger/...") breaks Windows `readFileSync`
+// -- fileURLToPath() is the platform-correct converter (also used by
+// tenant_isolation.test.ts's own REPO_ROOT, same file directory).
+const FORBIDDEN_FIELDS_PATH = fileURLToPath(new URL("../../../docs/design/forbidden_fields.json", import.meta.url));
 
 async function getRaw(query: string, extraHeaders?: Record<string, string>): Promise<{ status: number; text: string }> {
   const res = await fetch(`${functionUrl("public-order-status")}${query}`, {

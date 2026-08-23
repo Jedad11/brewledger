@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { resolveMerchantCtx, currentStoreId } from "@/lib/merchant";
 import { StoreLinkQR } from "./StoreLinkQR";
 import { PAGE_TITLE } from "./copy";
+import { SettingsSubNav } from "@/components/SettingsSubNav";
 import type { Database } from "@brewledger/db/types";
 
 type StoreRow = Pick<Database["public"]["Tables"]["stores"]["Row"], "name" | "slug" | "is_published">;
@@ -30,11 +31,18 @@ export default async function StoreLinkPage() {
   const store = storeRow as StoreRow | null;
 
   return (
-    <main className="mx-auto w-full max-w-xl px-4 py-8">
-      <h1 className="mb-6 font-serif text-3xl font-bold leading-[1.35] text-ink">{PAGE_TITLE}</h1>
-      <StoreLinkQR
-        store={store ? { name: store.name, slug: store.slug, isPublished: store.is_published } : null}
-      />
-    </main>
+    <>
+      <SettingsSubNav />
+      <header className="oc-top">
+        <div>
+          <h1>{PAGE_TITLE}</h1>
+        </div>
+      </header>
+      <div className="oc-body">
+        <StoreLinkQR
+          store={store ? { name: store.name, slug: store.slug, isPublished: store.is_published } : null}
+        />
+      </div>
+    </>
   );
 }

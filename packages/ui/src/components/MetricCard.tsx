@@ -18,7 +18,10 @@ export function MetricCard({ label, value, role, note }: MetricCardProps) {
     <div className="card bl-metric-card" data-testid="metric-card">
       <p className="note-plain">{label}</p>
       <div className="oc-big">
-        <MoneyValue value={value} role={role} />
+        {/* decimals={0} is MoneyValue's own default as of 2026-08 (see its
+         * own doc comment) -- kept explicit here as documentation, not
+         * because this call site needs to override anything. */}
+        <MoneyValue value={value} role={role} decimals={0} />
       </div>
       {note ? <p className="note-plain">{note}</p> : null}
     </div>

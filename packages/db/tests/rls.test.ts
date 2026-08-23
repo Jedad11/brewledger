@@ -84,7 +84,7 @@ describe("§7.1 — RLS introspection", () => {
     expect(rows).toEqual([]);
   });
 
-  it("the table count actually checked is pinned at 23 (not a false pass from an empty match)", async () => {
+  it("the table count actually checked is pinned at 24 (not a false pass from an empty match)", async () => {
     // Was 18 as of WBS 3.6; WBS 4.1's migration 0024_auth_attempts.sql added
     // a 19th table (auth_attempts, RLS enabled, zero policies — same shape
     // as job_queue). WBS 5.7's migration 0032_order_status_history.sql adds
@@ -106,10 +106,10 @@ describe("§7.1 — RLS introspection", () => {
       select count(*)::int as n from information_schema.tables
        where table_schema = 'public' and table_type = 'BASE TABLE'
     `);
-    expect(rows[0].n).toBe(23);
+    expect(rows[0].n).toBe(24);
   });
 
-  it("all 23 real tables are present by name", async () => {
+  it("all 24 real tables are present by name", async () => {
     if (!ready) return;
     const { rows } = await pg.query(`
       select table_name from information_schema.tables
@@ -126,6 +126,7 @@ describe("§7.1 — RLS introspection", () => {
         "ingredients",
         "job_queue",
         "menu_categories",
+        "menu_item_cost_cache",
         "menu_items",
         "menu_option_groups",
         "menu_options",

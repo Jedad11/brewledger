@@ -8,6 +8,7 @@ import { fetchPnlDay, fetchPnlTrend } from "./fetchPnlDay";
 import { PnlClient, PnlView } from "./PnlClient";
 import { PAGE_TITLE, TREND_TITLE } from "./copy";
 import { Sparkline } from "@brewledger/ui";
+import { ReportsSubNav } from "@/components/ReportsSubNav";
 import { businessDateBoundsUtc } from "../../businessDate";
 import type { Database } from "@brewledger/db/types";
 
@@ -33,7 +34,11 @@ export default async function PnlPage() {
   }
 
   const heading = (
-    <h1 className="mb-6 font-serif text-3xl font-bold leading-[1.35] text-ink">{PAGE_TITLE}</h1>
+    <header className="oc-top">
+      <div>
+        <h1>{PAGE_TITLE}</h1>
+      </div>
+    </header>
   );
 
   // Mirrors WBS 7.1's own "no stores row yet" fallback (a merchant who
@@ -55,7 +60,8 @@ export default async function PnlPage() {
       source: "live" as const,
     };
     return (
-      <main className="mx-auto w-full max-w-2xl px-4 py-8">
+      <>
+        <ReportsSubNav />
         {heading}
         <div className="oc-body">
           <PnlView day={emptyDay} />
@@ -64,7 +70,7 @@ export default async function PnlPage() {
             <Sparkline values={[]} />
           </div>
         </div>
-      </main>
+      </>
     );
   }
 
@@ -73,7 +79,8 @@ export default async function PnlPage() {
   const initialTrend = await fetchPnlTrend(supabase, store.id, initialDay);
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
+    <>
+      <ReportsSubNav />
       {heading}
       <PnlClient
         storeId={store.id}
@@ -82,6 +89,6 @@ export default async function PnlPage() {
         initialDay={initialDay}
         initialTrend={initialTrend}
       />
-    </main>
+    </>
   );
 }

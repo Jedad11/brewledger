@@ -38,7 +38,7 @@ export default async function DashboardPage() {
   // is no state_matrix.md entry for a dashboard-specific empty-store screen
   // (its own "Empty" bullet only covers zero orders), so this renders the
   // same all-zero/null summary that state renders — the merchant sees
-  // ฿0.00 revenue and "—" profit rather than a broken page, and the quick
+  // ฿0 revenue and "—" profit rather than a broken page, and the quick
   // actions still route them to setup.
   let store: StoreRow | null = null;
   if (storeId) {
@@ -53,13 +53,17 @@ export default async function DashboardPage() {
   const summary = store ? await fetchDashboardSummary(supabase, store.id, store.timezone) : EMPTY_SUMMARY;
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
-      <h1 className="mb-6 font-serif text-3xl font-bold leading-[1.35] text-ink">{PAGE_TITLE}</h1>
+    <>
+      <header className="oc-top">
+        <div>
+          <h1>{PAGE_TITLE}</h1>
+        </div>
+      </header>
       {store ? (
         <DashboardClient storeId={store.id} timezone={store.timezone} initialSummary={summary} />
       ) : (
         <DashboardView summary={summary} />
       )}
-    </main>
+    </>
   );
 }

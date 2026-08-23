@@ -23,7 +23,12 @@ export interface MoneyValueProps {
    */
   value: number | null;
   role: MoneyRole;
-  /** Default 2 — satang round-trips exactly at 2 decimal places. */
+  /**
+   * Default 0 — the prototype (`console-reports.js`'s and `customer-web.js`'s
+   * own `B()` helper) never shows decimal baht, and every caller in this
+   * codebase relied on this default rather than passing `decimals={2}`
+   * explicitly. Confirmed safe project-wide 2026-08 (see PROGRESS.md).
+   */
   decimals?: 0 | 2;
   /**
    * No enum is given in component_inventory.md / P5 Handoff.md §4 — this is
@@ -44,7 +49,7 @@ export interface MoneyValueProps {
   size?: "sm" | "md" | "lg";
 }
 
-export function MoneyValue({ value, role, decimals = 2, size }: MoneyValueProps) {
+export function MoneyValue({ value, role, decimals = 0, size }: MoneyValueProps) {
   const style = size ? { fontSize: SIZE_FONT_VAR[size] } : undefined;
 
   if (value === null) {

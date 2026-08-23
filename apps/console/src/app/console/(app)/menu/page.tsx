@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { resolveMerchantCtx, currentStoreId } from "@/lib/merchant";
 import { MenuListClient, type MenuListItem } from "./MenuListClient";
+import { SettingsSubNav } from "@/components/SettingsSubNav";
 import type { Database } from "@brewledger/db/types";
 
 type StoreRow = Pick<
@@ -63,17 +64,24 @@ export default async function MenuListPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
-      <h1 className="mb-6 font-serif text-3xl font-bold leading-[1.35] text-ink">เมนู</h1>
-      <MenuListClient
-        storeId={store?.id ?? null}
-        items={items}
-        onboarding={{
-          store: !!store?.name && !!store?.pickup_address,
-          menu: items.length > 0,
-          payments: !!store?.promptpay_verified_at,
-        }}
-      />
-    </main>
+    <>
+      <SettingsSubNav />
+      <header className="oc-top">
+        <div>
+          <h1>เมนู</h1>
+        </div>
+      </header>
+      <div className="oc-body">
+        <MenuListClient
+          storeId={store?.id ?? null}
+          items={items}
+          onboarding={{
+            store: !!store?.name && !!store?.pickup_address,
+            menu: items.length > 0,
+            payments: !!store?.promptpay_verified_at,
+          }}
+        />
+      </div>
+    </>
   );
 }

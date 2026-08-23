@@ -156,10 +156,33 @@ button{font-family:inherit;letter-spacing:var(--tracking-normal)}
 .cw-stepitem.is-now{color:var(--green-ledger);font-weight:700}
 .cw-stepitem.is-now .cw-dot{border-color:var(--green-brew);box-shadow:0 0 0 4px var(--green-mist-tint)}
 
-/* ---- Console shell ---- */
+/* ---- Console shell ----
+ * Cross-cutting fix (2026-08): the base page scaffold from
+ * /design/Owner Console.html's <style> block (its .oc/.oc-main rules and
+ * the matching slice of its @media(min-width:1280px) block) was never
+ * ported -- only the piecemeal .oc-nav/.oc-side/.oc-body-adjacent parts
+ * existed. Confirmed live: every console screen rendered single-column and
+ * off-center at desktop widths with no sidebar, because .oc-main never
+ * received flex:1 and .oc never switched to flex-direction:row. .oc-body
+ * itself (used by DashboardClient, PnlPage, ProfitPerDishPage already) was
+ * ALSO completely absent from this file -- ported here too, verbatim from
+ * the same <style> block, not previously extracted. .oc--auth and the
+ * cart-only .oc-total rule from that same <style> block are deliberately
+ * NOT ported -- out of scope for this fix (no authenticated screen uses
+ * .oc--auth yet, .oc-total belongs to a screen this package doesn't have). */
+.oc{min-height:100vh;display:flex;flex-direction:column}
+.oc-main{flex:1}
+.oc-body{padding:var(--space-3) var(--gutter-md) var(--space-6);display:flex;flex-direction:column;gap:var(--space-3);max-width:1100px}
+@media(min-width:1280px){
+.oc{flex-direction:row}
+.oc-body{padding-bottom:var(--space-9)}
+.oc-main{flex:1;min-width:0}
+.oc-body{max-width:1180px}
+}
+
 .oc-nav{display:grid;grid-template-columns:repeat(5,1fr);align-items:end;background:var(--white);box-shadow:var(--shadow-nav);padding:.6rem 0 1rem}
-.oc-nav button{position:relative;display:flex;flex-direction:column;align-items:center;gap:.4rem;min-height:var(--tap-min);border:0;background:none;cursor:pointer;font-size:var(--text-1);font-weight:600;color:var(--text-black-soft);padding:.6rem 0}
-.oc-nav button.is-active{color:var(--green-ledger)}
+.oc-nav a{position:relative;display:flex;flex-direction:column;align-items:center;gap:.4rem;min-height:var(--tap-min);border:0;background:none;cursor:pointer;font-size:var(--text-1);font-weight:600;color:var(--text-black-soft);padding:.6rem 0;text-decoration:none}
+.oc-nav a.is-active{color:var(--green-ledger)}
 .oc-nav .glyph{width:24px;height:24px;display:grid;place-items:center}
 .oc-nav .slot-sell{transform:translateY(-14px)}
 .oc-nav .slot-sell .glyph{width:var(--tap-wet);height:var(--tap-wet);border-radius:var(--radius-circle);background:var(--green-brew);color:#fff;box-shadow:var(--shadow-fab-base),var(--shadow-fab-ambient)}
@@ -170,8 +193,8 @@ button{font-family:inherit;letter-spacing:var(--tracking-normal)}
 .oc-nav{display:none}
 .oc-side{display:flex;flex-direction:column;gap:.4rem;width:232px;padding:var(--space-4) var(--space-3);background:var(--white);box-shadow:var(--shadow-nav);min-height:100%}
 .oc-side .wordmark{font-weight:800;font-size:var(--text-4);color:var(--green-ledger);margin-bottom:var(--space-3)}
-.oc-side button{display:flex;align-items:center;gap:1.2rem;min-height:var(--tap-min);padding:0 1.4rem;border:0;border-radius:var(--radius-pill);background:none;cursor:pointer;font-size:var(--text-3);font-weight:600;color:var(--text-black-soft);text-align:left}
-.oc-side button.is-active{background:var(--green-mist);color:var(--green-ledger)}
+.oc-side a{display:flex;align-items:center;gap:1.2rem;min-height:var(--tap-min);padding:0 1.4rem;border:0;border-radius:var(--radius-pill);background:none;cursor:pointer;font-size:var(--text-3);font-weight:600;color:var(--text-black-soft);text-align:left;text-decoration:none}
+.oc-side a.is-active{background:var(--green-mist);color:var(--green-ledger)}
 }
 
 /* ---- Ported from /design/Owner Console.html <style> — order inbox/detail,
@@ -196,6 +219,14 @@ button{font-family:inherit;letter-spacing:var(--tracking-normal)}
  * extracted into this file since no screen used them before the P&L report.
  * .oc-absorbed (the prototype's struck-through gateway-fee row) is
  * deliberately NOT ported — WBS 4.8 removed the fee line it styled. */
+/* Cross-cutting fix (2026-08) -- ported verbatim from /design/Console
+ * Reports.html <style> (.oc-subnav), not previously extracted into this
+ * file since no screen rendered the Reports sub-nav before now
+ * (ReportsSubNav.tsx, apps/console). */
+.oc-subnav{position:sticky;top:0;z-index:6;display:flex;gap:.6rem;overflow-x:auto;padding:1.2rem var(--gutter-md);background:var(--white);box-shadow:var(--shadow-nav)}
+.oc-subnav a{white-space:nowrap;flex:none;display:inline-flex;align-items:center;min-height:var(--tap-min);padding:0 1.8rem;border:0;border-radius:var(--radius-pill);background:none;font-family:inherit;font-size:var(--text-3);font-weight:600;color:var(--text-black-soft);cursor:pointer;text-decoration:none}
+.oc-subnav a.is-active{background:var(--green-mist);color:var(--green-ledger)}
+
 .oc-datesel{display:flex;align-items:center;justify-content:space-between;gap:1.2rem;background:var(--white);border-radius:var(--radius-pill);box-shadow:var(--shadow-card);padding:.6rem 1.2rem}
 .oc-arrow{width:var(--tap-min);height:var(--tap-min);border:0;border-radius:50%;background:var(--ceramic);color:var(--green-ledger);font-size:var(--text-5);cursor:pointer}
 .oc-arrow:disabled{color:var(--c-unknown);cursor:default}
@@ -212,6 +243,25 @@ button{font-family:inherit;letter-spacing:var(--tracking-normal)}
 .oc-group{display:grid;gap:1.2rem}
 .oc-grouphead{display:flex;align-items:center;justify-content:space-between;gap:1.2rem;flex-wrap:wrap}
 .oc-grouphead h3{font-size:var(--text-4);display:flex;align-items:center;gap:1rem;flex-wrap:nowrap}
+/* WBS 7.6 — ported verbatim from /design/Console Reports.html <style>
+ * (.oc-chip/.oc-periods/.oc-insight/.oc-brieftag/.oc-tablewrap/.oc-table),
+ * not previously extracted into this file since no screen used a period-chip
+ * selector or a data table before the profit-per-dish report. .oc-chip's
+ * definition here matches Console Reports.html and Console Setup.html
+ * verbatim (identical in both source files). */
+.oc-chip{display:inline-flex;align-items:center;min-height:var(--tap-min);padding:0 1.8rem;border:1px solid var(--input-border);border-radius:var(--radius-pill);background:var(--white);font-family:inherit;font-size:var(--text-3);cursor:pointer;white-space:nowrap;transition:transform var(--duration-fast) var(--ease-standard)}
+.oc-chip:active{transform:scale(var(--press-scale))}
+.oc-chip.is-on{background:var(--green-mist);border-color:var(--green-brew);color:var(--green-ledger);font-weight:700}
+.oc-periods{display:flex;gap:.8rem;flex-wrap:wrap}
+.oc-insight{background:var(--green-cask);color:#fff;border-radius:var(--radius-card);padding:var(--space-4);display:grid;gap:.8rem}
+.oc-brieftag{font-size:var(--text-1);font-weight:700;letter-spacing:var(--tracking-loose);text-transform:uppercase;color:var(--gold-light)}
+.oc-insight p{font-size:var(--text-5);font-weight:700;line-height:var(--lh-thai-head)}
+.oc-form{display:grid;gap:1.6rem}
+.oc-tablewrap{overflow-x:auto}
+.oc-table{width:100%;border-collapse:collapse;min-width:620px}
+.oc-table th,.oc-table td{text-align:right;padding:1.1rem 1.2rem;border-top:1px solid var(--hairline);font-size:var(--text-2);white-space:nowrap}
+.oc-table th:first-child,.oc-table td:first-child{text-align:left;white-space:normal;min-width:180px}
+.oc-table th{border-top:0;color:var(--green-ledger);font-weight:700}
 .oc-nearest{font-size:var(--text-1);font-weight:700;color:var(--green-brew);background:var(--green-mist);border-radius:var(--radius-pill);padding:.2rem 1rem;white-space:nowrap;flex:none}
 .oc-log{display:grid;margin-top:1rem}
 .oc-logrow{display:grid;grid-template-columns:64px 1fr;gap:1.2rem;padding:.9rem 0;border-top:1px solid var(--hairline)}
@@ -335,3 +385,38 @@ button{font-family:inherit;letter-spacing:var(--tracking-normal)}
 .bl-confidence-field__hint{display:flex;align-items:center;gap:.6rem;color:var(--st-unpaid-fg);font-size:var(--text-1);font-weight:400}
 .bl-confidence-field__hint::before{content:"!";width:16px;height:16px;border-radius:50%;background:var(--c-warning);color:#5c4207;display:grid;place-items:center;font-weight:800;font-size:10px;flex-shrink:0}
 .bl-untracked-disclosure{color:var(--text-black-soft);font-size:var(--text-2);font-weight:400}
+
+/* Ported verbatim from /design/Console Setup.html's <style> block (read-only
+   source, not edited) -- WBS 4.7's subscription plan grid + upgrade
+   checklist. Missing from the initial port; the page rendered as an
+   unstyled single-column stack until this landed. */
+.oc-plans{display:grid;gap:var(--space-3);grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.oc-plan{display:grid;gap:.8rem;align-content:start}
+.oc-plan.is-cur{outline:2px solid var(--green-brew)}
+.oc-planprice{font-size:var(--text-5);font-weight:800;color:var(--green-ledger)}
+.oc-feeline{margin-top:1.6rem;background:var(--green-mist);border-radius:var(--radius-pill);padding:.9rem 1.8rem;font-size:var(--text-2);font-weight:600;color:var(--green-ledger);display:inline-block}
+.oc-rows{display:grid;padding:0}
+.oc-row{display:grid;grid-template-columns:auto 48px 1fr auto;gap:1.4rem;align-items:center;padding:1.2rem var(--space-3);border-top:1px solid var(--hairline)}
+.oc-rows .oc-row:first-child{border-top:0}
+.oc-tick{color:var(--green-brew);font-weight:800}
+/* WBS 7.7 — ported verbatim from /design/Console Reports.html <style>
+ * (.oc-cmphead/.oc-cmpgrid/.oc-cmp/.oc-delta/.oc-legend/.sw/.sw--rev/
+ * .sw--pro), not previously extracted into this file since no screen used
+ * the period-comparison layout before the overview report. .oc-bars/
+ * .oc-barcol/.oc-bar/.oc-barlab (the prototype's own hand-rolled div bars)
+ * are deliberately NOT ported — the overview chart is drawn with recharts
+ * per the WBS 7.7 Claude Code Prompt's own step 3, not flex/height divs;
+ * .oc-bars is reused here only as the chart's sizing container. */
+.oc-cmphead{display:grid;gap:.4rem}
+.oc-cmpgrid{display:grid;gap:var(--space-3);grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.oc-cmp{display:grid;gap:.4rem;align-content:start}
+.oc-delta{font-size:var(--text-2);font-weight:700}
+.oc-delta.is-up{color:var(--green-brew)}
+.oc-delta.is-down{color:var(--red)}
+.oc-delta.is-unknown{color:var(--c-unknown)}
+.oc-bars{margin-top:1.6rem}
+.oc-legend{display:flex;gap:var(--space-3);margin-top:1.2rem;font-size:var(--text-2);color:var(--text-black-soft)}
+.oc-legend span{display:flex;align-items:center;gap:.6rem}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+.sw--rev{background:var(--green-brew)}
+.sw--pro{background:var(--green-ledger);opacity:.55}

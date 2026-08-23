@@ -29,9 +29,9 @@ export default async function IngredientEditorPage({ params }: PageProps<"/conso
 
   if (id === "new") {
     return (
-      <main className="mx-auto w-full max-w-xl px-4 py-8">
+      <div className="oc-body">
         <IngredientEditorForm storeId={storeId} ingredient={null} />
-      </main>
+      </div>
     );
   }
 
@@ -74,8 +74,8 @@ export default async function IngredientEditorPage({ params }: PageProps<"/conso
   };
 
   return (
-    <main className="mx-auto w-full max-w-xl px-4 py-8">
+    <div className="oc-body">
       <IngredientEditorForm storeId={storeId} ingredient={initialData} />
-    </main>
+    </div>
   );
 }

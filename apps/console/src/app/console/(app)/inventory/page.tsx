@@ -14,6 +14,7 @@ import { resolveMerchantCtx, currentStoreId } from "@/lib/merchant";
 import { costPerHumanUnit, type BaseUnit } from "@brewledger/costing/dist/units";
 import { formatSatangAsThb } from "@brewledger/shared/dist/money";
 import { IngredientListClient, type IngredientListItem } from "./IngredientListClient";
+import { ReportsSubNav } from "@/components/ReportsSubNav";
 import type { Database } from "@brewledger/db/types";
 
 type IngredientRow = Pick<
@@ -105,8 +106,11 @@ export default async function InventoryListPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
-      <IngredientListClient storeId={storeId} items={items} />
-    </main>
+    <>
+      <ReportsSubNav />
+      <div className="oc-body">
+        <IngredientListClient storeId={storeId} items={items} />
+      </div>
+    </>
   );
 }

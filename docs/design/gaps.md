@@ -90,6 +90,14 @@ existing screen's state rather than a new "locked" screen.
 **Blocks:** Nothing currently scheduled. Revisit if a future WBS entry adds
 tier-specific screens.
 
+**2026-08-23 note:** `/console/settings/subscription` was rebuilt (see
+GAP-10) to the prototype's own 4-card plan grid, including its
+`เลือกแพ็กเกจนี้` select control per card — so "plan selection" from this
+gap's original description now has a UI. It is not yet wired to a real
+tier-change action (no Edge Function/Server Action exists for it), so this
+gap's core finding — no screen demonstrates a feature actually being
+locked/unlocked by tier — still stands.
+
 ---
 
 ## GAP-4 — No stock-movement (ledger) view for inventory deductions
@@ -305,6 +313,38 @@ never took payment).
 the data exists).
 
 **Blocks:** Nothing currently scheduled beyond WBS 5.11 itself.
+
+---
+
+## GAP-10 — Subscription screen (`แผนการใช้งาน`) — state matrix corrected, not just documented
+
+**Status:** Same category of miss as GAP-1 and GAP-5 (a complete prototype
+screen absent from `P5 Handoff.md`'s extraction into `state_matrix.md`), but
+this one shipped as a wrong build first, not just missing documentation.
+`state_matrix.md`'s original "แผนการใช้งาน" section stated flatly that this
+screen "does not exist in the delivered prototype at all" and authored a
+feature-comparison-matrix-table layout from scratch. That claim was wrong:
+`design/console-setup.js` has a complete `scPlan()` function (line 117,
+registered in `SCREENS`/`SETUP`) implementing this screen as a 4-card
+pricing grid (`PLANS`, `.oc-plans`). WBS 4.7 was implemented against the
+incorrect state-matrix copy before this was caught.
+
+**Decision:** Per explicit product-owner override (2026-08-23), rebuilt to
+the prototype's card design. The internal `merchants.subscription_tier`
+enum (`free`/`starter`/`growth`/`scale`) was deliberately left unchanged —
+this is a display-layer-only change — and mapped by position onto the
+prototype's 4 `PLANS` cards. `state_matrix.md`'s "แผนการใช้งาน" section is
+rewritten to describe the card layout actually implemented, including the
+tier-name display mapping table, rather than the withdrawn feature-matrix
+description. RL-1's fee-disclosure sentence and RL-2's "sale never gated"
+statement — both real product requirements the original (wrong) state-matrix
+section correctly captured, and which the prototype's own simpler mockup
+does not contain — are preserved on the rebuilt screen rather than lost in
+the swap to the prototype's copy.
+
+**Owner:** M2 (screen + copy).
+
+**Blocks:** Nothing further. Closed by this same change (WBS 4.7 rebuild).
 
 ---
 

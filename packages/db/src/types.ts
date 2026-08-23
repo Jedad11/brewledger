@@ -329,6 +329,51 @@ export type Database = {
           },
         ]
       }
+      menu_item_cost_cache: {
+        Row: {
+          computed_at: string | null
+          cost_satang: number | null
+          created_at: string
+          is_stale: boolean
+          margin_satang: number | null
+          menu_item_id: string
+          store_id: string
+        }
+        Insert: {
+          computed_at?: string | null
+          cost_satang?: number | null
+          created_at?: string
+          is_stale?: boolean
+          margin_satang?: number | null
+          menu_item_id: string
+          store_id: string
+        }
+        Update: {
+          computed_at?: string | null
+          cost_satang?: number | null
+          created_at?: string
+          is_stale?: boolean
+          margin_satang?: number | null
+          menu_item_id?: string
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_item_cost_cache_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: true
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_item_cost_cache_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       menu_items: {
         Row: {
           availability: string

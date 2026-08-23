@@ -31,8 +31,8 @@ describe("DashboardView", () => {
       html = renderToStaticMarkup(<DashboardView summary={ZERO_BOM_SUMMARY} />);
     }).not.toThrow();
 
-    // Revenue rendered: ฿324.00
-    expect(html).toContain("324.00");
+    // Revenue rendered: ฿324 (MetricCard renders integer baht, no decimals)
+    expect(html).toContain("324");
     // Order counts rendered.
     expect(html).toContain(">2<");
     expect(html).toContain(">1<");
@@ -48,7 +48,8 @@ describe("DashboardView", () => {
     const partial: DashboardSummary = { ...ZERO_BOM_SUMMARY, profitSatang: 11800, trackedItemCount: 8 };
     const html = renderToStaticMarkup(<DashboardView summary={partial} />);
 
-    expect(html).toContain("118.00");
+    // ฿118 (MetricCard renders integer baht, no decimals)
+    expect(html).toContain("118");
     expect(html).not.toContain(NO_COST_DATA_NOTE);
     expect(html).toContain("คำนวณจาก 8 จาก 12 รายการที่มีข้อมูลต้นทุน");
   });

@@ -50,6 +50,7 @@ import type { Client } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { connect, isReachable, LOCAL_DB_URL } from "./helpers/db";
 import { anonClient, authenticatedClient, isApiReachable, serviceClient } from "./helpers/supabase-clients";
+import { createFullStoreFixture } from "./helpers/rls-fixture";
 // scripts/scan-order-status-bypass.mjs ships no .d.ts (it's a standalone
 // CLI script, not a package export) — vitest/esbuild resolves and runs it
 // fine at test time; this suppresses only tsc's static "no declaration
@@ -1371,6 +1372,124 @@ describe("WBS 5.7 — console_confirm_payment / console_reject_payment now write
       expect(history[0].from_status).toBe("PENDING_PAYMENT");
       expect(history[0].to_status).toBe("EXPIRED");
       expect(history[0].actor_type).toBe("merchant");
+    } finally {
+      await client.end();
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// WBS 6.9 follow-up (0048) — same bug class as 0034/0035 (order_status_
+// history) and 0045 (ingredient_cost_history), this time in
+// menu_item_cost_cache's trg_bom_lines_cost_recalc trigger (0046): a
+// cascading `delete from auth.users` through merchants -> stores ->
+// menu_items/bom_lines fires that trigger's AFTER DELETE branch, which
+// tried to INSERT a fresh menu_item_cost_cache row referencing a
+// menu_item_id/store_id that the SAME cascade may have already removed --
+// an FK violation, not a race that needed deferring (the parent is gone for
+// good once the enclosing transaction commits, so deferring the check would
+// just fail later at commit instead of at insert-time). 0048 fixed this
+// with a guard, not a deferred constraint: skip the cache write entirely
+// when either parent no longer resolves. Verified independently against a
+// clean origin/main checkout (no WBS 6.7 code) that this failure is
+// pre-existing on that migration alone, not an interaction with anything
+// this file's own suite adds.
+// ---------------------------------------------------------------------------
+
+describe("WBS 6.9 follow-up (0048) — menu_item_cost_cache cascade guard", () => {
+  it("REQUIRED: delete from auth.users cascades through stores -> menu_items -> bom_lines with zero orphaned menu_item_cost_cache/job_queue rows, trigger left ENABLED throughout", async () => {
+    if (!dbAvailable) return;
+    const client = await connect();
+    try {
+      // createFullStoreFixture already seeds one bom_lines row for its
+      // menu item (ingredientId/menuItemId/bomLineId) -- trg_bom_lines_
+      // cost_recalc fires on that INSERT too, so a cache row and a
+      // cost_recalc job already exist before the delete below, same
+      // "prove nonzero before proving zero" discipline as the 0034 test
+      // above.
+      const fixture = await createFullStoreFixture(client, { label: "cascade-cost-cache-check" });
+
+      const countsQuery = `select
+           (select count(*) from stores where id = $1) as stores,
+           (select count(*) from menu_items where id = $2) as menu_items,
+           (select count(*) from bom_lines where menu_item_id = $2) as bom_lines,
+           (select count(*) from menu_item_cost_cache where menu_item_id = $2) as cost_cache,
+           (select count(*) from job_queue where store_id = $1 and job_type = 'cost_recalc') as recalc_jobs`;
+      const before = await client.query<{
+        stores: string;
+        menu_items: string;
+        bom_lines: string;
+        cost_cache: string;
+        recalc_jobs: string;
+      }>(countsQuery, [fixture.storeId, fixture.menuItemId]);
+      expect(Number(before.rows[0].stores)).toBe(1);
+      expect(Number(before.rows[0].menu_items)).toBe(1);
+      expect(Number(before.rows[0].bom_lines)).toBe(1);
+      expect(Number(before.rows[0].cost_cache)).toBe(1); // the trigger's normal-path write, proven working
+      expect(Number(before.rows[0].recalc_jobs)).toBeGreaterThan(0);
+
+      const { rows: trigBefore } = await client.query<{ tgenabled: string }>(
+        `select tgenabled from pg_trigger where tgname = 'trg_bom_lines_cost_recalc'`,
+      );
+      expect(trigBefore[0].tgenabled).toBe("O"); // 'O' = enabled, origin/local role
+
+      // The thing 0048 actually fixed: this must not throw
+      // "violates foreign key constraint menu_item_cost_cache_menu_item_id_fkey".
+      await expect(client.query("delete from auth.users where id = $1", [fixture.authUserId])).resolves.toBeDefined();
+
+      const { rows: trigAfter } = await client.query<{ tgenabled: string }>(
+        `select tgenabled from pg_trigger where tgname = 'trg_bom_lines_cost_recalc'`,
+      );
+      expect(trigAfter[0].tgenabled).toBe("O"); // still enabled -- 0048 is a guard inside the function, not a disabled trigger
+
+      const after = await client.query<{
+        stores: string;
+        menu_items: string;
+        bom_lines: string;
+        cost_cache: string;
+        recalc_jobs: string;
+      }>(countsQuery, [fixture.storeId, fixture.menuItemId]);
+      expect(Number(after.rows[0].stores)).toBe(0);
+      expect(Number(after.rows[0].menu_items)).toBe(0);
+      expect(Number(after.rows[0].bom_lines)).toBe(0);
+      expect(Number(after.rows[0].cost_cache)).toBe(0); // REQUIRED: zero orphaned cache rows
+      expect(Number(after.rows[0].recalc_jobs)).toBe(0); // REQUIRED: no job left referencing a deleted store
+    } finally {
+      await client.end();
+    }
+  });
+
+  it("the guard does not disable the trigger's normal (non-cascade) job: a direct bom_lines delete still marks the cache stale and enqueues a recalc", async () => {
+    if (!dbAvailable) return;
+    const client = await connect();
+    try {
+      const fixture = await createFullStoreFixture(client, { label: "cascade-cost-cache-normal-path" });
+
+      // Clear the cache row's stale flag and the recalc jobs the fixture's
+      // own insert already produced, so this assertion is unambiguously
+      // about what THIS delete does, not leftover state from setup.
+      await client.query(`update menu_item_cost_cache set is_stale = false where menu_item_id = $1`, [fixture.menuItemId]);
+      await client.query(`delete from job_queue where store_id = $1 and job_type = 'cost_recalc'`, [fixture.storeId]);
+
+      // A direct, non-cascade delete of the one bom_lines row -- the
+      // menu_item and store are untouched, so the 0048 guard's "does the
+      // parent still exist" check passes and the trigger's real job runs.
+      await client.query(`delete from bom_lines where id = $1`, [fixture.bomLineId]);
+
+      const { rows: cache } = await client.query<{ is_stale: boolean }>(
+        `select is_stale from menu_item_cost_cache where menu_item_id = $1`,
+        [fixture.menuItemId],
+      );
+      expect(cache).toHaveLength(1); // not deleted, only re-marked stale
+      expect(cache[0].is_stale).toBe(true);
+
+      const { rows: jobs } = await client.query<{ count: string }>(
+        `select count(*)::text as count from job_queue where store_id = $1 and job_type = 'cost_recalc'`,
+        [fixture.storeId],
+      );
+      expect(Number(jobs[0].count)).toBeGreaterThan(0);
+
+      await fixture.cleanup();
     } finally {
       await client.end();
     }

@@ -98,6 +98,21 @@ this guard existed. If `pnpm dev:worker` throws over a blank optional env var
 rather than leaving it empty — `z.string().min(1).optional()` in
 `packages/shared/src/config.ts` accepts "absent", not "blank".
 
+**Missing `pnpm functions:serve` looks like a data/RLS bug but isn't.** If a
+Customer Web page (e.g. `/s/[slug]`) throws "failed to load public store" (or
+any `public-*`/`console-*` Edge Function 503s with `{"code":"BOOT_ERROR"}`),
+check first whether `pnpm functions:serve` is actually running as its own
+process — `supabase start` alone is not enough. `supabase start` ships its own
+embedded edge runtime, but that runtime's bind-mount discovery has a bug: any
+file reached only through a `deno.json` import-map alias (`@brewledger/db/types`,
+`@brewledger/shared/features`) never gets mounted into its container, so every
+function importing through one of those aliases fails to boot — which today
+is effectively all of them. This is not fixable by editing source (switching
+those imports to relative paths breaks the `tsc` build of `packages/shared`
+instead — its `rootDir` doesn't extend into `packages/db`). The fix is
+operational: start `pnpm functions:serve` as its own long-lived process: it
+serves the same functions through a different mechanism that isn't affected.
+
 ## Red lines
 
 These override convenience and schedule pressure everywhere in the repo. Full

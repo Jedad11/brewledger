@@ -93,12 +93,16 @@ export function withCollisionSuffix(base: string, attempt: number): string {
 
 // WBS 4.6 — single source for the public store URL, reused by the store
 // profile screen's slug preview note (StoreProfileForm.tsx) and by
-// settings/link's QR/print sheet, so the two never drift apart. `brewledger.app`
-// is the host the state matrix's own store-profile copy already hardcodes
-// ("brewledger.app/s/{slug}") -- there is no NEXT_PUBLIC_* env var for it
-// anywhere in the repo, so this constant IS that convention, not a
-// replacement for one.
-export const PUBLIC_STORE_HOST = "brewledger.app";
+// settings/link's QR/print sheet, so the two never drift apart.
+//
+// TEMPORARY (2026-08-23): the state matrix's own store-profile copy hardcodes
+// "brewledger.app/s/{slug}", but that domain was never purchased or pointed
+// at the apps/shop Vercel project -- every generated link/QR 404'd for real
+// merchants. Pointed at the actual live production host
+// (brewledger-shop.vercel.app) instead so links work tonight. Swap back to
+// "brewledger.app" once that domain is bought and added under apps/shop's
+// Vercel project Settings -> Domains (see PROGRESS.md for the follow-up).
+export const PUBLIC_STORE_HOST = "brewledger-shop.vercel.app";
 
 // RL-3: the QR/link payload is exactly this URL and nothing else -- no
 // merchant id, store id, or token. Anything more is a potential enumeration

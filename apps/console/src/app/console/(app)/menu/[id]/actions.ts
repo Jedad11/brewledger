@@ -6,12 +6,19 @@ import { uploadCompressedMenuImage } from "@brewledger/shared/dist/storage/menuI
 
 // WBS 4.4 — RL-2 PRIMARY ENFORCEMENT POINT. saveMenuItem is the one place a
 // merchant creates a sellable menu item, and it must succeed with ONLY name
-// + price. It never touches bom_lines, never requires an option group, and
-// never computes or returns a cost figure -- cost stays unknown (null) until
-// WBS 6.7/6.9 exist, and null is exactly what the console renders as "—".
-// Do not add validation here that a recipe/BOM exists, or that any field
-// beyond name/price is present -- that is precisely the RL-2 violation this
-// entry exists to prevent.
+// + price. It never requires an option group or a recipe line, and never
+// computes or returns a cost figure -- cost stays unknown (null) until
+// WBS 6.9's cost engine exists, and null is exactly what the console renders
+// as "—". Do not add validation here that a recipe/BOM exists, or that any
+// field beyond name/price is present -- that is precisely the RL-2
+// violation this entry exists to prevent.
+//
+// WBS 6.7 update: `recipe` below is optional bom_lines persistence, bundled
+// into this SAME save (interaction_spec.md: "Nothing else confirms. Saving
+// a menu item without a recipe never confirms." -- there is no separate
+// "save recipe" step). `recipe: null` means the recipe block was never
+// opened/touched this save and bom_lines is left completely alone; `recipe:
+// []` is a deliberate "no ingredients" edit and clears any existing rows.
 const SAVE_ERROR = "บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง";
 const MIN_PRICE_SATANG = 1;
 
@@ -29,6 +36,11 @@ export interface MenuOptionGroupInput {
   options: MenuOptionInput[];
 }
 
+export interface RecipeLineInput {
+  ingredientId: string;
+  qtyBaseUnit: number;
+}
+
 export interface SaveMenuItemInput {
   itemId: string | null;
   storeId: string;
@@ -36,6 +48,9 @@ export interface SaveMenuItemInput {
   priceSatang: number;
   description: string | null;
   optionGroups: MenuOptionGroupInput[];
+  /** null = recipe block untouched this save, leave bom_lines alone.
+   * See this file's own top comment for why [] is different from null. */
+  recipe: RecipeLineInput[] | null;
 }
 
 export type SaveMenuItemResult =
@@ -76,6 +91,32 @@ export async function saveMenuItem(input: SaveMenuItemInput): Promise<SaveMenuIt
 
   const description = input.description?.trim() || null;
   const supabase = await createClient();
+
+  // WBS 6.7 -- ingredientId comes from the client verbatim. RLS's
+  // merchant_rw_bom_lines (0021) only checks store_id in auth_store_ids(),
+  // not that ingredient_id's OWNING store matches input.storeId, so without
+  // this check a merchant could attach another store's ingredient to their
+  // own bom_lines row. Same pattern as console_confirm_purchase_invoice's
+  // ingredient-ownership check (0044_console_confirm_purchase_invoice.sql
+  // ~186-198). Runs before any write in this function -- the whole save
+  // must reject atomically, not save the menu item and then fail on bom_lines.
+  if (input.recipe !== null) {
+    const ingredientIds = [...new Set(input.recipe.map((r) => r.ingredientId).filter(Boolean))];
+    if (ingredientIds.length > 0) {
+      const { data: ownedIngredients, error: ingredientsError } = await supabase
+        .from("ingredients")
+        .select("id")
+        .eq("store_id", input.storeId)
+        .in("id", ingredientIds);
+      if (ingredientsError) return { error: SAVE_ERROR };
+      if ((ownedIngredients ?? []).length !== ingredientIds.length) {
+        console.error(
+          `saveMenuItem: rejected recipe -- one or more ingredientId not owned by store ${input.storeId}`,
+        );
+        return { error: SAVE_ERROR };
+      }
+    }
+  }
 
   const row = { name, price_satang: input.priceSatang, description, store_id: input.storeId };
 
@@ -142,6 +183,51 @@ export async function saveMenuItem(input: SaveMenuItemInput): Promise<SaveMenuIt
     if (deleteError) return { error: SAVE_ERROR };
   }
 
+  // WBS 6.7 -- bom_lines has a UNIQUE (menu_item_id, ingredient_id) (0009),
+  // so the option-groups pattern above (insert new rows, then delete the
+  // old ones) does NOT work here: editing an existing line's quantity for
+  // the SAME ingredient would collide with that ingredient's still-present
+  // old row before the delete ever runs. Using upsert on that exact
+  // constraint instead makes "update this ingredient's quantity" and
+  // "add a new ingredient" the same atomic statement, with no window where
+  // an existing line could be lost -- then a separate delete removes only
+  // the ingredients the merchant actually took OFF the recipe (rows whose
+  // id is old but whose ingredient is no longer in the new set).
+  if (input.recipe !== null) {
+    const seen = new Set<string>();
+    const rowsToUpsert = input.recipe.filter(
+      (r) => r.ingredientId && r.qtyBaseUnit > 0 && !seen.has(r.ingredientId) && seen.add(r.ingredientId),
+    );
+
+    if (rowsToUpsert.length > 0) {
+      const { error: bomError } = await supabase.from("bom_lines").upsert(
+        rowsToUpsert.map((r) => ({
+          store_id: input.storeId,
+          menu_item_id: itemId,
+          ingredient_id: r.ingredientId,
+          qty_base_unit: r.qtyBaseUnit,
+        })),
+        { onConflict: "menu_item_id,ingredient_id" },
+      );
+      if (bomError) return { error: SAVE_ERROR };
+    }
+
+    const keptIngredientIds = new Set(rowsToUpsert.map((r) => r.ingredientId));
+    const { data: existingBomRows, error: existingBomError } = await supabase
+      .from("bom_lines")
+      .select("id, ingredient_id")
+      .eq("menu_item_id", itemId);
+    if (existingBomError) return { error: SAVE_ERROR };
+
+    const staleIds = ((existingBomRows ?? []) as { id: string; ingredient_id: string }[])
+      .filter((row) => !keptIngredientIds.has(row.ingredient_id))
+      .map((row) => row.id);
+    if (staleIds.length > 0) {
+      const { error: staleDeleteError } = await supabase.from("bom_lines").delete().in("id", staleIds);
+      if (staleDeleteError) return { error: SAVE_ERROR };
+    }
+  }
+
   return {
     ok: true,
     item: {
@@ -152,6 +238,36 @@ export async function saveMenuItem(input: SaveMenuItemInput): Promise<SaveMenuIt
       imagePath: data.image_path as string | null,
     },
   };
+}
+
+/**
+ * WBS 6.7, RL-2: one dismissal is permanent for this menu item -- never
+ * re-offer a suggestion once this is set. Fire-and-forget from the merchant's
+ * point of view: no confirmation step (interaction_spec.md's "nothing else
+ * confirms" rule for this screen), and a failure here has no user-visible
+ * consequence beyond the suggestion possibly reappearing next visit -- it is
+ * never worth surfacing an error banner for a dismiss click, since the worst
+ * case is identical to never having dismissed at all.
+ */
+export type DismissRecipeSuggestionResult = { ok: true } | { error: string };
+
+export async function dismissRecipeSuggestion(itemId: string, storeId: string): Promise<DismissRecipeSuggestionResult> {
+  const merchant = await resolveMerchantCtx();
+  if (!merchant) return { error: SAVE_ERROR };
+  if (!isOwnedStore(merchant, storeId)) {
+    console.error(`dismissRecipeSuggestion: rejected storeId ${storeId} -- not owned by merchant ${merchant.merchantId}`);
+    return { error: SAVE_ERROR };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("menu_items")
+    .update({ recipe_suggestion_dismissed_at: new Date().toISOString() })
+    .eq("id", itemId)
+    .eq("store_id", storeId);
+
+  if (error) return { error: SAVE_ERROR };
+  return { ok: true };
 }
 
 export type UpdateMenuItemImageResult = { ok: true } | { error: string };

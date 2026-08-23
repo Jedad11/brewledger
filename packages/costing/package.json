@@ -7,7 +7,9 @@
   "sideEffects": false,
   "exports": {
     "./dist/units": "./dist/units.js",
-    "./dist/cost": "./dist/cost.js"
+    "./dist/cost": "./dist/cost.js",
+    "./dist/recipes/library": "./dist/recipes/library.js",
+    "./dist/recipes/preview": "./dist/recipes/preview.js"
   },
   "scripts": {
     "typecheck": "tsc --noEmit && tsc -p tsconfig.tests.json",

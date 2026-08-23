@@ -7,3 +7,5 @@
 // one bundle regardless of what's actually used.
 export type { BaseUnit, PurchaseUnit } from "./units";
 export type { IngredientCostHistoryRow } from "./cost";
+export type { RecipeLibraryEntry, RecipeLibraryLine } from "./recipes/library";
+export type { RecipePreviewLine } from "./recipes/preview";

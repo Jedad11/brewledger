@@ -2,10 +2,32 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Card, Input, Button, RecipeBlock } from "@brewledger/ui";
+import { Card, Input, Button, MoneyValue, RecipeBlock, type RecipeRow, type CreateIngredientInput, type RecipeIngredientOption } from "@brewledger/ui";
 import { thbToSatang, satangToThb } from "@brewledger/shared/dist/money";
 import { compressImage } from "@brewledger/shared/dist/storage/compress";
-import { saveMenuItem, uploadMenuItemPhoto, type SaveMenuItemInput } from "./actions";
+import { matchRecipeSuggestion } from "@brewledger/costing/dist/recipes/library";
+import { previewRecipeCostSatang, type RecipePreviewLine } from "@brewledger/costing/dist/recipes/preview";
+import type { BaseUnit } from "@brewledger/costing/dist/units";
+import {
+  saveMenuItem,
+  uploadMenuItemPhoto,
+  dismissRecipeSuggestion,
+  type SaveMenuItemInput,
+} from "./actions";
+// WBS 6.7 reuses WBS 6.4/6.5's inline ingredient-create action as-is rather
+// than duplicating it -- same store-ownership check, same insert shape, the
+// only two callers of a merchant creating an ingredient without leaving
+// whatever screen they're on.
+import { createIngredientInline } from "../../expenses/[id]/review/actions";
+
+// Recipe rows are base-unit quantities (18 g, 200 ml) -- a smaller-scale
+// label than units.ts's own "per kg/L" human-purchase-unit labels, so not
+// reused from there. Kept in sync with the identical map in page.tsx (this
+// file has no access to that server-only module boundary reason to share
+// one file, same as ReviewForm/page.tsx's own per-file BASE_UNIT_LABELS).
+const BASE_UNIT_LABEL: Record<BaseUnit, string> = { g: "กรัม", ml: "มล.", piece: "ชิ้น" };
+const RECIPE_NULL_COST_NOTE =
+  "ต้นทุนของวัตถุดิบที่ยังไม่มีราคาจะปรากฏเองเมื่อคุณยืนยันบิลซื้อของวัตถุดิบนั้น";
 
 export interface MenuItemEditorOption {
   id: string | null;
@@ -19,6 +41,13 @@ export interface MenuItemEditorOptionGroup {
   options: MenuItemEditorOption[];
 }
 
+export interface MenuItemIngredientOption {
+  id: string;
+  name: string;
+  baseUnit: BaseUnit;
+  currentCostSatang: number | null;
+}
+
 export interface MenuItemEditorInitialData {
   id: string;
   name: string;
@@ -27,6 +56,11 @@ export interface MenuItemEditorInitialData {
   imagePath: string | null;
   imageUrl: string | null;
   optionGroups: MenuItemEditorOptionGroup[];
+  /** null = no bom_lines row exists at all (RL-2 baseline) -- distinct from
+   * an explicitly-saved empty recipe, see MenuItemEditorForm's own recipe
+   * derivation and actions.ts's saveMenuItem header comment. */
+  recipe: RecipeRow[] | null;
+  recipeSuggestionDismissed: boolean;
 }
 
 const SAVE_SUCCESS = "บันทึกแล้ว";
@@ -64,7 +98,15 @@ function toDraftGroups(groups: MenuItemEditorOptionGroup[]): DraftGroup[] {
   }));
 }
 
-export function MenuItemEditorForm({ storeId, item }: { storeId: string; item: MenuItemEditorInitialData | null }) {
+export function MenuItemEditorForm({
+  storeId,
+  item,
+  ingredientOptions: initialIngredientOptions,
+}: {
+  storeId: string;
+  item: MenuItemEditorInitialData | null;
+  ingredientOptions: MenuItemIngredientOption[];
+}) {
   const router = useRouter();
 
   const [itemId, setItemId] = React.useState<string | null>(item?.id ?? null);
@@ -79,6 +121,90 @@ export function MenuItemEditorForm({ storeId, item }: { storeId: string; item: M
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [savedAt, setSavedAt] = React.useState<number | null>(null);
+
+  // WBS 6.7 -- recipe state. `recipe === null` is the RL-2 baseline ("no
+  // recipe row exists"); RecipeBlock shows the suggestion/blank-start view
+  // in that state and the edit table otherwise. See MenuItemEditorInitialData
+  // and actions.ts's saveMenuItem for why null and [] are kept distinct.
+  const [recipe, setRecipe] = React.useState<RecipeRow[] | null>(item?.recipe ?? null);
+  const [recipeDismissed, setRecipeDismissed] = React.useState(item?.recipeSuggestionDismissed ?? false);
+  const [recipeOpen, setRecipeOpen] = React.useState(false);
+  const [ingredientOptions, setIngredientOptions] = React.useState<MenuItemIngredientOption[]>(initialIngredientOptions);
+
+  const matchedRecipeEntry = React.useMemo(() => matchRecipeSuggestion(name), [name]);
+
+  const suggestionRows = React.useMemo<RecipeRow[] | null>(() => {
+    if (!matchedRecipeEntry) return null;
+    return matchedRecipeEntry.lines.map((line) => {
+      const match = ingredientOptions.find(
+        (o) => o.baseUnit === line.baseUnit && o.name.trim().toLowerCase() === line.ingredientName.trim().toLowerCase(),
+      );
+      return {
+        ingredientId: match?.id ?? "",
+        ingredientName: match?.name ?? line.ingredientName,
+        quantity: line.qtyBaseUnit,
+        unit: BASE_UNIT_LABEL[line.baseUnit],
+      };
+    });
+  }, [matchedRecipeEntry, ingredientOptions]);
+
+  const recipeIngredientOptions: RecipeIngredientOption[] = React.useMemo(
+    () => ingredientOptions.map((o) => ({ id: o.id, name: o.name, baseUnit: o.baseUnit })),
+    [ingredientOptions],
+  );
+
+  function handleUseSuggestion(rows: RecipeRow[]) {
+    setRecipe(rows);
+  }
+
+  function handleDismissSuggestion() {
+    setRecipeDismissed(true);
+    if (itemId) {
+      dismissRecipeSuggestion(itemId, storeId).catch((err) => {
+        console.error("dismissRecipeSuggestion failed", err);
+      });
+    }
+    // No itemId yet (brand-new, unsaved item) -- persisted once this item
+    // is actually saved, in handleSubmit below. Nothing to show the
+    // merchant either way (interaction_spec.md: nothing else confirms).
+  }
+
+  async function handleCreateRecipeIngredient(input: CreateIngredientInput): Promise<RecipeIngredientOption | null> {
+    const result = await createIngredientInline({
+      storeId,
+      name: input.name,
+      baseUnit: input.baseUnit,
+      packSize: input.packSize,
+    });
+    if ("error" in result) return null;
+
+    const created: MenuItemIngredientOption = {
+      id: result.ingredient.id,
+      name: result.ingredient.name,
+      baseUnit: result.ingredient.baseUnit,
+      currentCostSatang: result.ingredient.currentCostSatang,
+    };
+    setIngredientOptions((opts) => [...opts, created].sort((a, b) => a.name.localeCompare(b.name, "th")));
+    return { id: created.id, name: created.name, baseUnit: created.baseUnit };
+  }
+
+  const ingredientCostById = React.useMemo(
+    () => new Map(ingredientOptions.map((o) => [o.id, o.currentCostSatang])),
+    [ingredientOptions],
+  );
+
+  // Only rows the merchant has actually completed (a real ingredient +
+  // a positive quantity) count toward the preview -- a half-filled row is
+  // simply not there yet, never an error (RL-2: zero validation).
+  const completeRecipeLines: RecipePreviewLine[] = React.useMemo(() => {
+    if (recipe === null) return [];
+    return recipe
+      .filter((row): row is RecipeRow & { quantity: number } => row.ingredientId !== "" && row.quantity !== null && row.quantity > 0)
+      .map((row) => ({ qtyBaseUnit: row.quantity, unitCostSatang: ingredientCostById.get(row.ingredientId) ?? null }));
+  }, [recipe, ingredientCostById]);
+
+  const recipeCostPreviewSatang = previewRecipeCostSatang(completeRecipeLines);
+  const recipeHasUnknownCostLine = completeRecipeLines.some((l) => l.unitCostSatang === null);
   const [photoError, setPhotoError] = React.useState<string | null>(null);
 
   const priceSatang = priceThb.trim() === "" ? null : thbToSatang(Number(priceThb));
@@ -154,6 +280,18 @@ export function MenuItemEditorForm({ storeId, item }: { storeId: string; item: M
           priceDeltaSatang: thbToSatang(Number(o.priceDeltaThb || "0")),
         })),
       })),
+      // null = recipe block never touched this save (RL-2 baseline, leaves
+      // bom_lines alone); an array (even []) is only ever set once the
+      // merchant has actually opened/edited the block, see this file's own
+      // recipe state above. Incomplete rows (no ingredient picked, or no
+      // quantity) are silently dropped here, never blocked -- same "zero
+      // validation" rule as everywhere else in this recipe block.
+      recipe:
+        recipe === null
+          ? null
+          : recipe
+              .filter((row) => row.ingredientId !== "" && row.quantity !== null && row.quantity > 0)
+              .map((row) => ({ ingredientId: row.ingredientId, qtyBaseUnit: row.quantity as number })),
     };
 
     const result = await saveMenuItem(input);
@@ -192,6 +330,14 @@ export function MenuItemEditorForm({ storeId, item }: { storeId: string; item: M
 
     if (!itemId) {
       setItemId(result.item.id);
+      // The suggestion may have been dismissed before this brand-new item
+      // ever had an id to persist that dismissal against (dismissRecipeSuggestion
+      // needs a real row) -- catch up now that one exists.
+      if (recipeDismissed) {
+        dismissRecipeSuggestion(result.item.id, storeId).catch((err) => {
+          console.error("dismissRecipeSuggestion failed", err);
+        });
+      }
       // A failed photo needs its error read before the route change remounts
       // this form (fresh server props) and discards photoError with it --
       // stay put so the merchant can see it and retry from here.
@@ -293,13 +439,42 @@ export function MenuItemEditorForm({ storeId, item }: { storeId: string; item: M
           protect. A merchant who never opens it, or opens it and closes it
           empty, must reach exactly the same "saved successfully, item is
           sellable" outcome as one who fills it in fully -- saveMenuItem
-          above never reads or requires anything from here. Recipe
-          persistence itself (bom_lines) is WBS 6.7's scope, deferred: this
-          renders RecipeBlock with no suggestion/recipe wiring, so its
-          onUse/onChange are local-only and never call a save action. Do NOT
-          add a badge, asterisk, confirmation, or "you should really add a
+          above never requires anything from here; an untouched `recipe`
+          stays `null` and bom_lines is never written. WBS 6.7 wires real
+          suggestion-matching, the ingredient picker, and bom_lines
+          persistence (via the Save button above, not a separate confirm --
+          interaction_spec.md: "Saving a menu item without a recipe never
+          confirms," and neither does saving one WITH a recipe). Do NOT add
+          a badge, asterisk, confirmation, or "you should really add a
           recipe" copy here or anywhere near this component, now or later. */}
-      <RecipeBlock itemName={name} recipe={null} suggestion={null} onUse={() => {}} onChange={() => {}} />
+      <RecipeBlock
+        itemName={name}
+        recipe={recipe}
+        suggestion={recipeDismissed ? null : suggestionRows}
+        ingredientOptions={recipeIngredientOptions}
+        onUse={handleUseSuggestion}
+        onChange={setRecipe}
+        onDismiss={handleDismissSuggestion}
+        onCreateIngredient={handleCreateRecipeIngredient}
+        onOpenChange={setRecipeOpen}
+      />
+      {/* Rendered NEXT TO RecipeBlock, not inside it -- RecipeBlock (packages/ui)
+          must never derive a cost figure (RL-3, no-cost-formatting-logic.cjs);
+          this console page has packages/costing and does the arithmetic.
+          Only shown once there's an actual recipe table open to read (the
+          "Recipe editing" state in state_matrix.md), never during the
+          suggestion/blank-start view. */}
+      {recipeOpen && recipe !== null ? (
+        <div className="flex flex-col gap-1 px-1">
+          <div className="flex items-center justify-between">
+            <span className="note-plain">ต้นทุนต่อแก้ว</span>
+            <MoneyValue value={recipeCostPreviewSatang} role="cost" />
+          </div>
+          {recipeCostPreviewSatang === null && recipeHasUnknownCostLine ? (
+            <p className="note-plain">{RECIPE_NULL_COST_NOTE}</p>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

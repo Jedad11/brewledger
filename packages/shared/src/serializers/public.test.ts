@@ -32,6 +32,10 @@ function makeRow(overrides: Partial<MenuItemRow> = {}): MenuItemRow {
     availability: "available",
     sort_order: 0,
     created_at: "2026-08-01T00:00:00Z",
+    // WBS 6.7 added this column; irrelevant to imageUrl mapping, which is
+    // all this file tests -- null (never dismissed) is the default for
+    // every existing and future row.
+    recipe_suggestion_dismissed_at: null,
     ...overrides,
   };
 }

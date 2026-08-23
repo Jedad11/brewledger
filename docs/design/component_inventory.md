@@ -15,7 +15,7 @@ missing, add it here first, in the same change that needs it.
 | `UntrackedDisclosure` | `trackedCount`, `totalCount`, `untrackedRevenue?`, `variant: 'dashboard'\|'pnl'\|'dish'` — plain grey text on all three |
 | `StatusButton` | `label`, `onPress`, `minHeight: 56`, `optimistic: true` |
 | `OnboardingStrip` | `steps: [store, menu, payments]` — **never accepts a recipe step** |
-| `RecipeBlock` | `itemName`, `recipe: Row[] \| null`, `suggestion: Row[] \| null`, `onUse`, `onChange` — collapsed by default, zero validation |
+| `RecipeBlock` | `itemName`, `recipe: Row[] \| null`, `suggestion: Row[] \| null`, `ingredientOptions: {id,name,baseUnit}[]`, `onUse`, `onChange`, `onDismiss`, `onCreateIngredient`, `onOpenChange?` — collapsed by default, zero validation. `ingredientOptions`/`onCreateIngredient`/`onDismiss` added WBS 6.7 for the per-row ingredient picker (inline create, same pattern as WBS 6.4/6.5's purchase-review screen), the permanent per-item suggestion dismissal, and letting the caller render its own cost-preview line beside this component (`onOpenChange`) without RecipeBlock itself ever computing a cost figure (RL-3, `no-cost-formatting-logic.cjs`) |
 | `MetricCard` | `label`, `value: number \| null`, `role`, `note?: string` (plain grey) |
 | `NavShell` | `surface: 'console'`, `active`, `badge?: number` — bottom bar <1280px, sidebar ≥1280px |
 | `Toggle` | `label`, `description?`, `checked: boolean`, `onChange`, `disabled?` — ported `.oc-toggle`/`.oc-sw`. Not one of the original 12; added WBS 4.3 (store publish switch) the way Button/Input/Card were added in 2.2. |

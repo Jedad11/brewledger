@@ -11,7 +11,7 @@ import { ConfidenceField } from "./components/ConfidenceField";
 import { SlotPicker } from "./components/SlotPicker";
 import { EmptyState } from "./components/EmptyState";
 import { OrderCard, type OrderSummary } from "./components/OrderCard";
-import { RecipeBlock, type RecipeRow } from "./components/RecipeBlock";
+import { RecipeBlock, type RecipeRow, type RecipeIngredientOption } from "./components/RecipeBlock";
 import { OnboardingStrip } from "./components/OnboardingStrip";
 import { NavShell } from "./components/NavShell";
 import type { OrderStatus } from "./types";
@@ -72,6 +72,15 @@ export function Gallery() {
     { ingredientId: "milk", ingredientName: "นมสด", quantity: 200, unit: "มล." },
     { ingredientId: "cup", ingredientName: "แก้ว 16 ออนซ์", quantity: 1, unit: "ใบ" },
   ];
+
+  const recipeIngredientOptions: RecipeIngredientOption[] = [
+    { id: "coffee", name: "เมล็ดกาแฟ", baseUnit: "g" },
+    { id: "milk", name: "นมสด", baseUnit: "ml" },
+    { id: "cup", name: "แก้ว 16 ออนซ์", baseUnit: "piece" },
+  ];
+  async function galleryCreateIngredient(): Promise<RecipeIngredientOption | null> {
+    return null;
+  }
 
   const orderBase: OrderSummary = {
     id: "o1",
@@ -319,8 +328,11 @@ export function Gallery() {
             itemName="ลาเต้เย็นหวานน้อยพิเศษเพิ่มช็อต"
             recipe={null}
             suggestion={null}
+            ingredientOptions={recipeIngredientOptions}
             onUse={() => {}}
             onChange={() => {}}
+            onDismiss={() => {}}
+            onCreateIngredient={galleryCreateIngredient}
           />
         </Row>
         {/* Recipe suggested */}
@@ -330,8 +342,11 @@ export function Gallery() {
               itemName="ลาเต้"
               recipe={recipe}
               suggestion={suggestion}
+              ingredientOptions={recipeIngredientOptions}
               onUse={setRecipe}
               onChange={setRecipe}
+              onDismiss={() => {}}
+              onCreateIngredient={galleryCreateIngredient}
             />
           </details>
         </Row>
@@ -341,8 +356,11 @@ export function Gallery() {
             itemName="ลาเต้"
             recipe={recipeEditing}
             suggestion={null}
+            ingredientOptions={recipeIngredientOptions}
             onUse={() => {}}
             onChange={setRecipeEditing}
+            onDismiss={() => {}}
+            onCreateIngredient={galleryCreateIngredient}
           />
         </Row>
       </Section>

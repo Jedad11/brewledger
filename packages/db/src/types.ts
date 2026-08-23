@@ -339,6 +339,7 @@ export type Database = {
           image_path: string | null
           name: string
           price_satang: number
+          recipe_suggestion_dismissed_at: string | null
           sort_order: number
           store_id: string
         }
@@ -351,6 +352,7 @@ export type Database = {
           image_path?: string | null
           name: string
           price_satang: number
+          recipe_suggestion_dismissed_at?: string | null
           sort_order?: number
           store_id: string
         }
@@ -363,6 +365,7 @@ export type Database = {
           image_path?: string | null
           name?: string
           price_satang?: number
+          recipe_suggestion_dismissed_at?: string | null
           sort_order?: number
           store_id?: string
         }

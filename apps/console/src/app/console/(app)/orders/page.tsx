@@ -2,9 +2,11 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { resolveMerchantCtx, currentStoreId } from "@/lib/merchant";
 import { PendingPaymentSection, type PendingOrder } from "./PendingPaymentSection";
+import { RefundPendingSection } from "./RefundPendingSection";
 import { PageEmptyState } from "./PageEmptyState";
 import { InboxClient } from "./InboxClient";
 import { fetchWorkingQueue } from "./fetchWorkingQueue";
+import { fetchRefundPending } from "./fetchRefundPending";
 import { PAGE_TITLE } from "./copy";
 import type { Database } from "@brewledger/db/types";
 
@@ -65,8 +67,10 @@ export default async function OrdersPage() {
   let workingOrders: Awaited<ReturnType<typeof fetchWorkingQueue>> = [];
   let lastSeenAt: string | null = null;
   let notifySoundMuted = false;
+  let refundPendingOrders: Awaited<ReturnType<typeof fetchRefundPending>> = [];
   if (storeId) {
     workingOrders = await fetchWorkingQueue(supabase, storeId);
+    refundPendingOrders = await fetchRefundPending(supabase, storeId);
     const { data: storeRow } = await supabase
       .from("stores")
       .select("orders_last_seen_at, notify_sound_muted")
@@ -79,8 +83,11 @@ export default async function OrdersPage() {
   // Page-level empty state (docs/design/state_matrix.md line 127): only
   // shown when there is truly nothing to work on anywhere on this page —
   // widened here (WBS 5.8) from "pending is empty" to "pending AND the
-  // working queue are both empty", per WBS 5.6's own forward-looking note.
-  if (pendingOrders.length === 0 && workingOrders.length === 0) {
+  // working queue are both empty", per WBS 5.6's own forward-looking note,
+  // and again (WBS 5.11) to include the refund-pending list: an unresolved
+  // refund is a permanent problem until fixed (WBS 5.11 Acceptance) and
+  // must never be hidden behind "nothing to do today" copy.
+  if (pendingOrders.length === 0 && workingOrders.length === 0 && refundPendingOrders.length === 0) {
     return (
       <>
         <header className="oc-top">
@@ -112,6 +119,7 @@ export default async function OrdersPage() {
             initialMuted={notifySoundMuted}
           />
         ) : null}
+        {refundPendingOrders.length > 0 ? <RefundPendingSection orders={refundPendingOrders} /> : null}
       </div>
     </>
   );

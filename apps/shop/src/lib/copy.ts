@@ -185,11 +185,33 @@ export const ORDER_COLLECTED_BODY = "แล้วพบกันใหม่";
 export const ORDER_PENDING_PAYMENT_TITLE = "ยังไม่ได้ชำระเงิน";
 export const ORDER_PENDING_PAYMENT_BODY = "เปิดลิงก์หรือ QR ที่ได้รับตอนสั่งซื้ออีกครั้งเพื่อชำระเงิน";
 
-// Cancelled is title-only for now — see state_matrix.md's own "Cancelled"
-// entry and gaps.md's GAP-9 for why the reason/refund-timeframe lines from
-// the prototype are deferred, not silently dropped.
+// WBS 5.11 — GAP-9 closed. See state_matrix.md's "Cancelled"/"Refunded"
+// entries for the gating rule this implements: refundStatus, NEVER
+// cancelReason's mere presence, decides whether a refund line renders at
+// all (docs/db/wbs_5_11_refund_design.md §4) — a PENDING_PAYMENT order
+// cancelled before ever paying carries a cancelReason but refundStatus
+// stays null, and must never claim a refund is coming.
 export const ORDER_CANCELLED_TITLE = "ร้านยกเลิกออเดอร์นี้";
 export const ORDER_REFUNDED_BODY = "เงินคืนเข้าบัญชีเดิมเรียบร้อยแล้ว";
+export const ORDER_REFUND_PENDING_BODY = "เงินจะคืนเข้าบัญชีเดิมภายใน 3–5 วันทำการ";
+
+// Same five fixed codes/labels as apps/console's own cancel-reason picker
+// (interaction_spec.md:18) — one canonical Thai label per code, reused on
+// both sides of the transaction rather than two copies that could drift.
+export const CANCEL_REASON_LABEL_TH: Record<string, string> = {
+  out_of_stock: "ของหมด",
+  equipment_failure: "เครื่องเสีย",
+  customer_request: "ลูกค้าขอยกเลิก",
+  unexpected_closure: "ร้านปิดกะทันหัน",
+  other: "อื่นๆ",
+};
+
+export function cancelReasonLine(cancelReason: string | null): string | null {
+  if (!cancelReason) return null;
+  const label = CANCEL_REASON_LABEL_TH[cancelReason];
+  if (!label) return null;
+  return `เหตุผลจากร้าน: ${label}`;
+}
 
 export const ORDER_EXPIRED_TITLE = "หมดเวลาชำระเงิน";
 export const ORDER_EXPIRED_BODY = "ออเดอร์นี้ถูกยกเลิกเพราะไม่ได้ชำระเงินภายในเวลาที่กำหนด ยังไม่มีการตัดเงิน";

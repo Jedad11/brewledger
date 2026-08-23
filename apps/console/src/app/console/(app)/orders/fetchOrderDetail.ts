@@ -12,7 +12,16 @@ import { formatPickupTime } from "./format";
 
 type OrderRow = Pick<
   Database["public"]["Tables"]["orders"]["Row"],
-  "id" | "order_code" | "customer_name" | "customer_phone" | "total_satang" | "pickup_slot_id" | "status" | "store_id"
+  | "id"
+  | "order_code"
+  | "customer_name"
+  | "customer_phone"
+  | "total_satang"
+  | "pickup_slot_id"
+  | "status"
+  | "store_id"
+  | "cancel_reason"
+  | "refund_status"
 >;
 
 type OrderItemRow = Pick<
@@ -43,6 +52,8 @@ export interface OrderDetail {
   cups: number;
   items: OrderLineItem[];
   history: OrderDetailHistoryEntry[];
+  cancelReason: string | null;
+  refundStatus: string | null;
 }
 
 export async function fetchOrderDetail(
@@ -52,7 +63,9 @@ export async function fetchOrderDetail(
 ): Promise<OrderDetail | null> {
   const { data: orderRow } = await supabase
     .from("orders")
-    .select("id, order_code, customer_name, customer_phone, total_satang, pickup_slot_id, status, store_id")
+    .select(
+      "id, order_code, customer_name, customer_phone, total_satang, pickup_slot_id, status, store_id, cancel_reason, refund_status",
+    )
     .eq("id", orderId)
     .eq("store_id", storeId)
     .maybeSingle();
@@ -109,5 +122,7 @@ export async function fetchOrderDetail(
     cups,
     items,
     history,
+    cancelReason: order.cancel_reason,
+    refundStatus: order.refund_status,
   };
 }

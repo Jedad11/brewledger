@@ -341,6 +341,10 @@ button{font-family:inherit;letter-spacing:var(--tracking-normal)}
  * /design/Owner Console.html's <style> block. */
 .oc-scrim{position:fixed;inset:0;background:var(--overlay-black-60);z-index:30}
 .oc-sheet{position:fixed;left:50%;translate:-50% 0;bottom:0;width:100%;max-width:480px;background:var(--surface-card);border-radius:16px 16px 0 0;z-index:31;padding:var(--space-4);display:grid;gap:1.4rem;animation:up .28s var(--ease-standard)}
+/* WBS 5.11 — the cancel-reason picker's own sheet content, .oc-scrim/
+ * .oc-sheet's other missed sibling from the same WBS 5.12 port (see the
+ * comment above): /design/Owner Console.html's own <style> block. */
+.oc-reasons{display:flex;flex-wrap:wrap;gap:.8rem}
 
 /* ---- Ported from /design/Customer Web.html <style> — slot picker,
  * inline notices. ---- */

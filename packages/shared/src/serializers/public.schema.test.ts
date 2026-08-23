@@ -151,16 +151,53 @@ describe("publicSlotSchema", () => {
 });
 
 describe("publicOrderStatusSchema", () => {
+  // WBS 5.11 widened this DTO with cancelReason/refundStatus — both are
+  // required keys (nullable, not optional) per public.schema.ts, so a valid
+  // fixture must include them or safeParse fails on a MISSING key, not just
+  // an extra one.
   const valid = {
     orderCode: "QASNAP01",
     status: "PENDING_PAYMENT",
     pickupAt: null,
     itemName: "Latte",
     quantity: 2,
+    cancelReason: null,
+    refundStatus: null,
   };
 
   it("accepts the valid DTO shape", () => {
     expect(publicOrderStatusSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("accepts a cancelled order with cancelReason set and refundStatus still null (PENDING_PAYMENT cancel — nothing owed)", () => {
+    const result = publicOrderStatusSchema.safeParse({ ...valid, status: "CANCELLED", cancelReason: "out_of_stock", refundStatus: null });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a cancelled order with refundStatus='pending'", () => {
+    const result = publicOrderStatusSchema.safeParse({ ...valid, status: "CANCELLED", cancelReason: "equipment_failure", refundStatus: "pending" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a refunded order with refundStatus='done'", () => {
+    const result = publicOrderStatusSchema.safeParse({ ...valid, status: "REFUNDED", cancelReason: "customer_request", refundStatus: "done" });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an unknown cancelReason code", () => {
+    const result = publicOrderStatusSchema.safeParse({ ...valid, cancelReason: "merchant_felt_like_it" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an unknown refundStatus value (e.g. a truthy-but-wrong string, never a boolean-ish shortcut)", () => {
+    const result = publicOrderStatusSchema.safeParse({ ...valid, refundStatus: "refunded" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects when a required key (refundStatus) is missing entirely, not just extra", () => {
+    const { refundStatus: _omit, ...withoutRefundStatus } = valid;
+    const result = publicOrderStatusSchema.safeParse(withoutRefundStatus);
+    expect(result.success).toBe(false);
   });
 
   it("rejects when an extra key like paymentConfirmedBy is present", () => {
@@ -173,6 +210,11 @@ describe("publicOrderStatusSchema", () => {
       ...valid,
       totalCostSnapshotSatang: 3600,
     });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects when an extra key like refundResolvedBy is present — the RL-3 field this widening deliberately excludes", () => {
+    const result = publicOrderStatusSchema.safeParse({ ...valid, refundResolvedBy: "merchant-id-abc" });
     expect(result.success).toBe(false);
   });
 });

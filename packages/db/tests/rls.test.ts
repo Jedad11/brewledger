@@ -455,9 +455,12 @@ describe("§7.2, §7.5, §7.6, §7.7, §7.8 — merchant-scoped suite", () => {
       expect((data ?? []).length).toBeGreaterThan(0);
 
       const forbidden = /cost|margin|profit|fee|expense|stock/i;
+      // WBS 5.11 (packages/db/migrations/0051_console_cancel_order_refund.sql)
+      // deliberately widened this RPC with cancel_reason/refund_status —
+      // confirmed RL-3-safe (docs/db/wbs_5_11_refund_design.md §4).
       for (const row of data ?? []) {
         const keys = Object.keys(row).sort();
-        expect(keys).toEqual(["item_name", "order_code", "pickup_at", "quantity", "status"]);
+        expect(keys).toEqual(["cancel_reason", "item_name", "order_code", "pickup_at", "quantity", "refund_status", "status"]);
         for (const key of keys) {
           expect(forbidden.test(key)).toBe(false);
         }

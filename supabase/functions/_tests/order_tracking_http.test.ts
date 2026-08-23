@@ -424,7 +424,15 @@ describe("RL-3: every terminal state's live HTTP response is clean against docs/
     const body = JSON.parse(text) as Array<Record<string, unknown>>;
     expect(body.length).toBeGreaterThan(0);
     for (const row of body) {
-      expect(Object.keys(row).sort()).toEqual(["itemName", "orderCode", "pickupAt", "quantity", "status"]);
+      expect(Object.keys(row).sort()).toEqual([
+        "cancelReason",
+        "itemName",
+        "orderCode",
+        "pickupAt",
+        "quantity",
+        "refundStatus",
+        "status",
+      ]);
     }
     expect(body[0].status).toBe(status);
   });

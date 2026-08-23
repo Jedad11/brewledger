@@ -279,7 +279,21 @@ that needed it.
 
 ## GAP-9 — Customer-facing cancellation reason and refund timing unavailable until WBS 5.11
 
-**Status:** Real, scheduled gap. `state_matrix.md`'s original "Cancelled"
+**Status:** Closed by WBS 5.11. `orders.cancel_reason` and
+`orders.refund_resolved_by`/`refund_resolved_at` now exist
+(`packages/db/migrations/0051_console_cancel_order_refund.sql`,
+`docs/db/wbs_5_11_refund_design.md`); `public_order_status`/
+`public_order_lookup` were widened (DROP + CREATE, not REPLACE) to return
+both `cancel_reason` and `refund_status`; `state_matrix.md`'s Cancelled and
+Refunded entries for `/o/{code}` restore the reason and refund-timeframe
+lines, gated on `refund_status` (never `cancel_reason`'s mere presence,
+per the design doc's own §4 rule) so a `PENDING_PAYMENT` cancel — which
+carries a reason but owes no refund — never renders a false refund claim.
+`apps/shop/src/app/o/[code]/page.tsx` and `apps/shop/src/lib/copy.ts`
+consume the widened fields per that gating rule. Original text below,
+preserved for context.
+
+**Original status:** Real, scheduled gap. `state_matrix.md`'s original "Cancelled"
 entry for `/o/{code}` (transcribed from the prototype) names a specific
 cancellation reason (`เหตุผลจากร้าน: วัตถุดิบหมด`) and a refund-timeframe
 line (`เงินจะคืนเข้าบัญชีเดิมภายใน 3–5 วันทำการ`). Neither is buildable today:
@@ -312,7 +326,7 @@ never took payment).
 **Owner:** M1 (architect — RPC contract), M2 (state_matrix copy + screen once
 the data exists).
 
-**Blocks:** Nothing currently scheduled beyond WBS 5.11 itself.
+**Blocks:** Nothing. Closed by this same change (WBS 5.11).
 
 ---
 

@@ -68,6 +68,11 @@ export const publicOrderStatusSchema = z.object({
   pickupAt: z.string().nullable(),
   itemName: z.string(),
   quantity: z.number().int().positive(),
+  cancelReason: z.enum([
+    "out_of_stock", "equipment_failure", "customer_request",
+    "unexpected_closure", "other",
+  ]).nullable(),
+  refundStatus: z.enum(["pending", "done"]).nullable(),
 }).strict();
 
 // WBS 5.4 — checkout_create_order's response shapes. .strict() at every

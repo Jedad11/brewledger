@@ -54,7 +54,14 @@ afterAll(async () => {
 });
 
 const FORBIDDEN_KEY_RE = /cost|margin|profit|fee|expense|stock|cogs|merchant_id|auth_user_id|payload|balance|escrow|wallet|payout/i;
-const ALLOWED_SNAKE_KEYS = ["item_name", "order_code", "pickup_at", "quantity", "status"].sort();
+// WBS 5.11 (packages/db/migrations/0051_console_cancel_order_refund.sql)
+// deliberately widened both RPCs' RETURNS TABLE with cancel_reason and
+// refund_status — confirmed RL-3-safe operational state, not cost/margin/
+// stock/aggregate data (docs/db/wbs_5_11_refund_design.md §4). Allow-list
+// updated to match; refund_resolved_by/refund_resolved_at remain absent —
+// see the dedicated "does not leak resolution audit fields" coverage in
+// console_cancel_order_refund.test.ts.
+const ALLOWED_SNAKE_KEYS = ["cancel_reason", "item_name", "order_code", "pickup_at", "quantity", "refund_status", "status"].sort();
 
 function assertOnlyAllowListedKeys(rows: Array<Record<string, unknown>>): void {
   expect(rows.length).toBeGreaterThan(0);

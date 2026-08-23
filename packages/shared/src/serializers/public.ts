@@ -171,6 +171,11 @@ export interface PublicOrderStatus {
   pickupAt: string | null;
   itemName: string;
   quantity: number;
+  cancelReason: string | null;
+  // 'pending' | 'done' | null. null = no refund owed -- THE gating field
+  // for any refund-timeframe copy. Never derive this from cancelReason's
+  // presence; see docs/db/wbs_5_11_refund_design.md §4.
+  refundStatus: "pending" | "done" | null;
 }
 
 // The RPC's own column list IS the allow-list; this function only renames
@@ -182,6 +187,8 @@ export function toPublicOrderStatus(row: {
   pickup_at: string | null;
   item_name: string;
   quantity: number;
+  cancel_reason: string | null;
+  refund_status: string | null;
 }): PublicOrderStatus {
   return {
     orderCode: row.order_code,
@@ -189,6 +196,8 @@ export function toPublicOrderStatus(row: {
     pickupAt: row.pickup_at,
     itemName: row.item_name,
     quantity: row.quantity,
+    cancelReason: row.cancel_reason,
+    refundStatus: row.refund_status as PublicOrderStatus["refundStatus"],
   };
 }
 

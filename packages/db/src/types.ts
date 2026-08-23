@@ -696,6 +696,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          cancel_reason: string | null
           channel: string
           created_at: string
           customer_name: string
@@ -707,6 +708,8 @@ export type Database = {
           payment_confirmed_at: string | null
           payment_confirmed_by: string | null
           pickup_slot_id: string | null
+          refund_resolved_at: string | null
+          refund_resolved_by: string | null
           refund_status: string | null
           status: string
           store_id: string
@@ -715,6 +718,7 @@ export type Database = {
           total_satang: number
         }
         Insert: {
+          cancel_reason?: string | null
           channel?: string
           created_at?: string
           customer_name: string
@@ -726,6 +730,8 @@ export type Database = {
           payment_confirmed_at?: string | null
           payment_confirmed_by?: string | null
           pickup_slot_id?: string | null
+          refund_resolved_at?: string | null
+          refund_resolved_by?: string | null
           refund_status?: string | null
           status?: string
           store_id: string
@@ -734,6 +740,7 @@ export type Database = {
           total_satang: number
         }
         Update: {
+          cancel_reason?: string | null
           channel?: string
           created_at?: string
           customer_name?: string
@@ -745,6 +752,8 @@ export type Database = {
           payment_confirmed_at?: string | null
           payment_confirmed_by?: string | null
           pickup_slot_id?: string | null
+          refund_resolved_at?: string | null
+          refund_resolved_by?: string | null
           refund_status?: string | null
           status?: string
           store_id?: string
@@ -753,6 +762,13 @@ export type Database = {
           total_satang?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_refund_resolved_by_fkey"
+            columns: ["refund_resolved_by"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_pickup_slot_id_fkey"
             columns: ["pickup_slot_id"]
@@ -1134,6 +1150,10 @@ export type Database = {
         }
         Returns: Json
       }
+      console_cancel_order: {
+        Args: { p_order_id: string; p_reason: string }
+        Returns: Json
+      }
       console_confirm_payment: {
         Args: { p_merchant_id: string; p_order_id: string }
         Returns: Json
@@ -1143,6 +1163,10 @@ export type Database = {
         Returns: Json
       }
       console_reject_payment: { Args: { p_order_id: string }; Returns: Json }
+      console_resolve_refund: {
+        Args: { p_order_id: string }
+        Returns: Json
+      }
       console_undo_cash_sale: {
         Args: { p_merchant_id: string; p_order_id: string }
         Returns: Json
@@ -1172,20 +1196,24 @@ export type Database = {
       public_order_lookup: {
         Args: { p_order_code: string; p_phone: string }
         Returns: {
+          cancel_reason: string | null
           item_name: string
           order_code: string
           pickup_at: string
           quantity: number
+          refund_status: string | null
           status: string
         }[]
       }
       public_order_status: {
         Args: { p_order_code: string }
         Returns: {
+          cancel_reason: string | null
           item_name: string
           order_code: string
           pickup_at: string
           quantity: number
+          refund_status: string | null
           status: string
         }[]
       }
@@ -1221,6 +1249,7 @@ export type Database = {
           p_to: string
         }
         Returns: {
+          cancel_reason: string | null
           channel: string
           created_at: string
           customer_name: string
@@ -1232,6 +1261,8 @@ export type Database = {
           payment_confirmed_at: string | null
           payment_confirmed_by: string | null
           pickup_slot_id: string | null
+          refund_resolved_at: string | null
+          refund_resolved_by: string | null
           refund_status: string | null
           status: string
           store_id: string

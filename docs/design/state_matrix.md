@@ -154,24 +154,35 @@ implementation, same posture as WBS 5.2's stale-cart state.
   `เปิดลิงก์หรือ QR ที่ได้รับตอนสั่งซื้ออีกครั้งเพื่อชำระเงิน`. No retry link
   is offered — same reasoning as Collected above, this screen doesn't know
   the store slug needed to rebuild a `/pay` URL.
-- **Cancelled** — `ร้านยกเลิกออเดอร์นี้`. The prototype's own copy continues
-  with a specific reason (`เหตุผลจากร้าน: วัตถุดิบหมด`, one value from
-  `interaction_spec.md`'s own cancel-reason picker) and a refund-timeframe
-  line (`เงินจะคืนเข้าบัญชีเดิมภายใน 3–5 วันทำการ`) — **deferred, not
-  rebuilt**, because neither the cancellation reason nor `refund_status` is
-  a column `orders` carries yet (both are WBS 5.11's job, not started this
-  session — see GAP-9 below). Rendering either line today would mean
-  guessing at data that does not exist, which this codebase treats as more
-  dangerous than an incomplete screen (`CLAUDE.md`: unknown cost is `null`,
-  never guessed). Title-only until WBS 5.11 ships the columns and this file
-  gets its own follow-up edit.
-- **Refunded** (`status = REFUNDED`, authored — no prototype equivalent,
-  since the prototype never modelled a completed refund) —
-  `ร้านยกเลิกออเดอร์นี้` / `เงินคืนเข้าบัญชีเดิมเรียบร้อยแล้ว`. Safe to state
-  as fact (not a timeframe estimate) because `REFUNDED` is a real,
-  already-transitioned `orders.status` value (`transition_order`,
-  `packages/db/migrations/0032_order_status_history.sql`) — reaching this
-  state means a merchant already completed the transfer, not a projection.
+- **Cancelled** (WBS 5.11 — GAP-9 closed; `cancel_reason`/`refund_status`
+  now returned by `public_order_status`/`public_order_lookup`,
+  `packages/db/migrations/0051_console_cancel_order_refund.sql`) —
+  `ร้านยกเลิกออเดอร์นี้`, plus, when `cancelReason` is non-null, a reason
+  line `เหตุผลจากร้าน: {label}` (one of the five fixed Thai labels below —
+  never the raw code). **The refund-timeframe line
+  (`เงินจะคืนเข้าบัญชีเดิมภายใน 3–5 วันทำการ`) renders if and only if
+  `refundStatus === 'pending'` — never on `cancelReason`'s mere presence.**
+  This is the load-bearing rule the RPC contract itself was widened to
+  enforce (`docs/db/wbs_5_11_refund_design.md` §4): a `PENDING_PAYMENT`
+  order cancelled before ever paying carries a `cancelReason` (a reason is
+  captured for every cancel, regardless of originating status) but
+  `refundStatus` stays `null` — nothing was paid, nothing is owed — and
+  must render the reason line alone, with no refund claim beneath it.
+  Five fixed reason codes and their Thai labels, identical set and order to
+  the console's own cancel-reason picker (`interaction_spec.md:18`):
+  `out_of_stock` → ของหมด, `equipment_failure` → เครื่องเสีย,
+  `customer_request` → ลูกค้าขอยกเลิก, `unexpected_closure` → ร้านปิดกะทันหัน,
+  `other` → อื่นๆ.
+- **Refunded** (`status = REFUNDED`, `refundStatus = 'done'`; authored —
+  no prototype equivalent, since the prototype never modelled a completed
+  refund) — `ร้านยกเลิกออเดอร์นี้` / the same reason line as Cancelled above
+  (`cancelReason` is never cleared on `CANCELLED → REFUNDED`, WBS 5.11's own
+  design decision) / `เงินคืนเข้าบัญชีเดิมเรียบร้อยแล้ว`. The last line is
+  safe to state as fact (not a timeframe estimate) because `REFUNDED` is a
+  real, already-transitioned `orders.status` value (`transition_order`,
+  `packages/db/migrations/0032_order_status_history.sql`) reached only via
+  `console_resolve_refund` — reaching this state means a merchant already
+  completed the transfer, not a projection.
 - **Expired** — `หมดเวลาชำระเงิน` / `ออเดอร์นี้ถูกยกเลิกเพราะไม่ได้ชำระเงินภายในเวลาที่กำหนด ยังไม่มีการตัดเงิน`
 - **Not found** — `ไม่พบออเดอร์นี้` / `ตรวจสอบรหัสอีกครั้ง หรือค้นหาด้วยเบอร์โทรที่ใช้สั่ง` (never reveals whether the code format was valid)
 
@@ -212,9 +223,22 @@ verbatim below.
 ### ออเดอร์ `/console/orders`
 - **Empty** — `ยังไม่มีออเดอร์วันนี้` / `ลูกค้าสั่งผ่านลิงก์ร้านของคุณได้เลย` + `ดูลิงก์ร้าน`
 - **New orders** — persistent banner `มีออเดอร์ใหม่ N รายการ` + `รับทราบ`; each unseen card keeps a 6px left border until opened.
-- **Working queue (WBS 5.8 — grouped list, copy verbatim from `design/owner-console.js`'s `scOrders()`/`orderCard()`, not previously extracted into this file)** — orders with status ACCEPTED/PREPARING/READY, grouped into one section per pick-up slot, slots ascending; the nearest slot's heading carries the pill `ใกล้ที่สุด`. Each card shows, in order: order code, customer name, `รับ HH:MM น.`, the status badge (`OrderStatusBadge`), a full item-line list (`.oc-items` — item name, options on the line beneath in `note-plain`, quantity as `× N`), then `{cups} แก้ว` beside the order total (`MoneyValue`). WBS 5.8 itself wires no advance/cancel/open handler on these cards — see `OrderCard`'s own component-inventory entry. **WBS 5.9 wires `onAdvance` (status action button, one of `เริ่มทำ` / `พร้อมรับ` / `รับแล้ว` — only the single legal next action ever renders, verbatim from `design/owner-console.js`'s own `NEXT` map) and `onOpen` (`ดูรายละเอียด`, navigates to `/console/orders/{id}`)** — copy unchanged from what `OrderCard`/`orderCard()` already specify. `onCancel` (`ยกเลิกออเดอร์`) stays unwired: WBS 5.11 is not built yet.
+- **Working queue (WBS 5.8 — grouped list, copy verbatim from `design/owner-console.js`'s `scOrders()`/`orderCard()`, not previously extracted into this file)** — orders with status ACCEPTED/PREPARING/READY, grouped into one section per pick-up slot, slots ascending; the nearest slot's heading carries the pill `ใกล้ที่สุด`. Each card shows, in order: order code, customer name, `รับ HH:MM น.`, the status badge (`OrderStatusBadge`), a full item-line list (`.oc-items` — item name, options on the line beneath in `note-plain`, quantity as `× N`), then `{cups} แก้ว` beside the order total (`MoneyValue`). WBS 5.8 itself wires no advance/cancel/open handler on these cards — see `OrderCard`'s own component-inventory entry. **WBS 5.9 wires `onAdvance` (status action button, one of `เริ่มทำ` / `พร้อมรับ` / `รับแล้ว` — only the single legal next action ever renders, verbatim from `design/owner-console.js`'s own `NEXT` map) and `onOpen` (`ดูรายละเอียด`, navigates to `/console/orders/{id}`)** — copy unchanged from what `OrderCard`/`orderCard()` already specify. `onCancel` (`ยกเลิกออเดอร์`) stays unwired on this list card: WBS 5.11 wires
+  cancellation only on the order detail screen (`onOpen` already navigates
+  there), not a second time on the inbox card itself — a merchant working
+  the queue opens `ดูรายละเอียด` to cancel, the same one place the refund
+  state (`กำลังคืนเงิน`/`คืนเงินแล้ว`) also lives, rather than duplicating a
+  destructive action across two surfaces.
 - **Bulk "mark all ready" (WBS 5.9 — copy verbatim from `design/owner-console.js`'s own `scOrders()`, `data-bulk="${t}"` button, confirmed against this entry's own Claude Code Prompt text)** — a `btn--quiet` control in each real slot's group header (no button on a group with no `pickup_slot_id`, e.g. a cash-sale order with no reserved slot), labelled `ทำเสร็จทั้งช่วงเวลานี้`, shown only when the group has at least one ACCEPTED/PREPARING order. Marks every ACCEPTED/PREPARING order in that slot READY, one order at a time (an ACCEPTED order takes two hops — ACCEPTED→PREPARING→READY — a PREPARING order takes one; `transition_order` has no direct ACCEPTED→READY pair, WBS 5.7). On full success, no separate message (the cards' own badges update, same "optimistic, no toast" posture as the single-order button). On partial or total failure — authored, no prototype counterpart (the prototype's own bulk handler is a client-side-only mutation that cannot fail) — a persistent inline message beneath the group header, naming which orders failed: `ทำสำเร็จ {N} ออเดอร์ · ไม่สำเร็จ {M} ออเดอร์ ({order_code, order_code, ...})`, or `ทำรายการไม่สำเร็จทั้งหมด ลองใหม่อีกครั้ง` if the whole request failed outright. Never a vanishing toast.
-- **Order detail `/console/orders/{id}` (WBS 5.9 — no counterpart in this file until now; structure and copy sourced from `design/owner-console.js`'s own `scDetail()`, same posture as WBS 4.7/5.3's own authored screens)** — header: `ย้อนกลับ` + order code + `{customer name} · รับ HH:MM น.`. First card: status badge, order total (`MoneyValue`), the full item-line list, `{cups} แก้ว`, then the single legal next-action button if one exists (same three labels as the working queue). Second card `ติดต่อลูกค้า`: customer name + phone number with a `โทรหาลูกค้า` `tel:` link, or `ลูกค้าไม่ได้ให้เบอร์โทร` when no phone was given. Third card `ประวัติสถานะ`: one row per `order_status_history` entry, `HH:MM` beside the Thai label of the status reached (`OrderStatusBadge`'s own label map). **The prototype's own `scDetail()` always renders a `ยกเลิกออเดอร์` cancel button and a `กำลังคืนเงิน` refund-in-progress card for cancelled/refunded orders — both omitted here: WBS 5.11 (order cancellation and refund) is not built yet, and a button with no working handler is worse than no button (same reasoning `OrderCard`'s own component-inventory entry gives for `onCancel`).** On an advance failure, the same persistent inline message as the working queue's own card-level error, never a vanishing toast.
+- **Order detail `/console/orders/{id}` (WBS 5.9 — no counterpart in this file until now; structure and copy sourced from `design/owner-console.js`'s own `scDetail()`, same posture as WBS 4.7/5.3's own authored screens)** — header: `ย้อนกลับ` + order code + `{customer name} · รับ HH:MM น.`. First card: status badge, order total (`MoneyValue`), the full item-line list, `{cups} แก้ว`, then the single legal next-action button if one exists (same three labels as the working queue). Second card `ติดต่อลูกค้า`: customer name + phone number with a `โทรหาลูกค้า` `tel:` link, or `ลูกค้าไม่ได้ให้เบอร์โทร` when no phone was given. Third card `ประวัติสถานะ`: one row per `order_status_history` entry, `HH:MM` beside the Thai label of the status reached (`OrderStatusBadge`'s own label map). On an advance failure, the same persistent inline message as the working queue's own card-level error, never a vanishing toast.
+- **Cancel + refund (WBS 5.11 — wires the `ยกเลิกออเดอร์` button and the cancelled/refunded card the prototype's own `scDetail()` always renders, both previously omitted; see this file's own prior note, preserved in git history)** — a full-width `ยกเลิกออเดอร์` (`.btn--danger`) button appears beneath the history card **only** while the order is `ACCEPTED`/`PREPARING`/`READY` (the console UI's own scope for "who may cancel" — `docs/db/wbs_5_11_refund_design.md` §3; the RPC itself accepts a wider set, enforced structurally rather than duplicated as a second UI check). Tapping it opens a two-step, both-dismissible flow (`interaction_spec.md:18`):
+  1. **Reason picker sheet** (`.oc-scrim`/`.oc-sheet`, verbatim structure from `design/owner-console.js`'s own `cancelSheet()`) — title `เหตุผลที่ยกเลิก`, five reason pills in a row (same five labels/order as the customer-facing Cancelled entry above), `ต่อไป` (disabled until one is picked) and `ปิด` to dismiss with nothing changed.
+  2. **Confirm sheet** — title `ยืนยันการยกเลิก`, body `ออเดอร์ {code} · เหตุผล: {label}` then a corrected line **`ลูกค้าจะได้รับแจ้ง คุณจะต้องโอนเงินคืนให้ลูกค้าเองผ่านแอปธนาคาร`** — **not** the prototype's own `...ระบบจะเริ่มคืนเงินทันที` ("the system will begin the refund immediately"), which described the withdrawn gateway-refund design and now contradicts RL-1 (this system never moves money — WBS 5.11's own Revision note). Corrected here per `CLAUDE.md`'s own precedence rule that a red line beats the prototype, in the same change, rather than shipped verbatim. Buttons `ยืนยันยกเลิก` and `ไม่ยกเลิก`.
+
+  A failed cancel dismisses the sheet and leaves the same persistent inline card-level error the advance button uses — `ยกเลิกออเดอร์ไม่สำเร็จ ลองใหม่อีกครั้ง`, or `สถานะออเดอร์นี้เปลี่ยนไปแล้ว ลองรีเฟรชหน้าอีกครั้ง` on a 409 (another tab/device already moved this order past the point cancellation is legal) — never a vanishing toast.
+
+  Once cancelled/refunded, the button is replaced by an informational card in the same slot — gated on `refund_status`, never `cancel_reason`'s mere presence (identical rule to the customer-facing Cancelled/Refunded entries above): `refund_status = 'pending'` → `กำลังคืนเงิน` / `เงินจะคืนเข้าบัญชีเดิมของลูกค้าภายใน 3–5 วันทำการ ระบบแจ้งลูกค้าให้แล้ว` (verbatim, `scDetail()`); `refund_status = 'done'` → `คืนเงินแล้ว` / `เงินคืนเข้าบัญชีเดิมเรียบร้อยแล้ว` (authored — the prototype showed the SAME "in progress" card for both cancelled and refunded orders, which is factually wrong once a refund is actually resolved; corrected here rather than carried forward, same posture as the confirm-sheet correction above, though this one is an ordinary accuracy fix, not a red-line conflict). A cancelled order with no refund owed (`refund_status` stays `null` — a `PENDING_PAYMENT` cancel reachable only by direct URL, not from this UI) shows neither card.
+- **รอคืนเงิน section (WBS 5.11 — no counterpart in the delivered prototype; copy authored for the real implementation, same posture as WBS 5.6's own `รอยืนยันการชำระเงิน` section immediately above it on this page)** — section header `รอคืนเงิน`, positioned below the working queue (there is no completed-orders list on this page to sit above, so this section renders last). **Persists until every entry is resolved: never collapses by default, never ages out, no dismiss/ignore control** — the only way a row leaves this list is a successful `โอนคืนแล้ว` tap (WBS 5.11 Acceptance: "a cancelled order with an unresolved refund remains visible in the console indefinitely"). Backed by `orders_refund_pending_idx` (`store_id`, `refund_status = 'pending'`, `packages/db/migrations/0051_console_cancel_order_refund.sql`). Each card shows, in this priority: the amount to refund, large (`MoneyValue` `size="lg"`), the customer's phone number with a one-tap `คัดลอกเบอร์โทร`/`คัดลอกแล้ว` copy control (omitted when no phone was given, same as the order-detail contact card), the customer name and order code, how long the refund has been outstanding — `ค้างมา {N} วัน`, counted from the `order_status_history` row where the order reached `CANCELLED` (the moment the obligation began), not from order creation — and a `โอนคืนแล้ว` button (`StatusButton`, ≥56px full width). Helper line beneath, verbatim: `โอนคืนลูกค้าผ่านแอปธนาคารของคุณ แล้วกดยืนยันที่นี่`. A resolve that fails leaves the card in place with a persistent inline message `บันทึกการคืนเงินไม่สำเร็จ ลองใหม่อีกครั้ง`, or `รายการนี้เปลี่ยนไปแล้ว ลองรีเฟรชหน้าอีกครั้ง` on a 409 (another tab/device already resolved it) — never a vanishing toast. Section empty state (only reachable after resolving every row client-side during the same visit — the section itself is omitted from the page entirely when the initial server fetch finds nothing, same pattern as `รอยืนยันการชำระเงิน`): `ไม่มีออเดอร์ที่รอคืนเงิน`.
 - **Notification permission (WBS 5.8 — copy verbatim from `design/owner-console.js`'s `scSettings()`, surfaced inline on this screen rather than a separate settings page, since interaction_spec.md requires the polling fallback to run ON this screen regardless of permission state)**:
   - *Not yet asked* — no banner shown; the permission prompt itself is requested silently (native browser dialog) the first time the working queue has at least one order, never on bare page load.
   - *Denied* — inline note `อุปกรณ์นี้ปิดการแจ้งเตือนไว้ ระบบจึงตรวจหาออเดอร์ใหม่ให้ทุก 10 วินาทีขณะเปิดหน้านี้อยู่`.

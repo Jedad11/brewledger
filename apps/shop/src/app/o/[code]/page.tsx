@@ -42,6 +42,8 @@ import {
   ORDER_PENDING_PAYMENT_BODY,
   ORDER_CANCELLED_TITLE,
   ORDER_REFUNDED_BODY,
+  ORDER_REFUND_PENDING_BODY,
+  cancelReasonLine,
   ORDER_EXPIRED_TITLE,
   ORDER_EXPIRED_BODY,
   ORDER_NOT_FOUND_TITLE,
@@ -152,7 +154,8 @@ export default function OrderTrackPage() {
     };
   }, [phase, load]);
 
-  function renderTerm(title: string, body?: string) {
+  function renderTerm(title: string, bodyLines?: (string | null)[]) {
+    const lines = (bodyLines ?? []).filter((line): line is string => line !== null);
     return (
       <Card>
         <div className="cw-paycard">
@@ -160,11 +163,11 @@ export default function OrderTrackPage() {
             {ORDER_CODE_LABEL} <b className="num">{code}</b>
           </p>
           <h3 style={{ marginTop: ".8rem" }}>{title}</h3>
-          {body ? (
-            <p className="note-plain" style={{ marginTop: ".8rem" }}>
-              {body}
+          {lines.map((line, i) => (
+            <p key={i} className="note-plain" style={{ marginTop: ".8rem" }}>
+              {line}
             </p>
-          ) : null}
+          ))}
         </div>
       </Card>
     );
@@ -199,16 +202,25 @@ export default function OrderTrackPage() {
       );
     }
     if (phase === "pending_payment") {
-      return renderTerm(ORDER_PENDING_PAYMENT_TITLE, ORDER_PENDING_PAYMENT_BODY);
+      return renderTerm(ORDER_PENDING_PAYMENT_TITLE, [ORDER_PENDING_PAYMENT_BODY]);
     }
     if (phase === "cancelled") {
-      return renderTerm(ORDER_CANCELLED_TITLE);
+      // refundStatus, never cancelReason's mere presence, gates the refund
+      // line -- a PENDING_PAYMENT order cancelled before paying carries a
+      // cancelReason but refundStatus stays null, and must never claim a
+      // refund is coming (docs/db/wbs_5_11_refund_design.md §4).
+      const row = rows?.[0];
+      return renderTerm(ORDER_CANCELLED_TITLE, [
+        cancelReasonLine(row?.cancelReason ?? null),
+        row?.refundStatus === "pending" ? ORDER_REFUND_PENDING_BODY : null,
+      ]);
     }
     if (phase === "refunded") {
-      return renderTerm(ORDER_CANCELLED_TITLE, ORDER_REFUNDED_BODY);
+      const row = rows?.[0];
+      return renderTerm(ORDER_CANCELLED_TITLE, [cancelReasonLine(row?.cancelReason ?? null), ORDER_REFUNDED_BODY]);
     }
     if (phase === "expired") {
-      return renderTerm(ORDER_EXPIRED_TITLE, ORDER_EXPIRED_BODY);
+      return renderTerm(ORDER_EXPIRED_TITLE, [ORDER_EXPIRED_BODY]);
     }
 
     // active / collected — rows is always set by the time either phase is

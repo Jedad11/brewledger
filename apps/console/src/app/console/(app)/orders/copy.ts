@@ -81,3 +81,89 @@ export const DETAIL_CONTACT_TITLE = "ติดต่อลูกค้า";
 export const DETAIL_CONTACT_MISSING = "ลูกค้าไม่ได้ให้เบอร์โทร";
 export const DETAIL_CALL_CUSTOMER = "โทรหาลูกค้า";
 export const DETAIL_HISTORY_TITLE = "ประวัติสถานะ";
+
+// WBS 5.11 -- order cancellation and merchant-initiated refund. Reason
+// picker labels/order verbatim from interaction_spec.md:18 (also
+// design/owner-console.js's own REASONS const) -- mapped client-side to the
+// five orders.cancel_reason DB codes (docs/db/wbs_5_11_refund_design.md
+// §1); the codes never appear as literal UI strings.
+export type CancelReasonCode =
+  | "out_of_stock"
+  | "equipment_failure"
+  | "customer_request"
+  | "unexpected_closure"
+  | "other";
+
+export const CANCEL_REASONS: { code: CancelReasonCode; label: string }[] = [
+  { code: "out_of_stock", label: "ของหมด" },
+  { code: "equipment_failure", label: "เครื่องเสีย" },
+  { code: "customer_request", label: "ลูกค้าขอยกเลิก" },
+  { code: "unexpected_closure", label: "ร้านปิดกะทันหัน" },
+  { code: "other", label: "อื่นๆ" },
+];
+
+export function cancelReasonLabel(code: CancelReasonCode): string {
+  return CANCEL_REASONS.find((r) => r.code === code)?.label ?? code;
+}
+
+export const DETAIL_CANCEL_BUTTON = "ยกเลิกออเดอร์";
+
+// Two dismissible steps, per interaction_spec.md:18 -- reason picker, then
+// a confirm sheet. Titles/next-step labels verbatim from
+// design/owner-console.js's own cancelSheet(). The confirm sheet's BODY
+// text is authored, not the prototype's verbatim "...ระบบจะเริ่มคืนเงินทันที"
+// ("the system will begin the refund immediately") -- that line describes
+// the withdrawn gateway-refund design and now contradicts RL-1 (this system
+// never moves money; the merchant transfers the refund from their own
+// banking app, WBS 5.11's own Revision note). Corrected here rather than
+// carried forward verbatim, per CLAUDE.md's own rule that a red line beats
+// the prototype and the correction is made in the same change.
+export const CANCEL_REASON_SHEET_TITLE = "เหตุผลที่ยกเลิก";
+export const CANCEL_REASON_NEXT_LABEL = "ต่อไป";
+export const CANCEL_REASON_CLOSE_LABEL = "ปิด";
+
+export const CANCEL_CONFIRM_TITLE = "ยืนยันการยกเลิก";
+export function cancelConfirmOrderLine(orderCode: string, reasonLabel: string): string {
+  return `ออเดอร์ ${orderCode} · เหตุผล: ${reasonLabel}`;
+}
+export const CANCEL_CONFIRM_REFUND_NOTE = "ลูกค้าจะได้รับแจ้ง คุณจะต้องโอนเงินคืนให้ลูกค้าเองผ่านแอปธนาคาร";
+export const CANCEL_CONFIRM_YES = "ยืนยันยกเลิก";
+export const CANCEL_CONFIRM_NO = "ไม่ยกเลิก";
+
+export const CANCEL_FAILED = "ยกเลิกออเดอร์ไม่สำเร็จ ลองใหม่อีกครั้ง";
+export const CANCEL_STALE = "สถานะออเดอร์นี้เปลี่ยนไปแล้ว ลองรีเฟรชหน้าอีกครั้ง";
+export const CANCEL_VALIDATION_FAILED = "กรุณาเลือกเหตุผลก่อนยืนยัน";
+
+// The order-detail screen's own informational cards for a terminal
+// cancelled/refunded order -- gated on refund_status, never cancel_reason's
+// mere presence (same load-bearing rule as the customer-facing tracking
+// page, docs/db/wbs_5_11_refund_design.md §4): refund_status='pending'
+// shows the in-progress card (title/body verbatim,
+// design/owner-console.js's own scDetail()); refund_status='done' shows a
+// completed card instead of the SAME "in progress" copy the prototype
+// showed for both cases -- a resolved obligation is not "in progress",
+// and the prototype never modelled a completed refund at all (same gap as
+// state_matrix.md's own "Refunded" entry).
+export const DETAIL_REFUND_PENDING_TITLE = "กำลังคืนเงิน";
+export const DETAIL_REFUND_PENDING_BODY = "เงินจะคืนเข้าบัญชีเดิมของลูกค้าภายใน 3–5 วันทำการ ระบบแจ้งลูกค้าให้แล้ว";
+export const DETAIL_REFUND_DONE_TITLE = "คืนเงินแล้ว";
+export const DETAIL_REFUND_DONE_BODY = "เงินคืนเข้าบัญชีเดิมเรียบร้อยแล้ว";
+
+// "รอคืนเงิน" section -- placed below the working queue, above completed
+// orders, persists until every entry is resolved (never ages out, no
+// dismiss/ignore control). Copy authored for the real implementation, same
+// posture as WBS 5.6's own "รอยืนยันการชำระเงิน" section -- see
+// docs/design/state_matrix.md's own entry for this section, added in this
+// change.
+export const REFUND_SECTION_TITLE = "รอคืนเงิน";
+export const REFUND_SECTION_EMPTY = "ไม่มีออเดอร์ที่รอคืนเงิน";
+export const REFUND_HELPER_LINE = "โอนคืนลูกค้าผ่านแอปธนาคารของคุณ แล้วกดยืนยันที่นี่";
+export const REFUND_RESOLVE_LABEL = "โอนคืนแล้ว";
+export function refundOutstandingDays(days: number): string {
+  return `ค้างมา ${days} วัน`;
+}
+export const REFUND_COPY_PHONE_LABEL = "คัดลอกเบอร์โทร";
+export const REFUND_COPY_SUCCESS = "คัดลอกแล้ว";
+export const REFUND_COPY_FAILED = "คัดลอกไม่สำเร็จ ลองใหม่อีกครั้ง";
+export const RESOLVE_REFUND_FAILED = "บันทึกการคืนเงินไม่สำเร็จ ลองใหม่อีกครั้ง";
+export const RESOLVE_REFUND_STALE = "รายการนี้เปลี่ยนไปแล้ว ลองรีเฟรชหน้าอีกครั้ง";

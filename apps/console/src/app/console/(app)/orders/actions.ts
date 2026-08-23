@@ -12,7 +12,18 @@
 // tapped a button" and "the Edge Function saw a real merchant JWT".
 import { createClient } from "@/lib/supabase/server";
 import { resolveMerchantCtx, currentStoreId } from "@/lib/merchant";
-import { CONFIRM_FAILED, REJECT_FAILED, ADVANCE_FAILED, ADVANCE_STALE } from "./copy";
+import {
+  CONFIRM_FAILED,
+  REJECT_FAILED,
+  ADVANCE_FAILED,
+  ADVANCE_STALE,
+  CANCEL_FAILED,
+  CANCEL_STALE,
+  CANCEL_VALIDATION_FAILED,
+  RESOLVE_REFUND_FAILED,
+  RESOLVE_REFUND_STALE,
+  type CancelReasonCode,
+} from "./copy";
 
 interface FunctionResult {
   ok: boolean;
@@ -101,6 +112,38 @@ export async function advanceOrder(
   if (result.status === 409) return { ok: false, error: ADVANCE_STALE };
   if (!result.json || result.status >= 400 || result.json.ok !== true) {
     return { ok: false, error: ADVANCE_FAILED };
+  }
+  return { ok: true, already: Boolean(result.json.already) };
+}
+
+// WBS 5.11 -- "ยกเลิกออเดอร์". Reason is one of the five DB codes
+// (statusMap.ts-style: the console's own reason picker maps the five Thai
+// labels to these codes client-side -- copy.ts's CANCEL_REASONS -- the
+// codes themselves never appear as literal UI strings).
+export type CancelOrderResult = { ok: true; already: boolean } | { ok: false; error: string };
+
+export async function cancelOrder(orderId: string, reason: CancelReasonCode): Promise<CancelOrderResult> {
+  const result = await postConsoleFunction("console-cancel-order", { orderId, reason });
+  if (!result) return { ok: false, error: CANCEL_FAILED };
+  if (result.status === 409) return { ok: false, error: CANCEL_STALE };
+  if (result.status === 400) return { ok: false, error: CANCEL_VALIDATION_FAILED };
+  if (!result.json || result.status >= 400 || result.json.ok !== true) {
+    return { ok: false, error: CANCEL_FAILED };
+  }
+  return { ok: true, already: Boolean(result.json.already) };
+}
+
+// WBS 5.11 -- "โอนคืนแล้ว". Records that the merchant has already
+// transferred the refund from their own banking app (RL-1) -- this action
+// never moves money itself.
+export type ResolveRefundResult = { ok: true; already: boolean } | { ok: false; error: string };
+
+export async function resolveRefund(orderId: string): Promise<ResolveRefundResult> {
+  const result = await postConsoleFunction("console-resolve-refund", { orderId });
+  if (!result) return { ok: false, error: RESOLVE_REFUND_FAILED };
+  if (result.status === 409) return { ok: false, error: RESOLVE_REFUND_STALE };
+  if (!result.json || result.status >= 400 || result.json.ok !== true) {
+    return { ok: false, error: RESOLVE_REFUND_FAILED };
   }
   return { ok: true, already: Boolean(result.json.already) };
 }

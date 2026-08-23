@@ -284,6 +284,11 @@ export interface PublicOrderStatusRow {
   pickupAt: string | null;
   itemName: string;
   quantity: number;
+  cancelReason: string | null;
+  // 'pending' | 'done' | null. null = no refund owed -- THE gating field
+  // for any refund-timeframe copy. Never derive this from cancelReason's
+  // presence; see docs/db/wbs_5_11_refund_design.md §4.
+  refundStatus: "pending" | "done" | null;
 }
 
 export function fetchOrderStatus(code: string): Promise<PublicFetchResult<PublicOrderStatusRow[]>> {

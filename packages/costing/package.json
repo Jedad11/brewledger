@@ -10,7 +10,8 @@
     "./dist/cost": "./dist/cost.js",
     "./dist/recipes/library": "./dist/recipes/library.js",
     "./dist/recipes/preview": "./dist/recipes/preview.js",
-    "./dist/costPerCup": "./dist/costPerCup.js"
+    "./dist/costPerCup": "./dist/costPerCup.js",
+    "./dist/stock": "./dist/stock.js"
   },
   "scripts": {
     "typecheck": "tsc --noEmit && tsc -p tsconfig.tests.json",

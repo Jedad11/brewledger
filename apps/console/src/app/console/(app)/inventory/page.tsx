@@ -12,6 +12,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { resolveMerchantCtx, currentStoreId } from "@/lib/merchant";
 import { costPerHumanUnit, type BaseUnit } from "@brewledger/costing/dist/units";
+import { isNegativeStock } from "@brewledger/costing/dist/stock";
 import { formatSatangAsThb } from "@brewledger/shared/dist/money";
 import { IngredientListClient, type IngredientListItem } from "./IngredientListClient";
 import { ReportsSubNav } from "@/components/ReportsSubNav";
@@ -96,7 +97,14 @@ export default async function InventoryListPage() {
         baseUnit,
         costLabel,
         stockLabel: formatStock(stock.stock_base_unit, baseUnit),
-        isNegative: stock.stock_base_unit < 0,
+        // WBS 6.8 negative-stock policy: allow it, warn, never block a sale.
+        // The ledger can go negative because the merchant will forget to
+        // record a purchase, not because anything is wrong with the sale --
+        // framed to the merchant as "likely missing a purchase record"
+        // (NEGATIVE_NOTE in IngredientListClient), never as merchant error.
+        // Decision lives once in isNegativeStock (packages/costing/src/stock.ts),
+        // not as an inline comparison here.
+        isNegative: isNegativeStock(stock.stock_base_unit),
         daysOfCover: stock.days_of_cover,
         lastPurchaseLabel: stock.last_purchase_at
           ? new Date(stock.last_purchase_at).toLocaleDateString("th-TH", { day: "numeric", month: "short" })

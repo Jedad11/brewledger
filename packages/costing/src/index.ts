@@ -10,3 +10,7 @@ export type { IngredientCostHistoryRow } from "./cost";
 export type { RecipeLibraryEntry, RecipeLibraryLine } from "./recipes/library";
 export type { RecipePreviewLine } from "./recipes/preview";
 export type { BomCostRow } from "./costPerCup";
+// No exported type from stock.ts -- isNegativeStock takes a plain number;
+// isLowStock takes number and number | null -- neither needs a re-exported
+// type (see index.ts's own header comment on why this file has no runtime
+// export at all).

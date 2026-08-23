@@ -73,10 +73,31 @@ export async function proxy(request: NextRequest) {
 
   const isPublicRoute = PUBLIC_CONSOLE_ROUTES.includes(request.nextUrl.pathname);
 
+  // Both redirect branches below build a NEW NextResponse rather than
+  // returning `response` directly -- but `response` may already carry a
+  // Set-Cookie for a session getUser() just refreshed (setAll() above writes
+  // into `response`, not into the request). Forwarding those cookies onto
+  // the redirect is required, not cosmetic: skipping it leaves the browser
+  // holding the OLD refresh token while GoTrue has already rotated to a new
+  // one server-side, so the very next request's refresh attempt fails,
+  // user resolves to null, and this proxy bounces to /console/login --
+  // whose own next-request re-evaluation can then see a still-valid access
+  // token on that request and bounce straight back, alternating forever.
+  // This was reproduced live: Network tab showed console(307)<->login(307)
+  // repeating every ~100-150ms until Chrome's own navigation throttling
+  // kicked in.
+  function redirectPreservingRefreshedCookies(url: URL): NextResponse {
+    const redirectResponse = NextResponse.redirect(url);
+    for (const cookie of response.cookies.getAll()) {
+      redirectResponse.cookies.set(cookie);
+    }
+    return redirectResponse;
+  }
+
   if (!user && !isPublicRoute) {
     const loginUrl = new URL("/console/login", request.url);
     loginUrl.searchParams.set("next", request.nextUrl.pathname);
-    return NextResponse.redirect(loginUrl);
+    return redirectPreservingRefreshedCookies(loginUrl);
   }
 
   if (user && request.nextUrl.pathname === "/console/login") {
@@ -87,7 +108,9 @@ export async function proxy(request: NextRequest) {
     // bouncing an already-authenticated merchant off-site with no login
     // page ever shown. safeNext() rejects anything that doesn't stay under
     // /console before it ever reaches `new URL(...)`.
-    return NextResponse.redirect(new URL(safeNext(request.nextUrl.searchParams.get("next")), request.url));
+    return redirectPreservingRefreshedCookies(
+      new URL(safeNext(request.nextUrl.searchParams.get("next")), request.url),
+    );
   }
 
   return response;

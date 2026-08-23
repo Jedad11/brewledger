@@ -1138,7 +1138,15 @@ export type Database = {
         Args: { p_merchant_id: string; p_order_id: string }
         Returns: Json
       }
+      console_create_cash_sale: {
+        Args: { p_cart_lines: Json; p_merchant_id: string }
+        Returns: Json
+      }
       console_reject_payment: { Args: { p_order_id: string }; Returns: Json }
+      console_undo_cash_sale: {
+        Args: { p_merchant_id: string; p_order_id: string }
+        Returns: Json
+      }
       create_payment_charge: {
         Args: { p_order_code: string; p_qr_payload: string }
         Returns: {

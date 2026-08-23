@@ -300,6 +300,48 @@ button{font-family:inherit;letter-spacing:var(--tracking-normal)}
 .oc-rectable .input{min-height:44px;padding:.8rem 1.2rem}
 .oc-costline{display:flex;align-items:baseline;justify-content:space-between;gap:1.2rem;padding-top:1.2rem;border-top:1px solid var(--hairline)}
 
+/* ---- WBS 5.12 — ported from /design/Owner Console.html <style>
+ * (.oc-quick/.oc-tiles/.oc-tile/.oc-tilebadge/.oc-recent/.oc-total), not
+ * previously extracted since no screen used them before the quick-sale
+ * grid. Owner Console.html's own .oc-recrow (4 columns: 56px 1fr auto auto,
+ * used by its "recent sales" strip) collides BY NAME with Console
+ * Setup.html's already-ported 3-column .oc-rectable .oc-recrow (the recipe
+ * table row, WBS 6.7) -- the two source HTML files reuse the same class
+ * name for unrelated rows, a collision this shared components.css has to
+ * resolve that neither prototype file individually needed to. Scoped here
+ * under .oc-recent so both coexist without one clobbering the other; the
+ * two are never nested inside each other so this cannot misfire. */
+.oc-quick{padding-bottom:var(--space-4)}
+.oc-tiles{display:grid;gap:1.2rem;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.oc-tile{position:relative;display:grid;align-content:space-between;gap:.8rem;min-height:104px;padding:1.4rem;border:0;border-radius:var(--radius-card);background:var(--surface-card);box-shadow:var(--shadow-card);font-family:inherit;font-size:var(--text-3);text-align:left;cursor:pointer;color:var(--text-black);transition:transform var(--duration-fast) var(--ease-standard)}
+.oc-tile:active{transform:scale(var(--press-scale))}
+.oc-tile b{font-weight:700;line-height:var(--lh-thai-head)}
+.oc-tile .num{color:var(--text-black-soft)}
+.oc-tile.is-hot{min-height:128px;background:var(--green-mist);grid-column:span 2}
+.oc-tile.is-hot b{font-size:var(--text-4);color:var(--green-ledger)}
+.oc-tilebadge{position:absolute;top:1rem;right:1rem;min-width:28px;height:28px;padding:0 .6rem;border-radius:var(--radius-pill);background:var(--green-brew);color:#fff;font-weight:700;display:grid;place-items:center;font-size:var(--text-2)}
+.oc-recent{display:grid;gap:0}
+.oc-recent .oc-recrow{display:grid;grid-template-columns:56px 1fr auto auto;gap:1.2rem;align-items:center;padding:1rem 0;border-top:1px solid var(--hairline)}
+.oc-total{position:sticky;bottom:var(--oc-navh,110px);z-index:5;display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-3) var(--gutter-md);background:var(--green-cask);color:#fff}
+.oc-total .note-plain{color:var(--text-white-soft)}
+.oc-total .money{color:#fff}
+/* width:auto + this padding mirrors /design/Owner Console.html's own inline
+ * style="width:auto;padding:0 3.2rem" on this button — needed because
+ * .btn--wet (above) sets width:100% for the order-status full-width tap
+ * target rule, which this right-aligned pill button must override or it
+ * stretches to fill .oc-total and overflows past the bar's right edge. */
+.oc-total .btn{background:#fff;color:var(--green-cask);white-space:nowrap;flex:none;width:auto;padding:0 3.2rem}
+@media(min-width:1280px){.oc-total{bottom:0!important}}
+/* .oc-scrim/.oc-sheet were missed in the WBS 5.12 port above — the only
+ * built screen to reference this pair (QuickSaleOptionSheet.tsx's long-press
+ * option sheet; owner-console.js's own cancelSheet() also uses it but that
+ * screen, WBS 5.11, isn't built yet). Functionally identical to the
+ * already-ported .cw-scrim/.cw-sheet below, just under the Owner Console's
+ * own class names and z-index (30/31 vs Customer Web's 20/21) per
+ * /design/Owner Console.html's <style> block. */
+.oc-scrim{position:fixed;inset:0;background:var(--overlay-black-60);z-index:30}
+.oc-sheet{position:fixed;left:50%;translate:-50% 0;bottom:0;width:100%;max-width:480px;background:var(--surface-card);border-radius:16px 16px 0 0;z-index:31;padding:var(--space-4);display:grid;gap:1.4rem;animation:up .28s var(--ease-standard)}
+
 /* ---- Ported from /design/Customer Web.html <style> — slot picker,
  * inline notices. ---- */
 .cw-notice{background:var(--white);border-left:0;border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:var(--space-3);display:grid;gap:.4rem}

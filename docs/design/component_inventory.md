@@ -20,6 +20,7 @@ missing, add it here first, in the same change that needs it.
 | `NavShell` | `surface: 'console'`, `active`, `badge?: number` — bottom bar <1280px, sidebar ≥1280px |
 | `Toggle` | `label`, `description?`, `checked: boolean`, `onChange`, `disabled?` — ported `.oc-toggle`/`.oc-sw`. Not one of the original 12; added WBS 4.3 (store publish switch) the way Button/Input/Card were added in 2.2. |
 | `Sparkline` | `values: (number \| null)[]` (chronological). Ported from `design/console-reports.js`'s `spark()`. Not one of the original 12; added WBS 7.5 for the P&L's 7-day net-profit trend strip. `null` points are skipped when drawing the line (never coerced to 0 — same RL-2 null discipline as `MoneyValue`); renders nothing with fewer than 2 defined points. |
+| `QuickSaleTile` | `id`, `name`, `priceSatang`, `quantityInCart: number` (badge, hidden at 0), `hot: boolean` (128px double-width variant), `onTap`, `onLongPress` — ported `.oc-tile`/`.oc-tile.is-hot`/`.oc-tilebadge` from `design/Owner Console.html`. Not one of the original 12; added WBS 5.12 (quick cash sale) — no tile-grid component existed before this entry, so one was added here per the "add it here first" rule rather than defined ad hoc in `apps/console`. Presentational plus press detection only (500ms pointer-hold or native `contextmenu` fires `onLongPress`; a plain click fires `onTap`); the caller composes the `.oc-tiles` grid and owns all cart state. |
 
 No new component was needed to document GAP-1 (the transaction ledger). Its
 screen composes existing patterns: a segmented control (already used

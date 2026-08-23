@@ -348,6 +348,45 @@ the swap to the prototype's copy.
 
 ---
 
+## GAP-11 — Quick cash sale screen (`ขายหน้าร้าน`) — undocumented in the state matrix, not missing
+
+**Status:** Exists and is complete in the delivered package (`screen_inventory.md`
+already lists it, `/console/sales/quick`, and `NavShell`'s own `quick` nav
+entry has routed to it since WBS 2.2/3.1). It was simply absent from
+`P5 Handoff.md`'s state matrix — the same category of gap as GAP-1 and
+GAP-5, just for a single screen's copy rather than a whole undocumented
+screen.
+
+- **Implementation:** `design/owner-console.js`, screen key `quick` (`scQuick()`, search `/* ---------- 5. quick cash sale`).
+- **Route:** `/console/sales/quick`.
+- **Surface / auth:** Console, authenticated.
+- **Copy sourced verbatim:** title `ขายหน้าร้าน`, subtitle `แตะเพื่อเพิ่ม · กดค้างเพื่อเลือกตัวเลือก`,
+  recent-sales header `ขายล่าสุด`, confirm button `รับเงินสด`, per-row undo
+  `ยกเลิก`, expired-undo label `หมดเวลายกเลิก` (also present in
+  `interaction_spec.md` line 27).
+- **One deliberate divergence from the prototype, not a copy gap:** the
+  prototype's own `TILES` array is a hardcoded 10-item demo list, and its
+  long-press handler is a stub `alert()` ("ตัวเลือกสำหรับ ... (กดค้าง)") —
+  neither reads from a real store's menu nor actually opens an option
+  picker. WBS 5.12 replaces both with the real thing: tiles read from the
+  store's own `menu_items` (ranked by recent sales volume, since no
+  popularity flag is persisted anywhere in the schema — see that entry's
+  own PROGRESS.md notes for the exact window/threshold chosen), and
+  long-press opens a real option sheet for items with option groups,
+  defaulting to the first option per required group by `sort_order` (no
+  "most common option set" is persisted anywhere either).
+
+**Decision:** Documented, not rebuilt. Added to `/docs/design/state_matrix.md`
+(new `### ขายหน้าร้าน /console/sales/quick` section) and `QuickSaleTile`
+added to `packages/ui`/`component_inventory.md`, in the same change (WBS
+5.12) that needed both.
+
+**Owner:** M2.
+
+**Blocks:** Nothing. Closed by this same change.
+
+---
+
 ## Adherence lint follow-up (not a screen gap, recorded here for visibility)
 
 `_ds/.../_adherence.oxlintrc.json` cannot be executed by the installed

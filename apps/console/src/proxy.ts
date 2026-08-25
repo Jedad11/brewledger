@@ -61,14 +61,27 @@ export async function proxy(request: NextRequest) {
   // cookie-format change) throws instead of resolving — caught here so
   // every failure mode collapses to the same deny-by-default outcome
   // (redirect to /console/login) rather than an unhandled 500.
+  //
+  // ONE retry on a THROWN failure only -- reproduced live: Supabase's own
+  // Auth Logs showed every /user request in a login<->console flip-flop
+  // window returning 200 (GoTrue itself never rejected the token), so the
+  // proxy's own network call to GoTrue must have been failing transiently
+  // BEFORE reaching GoTrue (timeout/connection reset from Vercel's edge
+  // runtime), landing here as a caught exception, not as a genuine
+  // resolved-null session. A clean resolved null (real logout/expiry, no
+  // throw) is never retried -- retrying that would just mask the deny
+  // decision, not fix a flake.
   let user = null;
-  try {
-    const {
-      data: { user: resolvedUser },
-    } = await supabase.auth.getUser();
-    user = resolvedUser;
-  } catch {
-    user = null;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const {
+        data: { user: resolvedUser },
+      } = await supabase.auth.getUser();
+      user = resolvedUser;
+      break;
+    } catch {
+      if (attempt === 1) user = null;
+    }
   }
 
   const isPublicRoute = PUBLIC_CONSOLE_ROUTES.includes(request.nextUrl.pathname);

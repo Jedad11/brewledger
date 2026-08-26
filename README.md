@@ -48,3 +48,28 @@ I worked on this as a two-person team. My main contributions:
 
 See the commit history and `BrewLedger_WBS_Dictionary.md` for the full
 breakdown of what was built.
+
+## Screenshots
+
+Walkthrough of the Owner Console — phone-OTP login, the daily dashboard, the
+ingredient inventory (negative-stock policy), the menu/BOM recipe editor,
+the live orders inbox, and a manual cash sale.
+
+> Captured against the real Console app running with a local mock standing in
+> for Supabase (Postgres/PostgREST/GoTrue/Edge Functions), since no local
+> Supabase instance could be started on the machine used to take these
+> (Postgres itself failed to start in that Docker environment). The UI, copy,
+> and costing logic shown are all the genuine app code — only the data layer
+> underneath is a stand-in.
+
+| | |
+|---|---|
+| **Login — phone** | ![Login phone](./screenshots/01-login-phone.png) |
+| **Login — OTP** | ![Login OTP](./screenshots/02-login-otp.png) |
+| **Dashboard** | ![Dashboard](./screenshots/03-dashboard.png) |
+| **Inventory** | ![Inventory](./screenshots/04-inventory.png) |
+| **Menu list** | ![Menu list](./screenshots/05-menu.png) |
+| **Menu item editor** | ![Menu item editor](./screenshots/06-menu-item-editor.png) |
+| **Recipe / BOM editor** | ![Recipe editor](./screenshots/07-menu-item-recipe.png) |
+| **Orders inbox** | ![Orders inbox](./screenshots/08-orders.png) |
+| **Quick cash sale** | ![Quick cash sale](./screenshots/09-sales-quick.png) |

@@ -51,16 +51,18 @@ breakdown of what was built.
 
 ## Screenshots
 
-Walkthrough of the Owner Console — phone-OTP login, the daily dashboard, the
-ingredient inventory (negative-stock policy), the menu/BOM recipe editor,
-the live orders inbox, and a manual cash sale.
-
-> Captured against the real Console app running with a local mock standing in
+> Captured against the real Next.js apps running with a local mock standing in
 > for Supabase (Postgres/PostgREST/GoTrue/Edge Functions), since no local
 > Supabase instance could be started on the machine used to take these
 > (Postgres itself failed to start in that Docker environment). The UI, copy,
-> and costing logic shown are all the genuine app code — only the data layer
+> and business logic shown are all the genuine app code — only the data layer
 > underneath is a stand-in.
+
+### Owner Console (`apps/console`)
+
+Phone-OTP login, the daily dashboard, the ingredient inventory (negative-stock
+policy), the menu/BOM recipe editor, the live orders inbox, and a manual cash
+sale.
 
 | | |
 |---|---|
@@ -73,3 +75,22 @@ the live orders inbox, and a manual cash sale.
 | **Recipe / BOM editor** | ![Recipe editor](./screenshots/07-menu-item-recipe.png) |
 | **Orders inbox** | ![Orders inbox](./screenshots/08-orders.png) |
 | **Quick cash sale** | ![Quick cash sale](./screenshots/09-sales-quick.png) |
+
+### Customer Web (`apps/shop`)
+
+The unauthenticated ordering flow: browse the menu, pick item options, review
+the cart, choose a pickup slot, pay by PromptPay QR, and track the order
+through to pickup — plus the phone+code order lookup screen (the
+rate-limited public endpoint below).
+
+| | |
+|---|---|
+| **Store menu** | ![Store menu](./screenshots/10-shop-store.png) |
+| **Item options** | ![Item options](./screenshots/11-shop-item-options.png) |
+| **Cart bar** | ![Cart bar](./screenshots/12-shop-cart-bar.png) |
+| **Cart** | ![Cart](./screenshots/13-shop-cart.png) |
+| **Pickup slot + details** | ![Checkout slot picker](./screenshots/14-shop-checkout-slot.png) |
+| **PromptPay QR payment** | ![Pay QR](./screenshots/15-shop-pay-qr.png) |
+| **Order tracking — preparing** | ![Order tracking](./screenshots/16-shop-track-order.png) |
+| **Order tracking — collected** | ![Order collected](./screenshots/17-shop-order-collected.png) |
+| **Find my order (phone + code)** | ![Track lookup](./screenshots/18-shop-track-lookup.png) |
